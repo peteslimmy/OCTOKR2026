@@ -19,36 +19,35 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 |---|---|---|---|
 | 1 | Task execution window | BU Leads can set `UNDEFINED → DONE/NOT_DONE` only **after content lock** (Tue 18:00) until final lock, exactly as `04-BUSINESS-RULES` BR-WR-010 reads. Before content lock the task definition is editable but its status is not. | Confirm. |
 | 2 | Report creation cut-off | A BU can create its report from Monday 00:00 until content lock. After content lock nothing can be added, so a missing report stays missing (0.00 / NON_COMPLIANT at final lock). | Confirm. |
-| 3 | Report review | ADR-038: Presenter/Admin/SuperAdmin marks a final-locked, submitted report REVIEWED (audited, non-blocking). Provides the "normal review" referenced by skipped-week rules. | **Yes** — the specification defines no review state. |
+| 3 | Report review | ADR-038: Presenter/Admin/SuperAdmin marks a final-locked, submitted report REVIEWED (audited, non-blocking). Provides the "normal review" referenced by skipped-week rules. | Settled by ADR-038; whether a rejection comment is mandatory is still open (DEC-016). |
 | 4 | Provisional quarter scores (DEC-020) | A quarterly snapshot is `PROVISIONAL` until the quarter is locked, every eligible week is finalised **and** every submitted report is reviewed. Pending review is never scored as zero (ADR-081). | Settled by ADR-081. |
 | 5 | Week → quarter assignment (DEC-004) | A reporting week belongs to the quarter containing its Monday. Reporting weeks keep their own lifecycle even after their quarter locks (a week whose Monday is in the last days of a quarter finalises after the next quarter starts). | **Yes**. |
-| 6 | Which BUs report weekly | **Every ACTIVE BU is expected to report** (including an "HQ"/admin BU if one exists). A BU created mid-quarter is excluded from earlier weeks (`created_at` after the week ended). | **Yes** — a "reports weekly" flag per BU is likely needed. |
+| 6 | Which BUs report weekly | **Every ACTIVE BU is expected to report** (including an "HQ"/admin BU if one exists). A BU created mid-quarter is excluded from earlier weeks (`created_at` after the week ended). The per-unit `reports_weekly` flag (default true) now decides this, and `unit_type` derives from it (ADR-048, ADR-078). | Settled by ADR-048; confirm that new units default to reporting. |
 | 7 | Go-live mid-quarter | Weeks that have already ended when a quarter is activated are finalised as missing-report zeros by the scheduler, per the fixed-denominator rule. | **Yes** — production go-live should align with a quarter start, or an authorised exception / start-week setting is needed. |
 | 8 | Penalty rate | No default. APPLY is impossible until Admin/SuperAdmin configures a rate; WAIVE needs only a reason. | Provide the rate. |
 | 9 | Integrity correction timing | Allowed after content lock. Refused (`QUARTER_LOCKED`) once the week is final-locked **and** its quarter is locked; the late-report amendment path (ADR-050) is separate and does not use integrity corrections. | Confirm. |
 | 10 | Strategy edits after activation (DEC-007) | Titles/descriptions of an ACTIVE quarter's objective, KRs and Sub-KRs can be edited (audited); nothing can be deleted; new Sub-KRs can be added; KR count is capped at 4. Locked quarters are read-only. | **Yes**. |
 | 11 | Edit lease (DEC-008) | 5-minute TTL, 2-minute heartbeat, one active lease per report; expiry is lazy. No admin takeover yet. | Confirm values. |
 | 12 | Calendar quarters | Quarters are calendar quarters; the Annual Theme year is the calendar year. | Confirm. |
-| 13 | Holiday scope | Whole reporting weeks only; declaring a week that already has submitted reports or is final-locked returns `HOLIDAY_AMENDMENT_REQUIRED` (the audited amendment path is not built yet). Reversal is not built yet. | Post-lock/after-submission declaration and reversal use the controlled amendment (ADR-051). |
+| 13 | Holiday scope | Whole reporting weeks only; declaring a week that already has submitted reports or is final-locked returns `HOLIDAY_AMENDMENT_REQUIRED` and goes through the audited amendment path, which also handles reversal (ADR-051, ADR-058). | Settled by ADR-051/058; the zero-score effect on reversal is row 28. |
 | 14 | Role → permission matrix | See `supabase/migrations/…_foundation.sql`. Derived from `06-ROLES-PERMISSIONS` scope rules; new permissions: `weekly_report.review`, `reporting.week.manage`, `strategy.quarter.manage`, `dashboard.executive.view`, `presentation.view`. | Review. |
 | 15 | Session ↔ week link | A session presents the week that final-locks on that Tuesday; Skip activates the summary requirement on that week's reports (ADR-042). | **Yes**. |
 | 16 | Skip while a draft roster exists | Allowed (draft discarded); refused once finalised (ADR-043). | Confirm. |
 | 17 | Disbursement commitments | Approved-but-unreleased requests reduce the *available* balance, so approvals cannot over-commit (ADR-046). | Confirm. |
 | 18 | "Designated HR approver" | Implemented as per-user permission designations (ADR-047). Admin/SuperAdmin hold approve by default. | Confirm. |
 | 19 | Reviewer comment on rejection | Recorded, **not** mandatory (DEC-016). | **Yes**. |
-| 20 | BU that does not report | `reports_weekly` flag (ADR-048). | **Yes**. |
+| 20 | BU that does not report | `reports_weekly` flag (ADR-048). | Settled by ADR-048; row 6 covers the default. |
 | 21 | Violation scope | Fine/criticality snapshotted per violation; one payment per violation (no partial payments); no dismissal/waiver flow is specified, so none exists. | **Yes**. |
-| 22 | Ledger corrections | Compensating entries are required by the spec but no operation/permission/role is defined for them yet; the ledger table accepts a `REVERSAL` source for when it is. | **Yes**. |
-
+| 22 | Ledger corrections | Compensating entries: a reversal is requested against a ledger entry, decided by an independent approver, and posted as a `REVERSAL` entry that references the original (ADR-059). Roles are in row 47. | Settled by ADR-059; confirm the roles in row 47. |
 | 23 | Late-report approval chain (ADR-050) | Admin/Super Admin authorise (`quarter.score.amend`); the BU Lead files; a `weekly_report.review` holder reviews; a `quarter.score.amend` holder who is **not the reviewer** applies. The authoriser may also apply. The spec requires a reason and an approval but names no segregation of duties, so reviewer ≠ applier is the added control. | **Yes** — confirm the chain. |
 | 24 | Late report needs finished tasks | A late report is scored on submission, so every task must be Done/Not done before it can be submitted (`TASK_STATUS_REQUIRED`). | Confirm. |
 | 25 | Compliance after an accepted late report | `weekly_compliance` stays `NON_COMPLIANT` (history is not rewritten); only the score is amended. | **Yes** — the spec leaves the compliance effect to the exception decision. |
 | 26 | Rejected late reports | A submitted late report can be rejected (exception `REVOKED`, report relocked, score unchanged). Not re-submittable under the same exception; a new authorisation is needed. | Confirm. |
-| 27 | Holiday amendment permission (ADR-051) | `quarter.score.amend` (Admin, Super Admin) for both directions, single step, mandatory reason; HR's `reporting.period.holiday.manage` covers only the ordinary pre-lock declaration. 06-ROLES says post-lock changes use "the separately authorised amendment path" without naming the permission. | **Yes** — confirm permission and whether a second approver is wanted. |
+| 27 | Holiday amendment permission (ADR-051) | Ordinary pre-lock declaration: HR's `reporting.period.holiday.manage`, single step, mandatory reason. Amendments that touch a submitted or final-locked week (and reversals) need `quarter.score.amend` to request and a second Admin/Super Admin to decide (ADR-058). | Settled by ADR-051/058; confirm the permission and the two-person rule. |
 | 28 | Reversing a locked holiday | Missing-report zeros are recorded retroactively for every expected BU without a score, with `NON_COMPLIANT`; no automatic late-report exception. The spec says eligibility changes create a new snapshot but does not say whether reinstated weeks should score zero. | **Yes** — alternative is to require explicit exceptions before reversal. |
 | 29 | Who must use MFA (ADR-052) | SUPER_ADMIN, ADMIN, FINANCE (legacy ADR-023). HR (approves attendance amendments) and Presenter (reviews reports) are optional. Table `mfa_required_roles` is the single place to change it. | **Yes** — confirm the role list. |
 | 30 | Step-up window and scope | 15 minutes after the last TOTP check, on the routes listed in ADR-052. Not applied to routine writes. | Confirm. |
-| 31 | Lost-authenticator recovery | Administrator reset only (no recovery codes, no email-based bypass): safest for elevated roles, but a locked-out sole Super Admin needs database access. | **Yes** — decide whether to add one-time recovery codes. |
+| 31 | Lost-authenticator recovery | Administrator reset, plus ten single-use recovery codes that remove the authenticator and end other sessions; no email-based bypass. A locked-out sole Super Admin still needs the break-glass script (row 51) and database access (ADR-060). | Settled by ADR-060; row 50 covers the code policy. |
 | 32 | Password policy | 12+ characters, upper/lower/digit, small deny-list. No breached-password (HIBP) check and no expiry/rotation (NIST advises against forced rotation). | Confirm. |
 | 33 | Organisation score (ADR-053) | The application defines none. Reports show "average of BU scores" labelled *pending approval*. | **Yes** — define the official organisation-level score, or confirm the average. |
 | 34 | Compliance rate and "on time" | Compliance rate = compliant ÷ (compliant + non-compliant) finalised, non-holiday expected weeks, read from the compliance record. "Submitted before content lock" is shown as an informational, unapproved measure. | **Yes** — is the final lock the only deadline? |
@@ -95,43 +94,6 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 75 | One email service, one AI provider | Only one of each may be switched on at a time; webhooks may be many. | Confirm. |
 | 76 | What a webhook carries | Audit action, entity type and id, outcome, actor role, time, correlation id; never values or reasons. | **Yes** — confirm what may leave. |
 | 77 | AI provider | Configured and tested only; no feature sends data to it yet. | **Yes** — decide which features may use it and what data may leave (data-protection review) before any is built. |
-
-## C. Not yet built (explicit backlog)
-
-Milestone 3a is done (late-report score amendment, ADR-050). Milestone 3b is done (holiday amendment/reversal, ADR-051). Remaining milestone 3 / hardening:
-session-outcome correction workflow, ledger reversal operation, Milestone 4 is done (MFA/TOTP, step-up, password forgot/reset/change, CSP; ADR-052). Milestone 5 is done (Playwright E2E + axe gate in CI). Milestone 6 is done for the data that exists (Reports module, ADR-053); decisions 2 (two-person holiday amendments), 3, 5, 6, 7, 8 and 9 of ADR-054 are recorded but not built. Remaining: production email provider (SMTP) setup, E2E + CI axe gate (axe was run manually on every screen: zero violations), dependency/performance review,
-backup-restore rehearsal, data-migration tooling, evidence file storage for attendance amendments (references only today),
-bulk imports, partial-quarter/BU lifecycle rules (DEC-004), per-user notification preferences and email delivery.
-
-## D. Verification summary
-
-- 34 unit tests (scoring vectors, penalty arithmetic, quarterly mean/N-A, WAT lock boundaries, SMART engine).
-- 60 database integration tests: milestone 1 (lock boundaries, execution rules, final-lock idempotency, integrity workflow,
-  holiday, RLS, audit immutability, privilege escalation) plus milestone 2 (PRESENT-by-default roster, atomic/idempotent/
-  all-or-nothing Skip OKR, immutable finalised rosters, amendments incl. self-approval, stale and duplicate protection,
-  violation→ledger atomicity, ledger immutability and non-negative balance, disbursement segregation of duties, commitments,
-  reconciliation, finance RLS).
-- 5 true multi-connection concurrency tests (`npm run test:concurrency`): simultaneous approvals cannot overdraw the fund,
-  parallel releases post one debit, parallel payments credit once, parallel Skip is not mixed, parallel amendments leave one pending.
-- Milestone 3a: 6 DB tests (`tests/db/late_report.test.ts`: full flow on a locked quarter, snapshot/compliance/audit immutability, permission, segregation, idempotency, scoping) and 3 HTTP tests (`tests/api/late-report.api.test.ts`).
-- Milestone 3b: 4 DB tests (`tests/db/holiday_amendment.test.ts`: post-lock declare, retroactive reverse with backfill, locked-quarter amendment, dashboard/RLS) and 2 HTTP tests.
-- Milestone 4: 4 DB tests (`tests/db/mfa.test.ts`), 4 unit tests (password policy), 13 HTTP tests (`tests/api/security.api.test.ts`: elevated-role challenge, wrong code, enrol/remove, admin reset guards, forgot/reset/change, full emailed-link flow against the real auth server, CSP). axe: zero violations on login (both steps), forgot/reset password and account security.
-- Milestone 5: 25 Playwright tests (`tests/e2e`, `npm run test:e2e`; CI job `e2e`): auth/MFA journeys, the full weekly lifecycle (draft → submit → content lock → execute → final lock → score 50.00 → review), late-report and holiday amendments through the UI, axe (WCAG 2.2 A/AA + best practice) on every screen per role, signed-out screens, a dialog, and no horizontal overflow at 375 px. Defects found by writing them and fixed: the edit lease could be released after a quick remount (ordering guard added), and the holiday amendment reused one idempotency key for declare and reverse.
-- Milestone 6: 12 DB tests (`tests/db/reports.test.ts`: reconciliation to snapshots and compliance, BU scope, MFA-incomplete sessions, finance blanks, snapshots immutable, saved-report sharing, export audit), 32 unit tests (statistics, forecast, insights rules, assistant, sanitising, canonical JSON), 12 HTTP tests (`tests/api/reports.api.test.ts`) and 8 Playwright tests (`05-reports.spec.ts`) plus axe on every report page.
-- Display, hint, landing, import (ADR-055 to 057): 103 unit tests in total (formatters, metric easing, week label, import rules: 20 added), 8 DB tests for the Last Week hint (`tests/db/last_week.test.ts`: Week N versus N-1, Done / other BU / older excluded, year boundary, holiday, no report, scope, no mutation), 6 DB tests for the import commit (`tests/db/employee_import.test.ts`), 14 HTTP tests (`tests/api/last-week.api.test.ts`, `tests/api/import.api.test.ts`) and 18 Playwright tests (91 in the whole suite) (`06-last-week`, `07-landing-login`, `08-employee-import`, `09-metric-cards`).
-- Milestone 8 (ADR-058 to 062): 128 unit tests in total, 138 DB tests (holiday two-person, ledger reversal, recovery codes, reminders and email, Business Unit import), 77 HTTP tests across 11 files, 112 Playwright tests (specs 08 to 13 cover the import wizards, metric cards, drill-down, ledger reversal, recovery and email settings).
-- 17 HTTP tests (unauthenticated, CSRF origin, mass-assignment, RBAC, cross-BU, anti-enumeration, full violation→disbursement flow).
-- axe-core (WCAG 2.2 A/AA + best practice): zero violations on login, dashboards, governance, roster (draft and skipped), amendments,
-  violations, finance.
-
-**Resolved defect.** `POST /api/internal/jobs/run` twice answered 500 during end-to-end runs. The cause was the development clock restarting the database REST layer while a request was in flight; the clock script now waits until the API answers again before returning. No data was affected (the jobs are idempotent). It has not recurred since; if it does in a real environment, check the REST layer's logs first.
-
-| 63 | Branding (name, logo, favicon, main colour) is applied immediately and audited, with no second-person approval, because it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
-| 64 | A Department is a unit that does not file weekly reports; it is not a unit inside a Business Unit. Staff belong to exactly one unit. | Yes: confirm there is no Department-under-BU hierarchy. |
-| 65 | Dashboard completion rate = done tasks / all tasks; average score = mean of stored weekly scores of reportable, scored weeks; on-time = submitted before the content lock. | Yes: confirm the definitions. |
-
-| 66 | Landing and sign-in content is applied on save and audited, with no second-person approval (ADR-077); it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
-| 67 | The built-in landing page copy (features, steps, trust points) is the previous wording; the figures band, gallery and testimonial are hidden by default so no invented numbers or quotes appear. | Yes: confirm the default wording. |
 | 78 | Historical import: who and how | Super Admin only, no second approver, authenticator code and typed confirmation, rehearsal first, recomputed through the normal engine (ADR-077). | Owner decided; confirm a no-approver action is acceptable with step-up as its only extra check. |
 | 79 | Placeholder strategy for historical quarters | Where a past quarter has no strategy a placeholder objective, key results and Sub-KRs are created, titled "(historical, imported)". | **Yes** — supply real wording, or confirm placeholders. |
 | 80 | Back-dating Business Units | A unit's creation date is moved back to its first week in the file so earlier weeks are not counted against it. | **Yes** — confirm. |
@@ -145,3 +107,29 @@ bulk imports, partial-quarter/BU lifecycle rules (DEC-004), per-user notificatio
 | 88 | Strategy import scope | Fills empty, non-active quarters only; ended quarters are stored locked, others planned. Active quarters keep the change-request rule (ADR-079). | Confirm. |
 | 89 | Sign-in import control | No approval, a fresh authenticator code and the same role rules as Add user (ADR-080). | **Yes** — confirm, or ask for an approval step on both paths. |
 | 90 | Sign-in links | One-time links are shown once and downloadable; they are not stored or emailed (no email provider is configured). | Confirm. |
+| 91 | Branding | Name, logo, favicon and main colour are applied immediately and audited, with no second-person approval, because it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
+| 92 | Department | A Department is a unit that does not file weekly reports; it is not a unit inside a Business Unit. Staff belong to exactly one unit. | Yes: confirm there is no Department-under-BU hierarchy. |
+| 93 | Dashboard completion rate | Done tasks / all tasks; average score = mean of stored weekly scores of reportable, scored weeks; on-time = submitted before the content lock. | Yes: confirm the definitions. |
+| 94 | Landing and sign-in content | Applied on save and audited, with no second-person approval (ADR-077); it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
+| 95 | Landing page copy | The built-in landing page copy (features, steps, trust points) is the previous wording; the figures band, gallery and testimonial are hidden by default so no invented numbers or quotes appear. | Yes: confirm the default wording. |
+
+## C. Not yet built (explicit backlog)
+
+Built since this section was first written: session-outcome correction (ADR-063), ledger reversal (ADR-059), recovery codes (ADR-060), reminders and email outbox (ADR-061), employee, Business Unit, strategy, historical and sign-in imports (ADR-056, ADR-077, ADR-079, ADR-080), per-user notification preferences, and the Playwright + axe gate.
+
+Still open:
+- a production email provider and hosting (ADR-054 #8; the owner has not chosen),
+- one calendar-configuration object (ADR-054 #4),
+- evidence file storage for attendance amendments - the API stores references only (`attendance_amendment_requests.evidence_refs`),
+- dependency and performance review against production hardware,
+- backup-restore rehearsal.
+
+## D. Verification summary (2026-10-20)
+
+- `npm run test:unit`: 26 files, 216 tests passing.
+- Database lane: 35 files under `tests/db`; HTTP lane: 19 files under `tests/api`; concurrency lane: 1 file under `tests/concurrency`. The database lane needs a seeded, reset database and is not part of documentation-only changes.
+- End-to-end: 23 Playwright specs under `tests/e2e` (auth/MFA, full weekly lifecycle, amendments, imports, reports, ledger reversal, recovery, email settings), with an axe check (WCAG 2.2 A/AA + best practice) on each screen per role.
+- axe: zero violations reported on the screens exercised.
+- Earlier milestone counts were removed because they no longer matched the suites.
+
+**Resolved defect.** `POST /api/internal/jobs/run` twice answered 500 during end-to-end runs. The cause was the development clock restarting the database REST layer while a request was in flight; the clock script now waits until the API answers again before returning. No data was affected (the jobs are idempotent). It has not recurred since; if it does in a real environment, check the REST layer's logs first.
