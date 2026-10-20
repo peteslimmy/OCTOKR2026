@@ -182,7 +182,7 @@ Following Tuesday 11:00 → Final Lock (immutable, UNDEFINED→NOT_DONE)
 - **Components**: Primitives (Button, Card, Badge, Field, DataTable) + specialised (MetricCard, Drawer, Hero, StepForm, AnimatedNumber, 3D charts)
 
 ### Accessibility (WCAG 2.2 AA)
-- **Enforced**: `tests/e2e/a11y.spec.ts` runs axe-core on 8 critical routes, **zero violations of any impact**
+- **Enforced**: `tests/e2e/02-accessibility.spec.ts` runs axe-core on `/login` and every signed-in route in each seeded role's map, **zero violations of any impact**
 - Single `<main>` landmark per page
 - 4.5:1 text contrast, 3:1 UI/focus
 - Full keyboard navigation, visible focus indicators

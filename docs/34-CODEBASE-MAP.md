@@ -89,7 +89,7 @@ Consequences worth internalising:
 
 ## 2. Application surface inventory
 
-### Pages (43)
+### Pages (42)
 
 | Area | Routes |
 |---|---|
@@ -103,24 +103,47 @@ Consequences worth internalising:
 | Administration | `/admin`, `/admin/people`, `/admin/units`, `/admin/roles`, `/admin/calendar`, `/admin/settings`, `/admin/branding`, `/admin/site`, `/admin/integrations`, `/admin/approvals`, `/admin/import`, `/admin/import/business-units`, `/admin/import/history`, `/admin/import/sign-ins`, `/admin/import/strategy` |
 | Account | `/account/security` |
 
-### API groups (158 handlers under `src/app/api`)
+### API groups (158 route handlers; 155 under `src/app/api`)
 
-`health`, `internal/health`, `internal/jobs/run`; `v1/auth/*` (login, logout, me, password
-forgot/reset/change, mfa enroll/verify/disable/recover/recovery-codes/status);
-`v1/admin/penalty-rate`; `v1/attendance-*`; `v1/audit` (+`export`); `v1/branding` (+assets);
-`v1/business-units` (+`[id]`, `bulk-delete`); `v1/config-changes` (+decision/withdraw/emergency);
-`v1/dashboards/{bu,executive}`; `v1/disbursement-requests` (+approve/disburse/reject/review);
+`health`, `internal/health`, `internal/jobs/run`; `v1/admin/penalty-rate`;
+`v1/attendance-amendment-requests` (+`[id]/approve`, `[id]/reject`);
+`v1/attendance-records/[id]` (+`amendment-requests`); `v1/audit` (+`export`);
+`v1/auth/*` (login, logout, me, password forgot/reset/change, mfa
+enroll/verify/disable/recover/recovery-codes/status); `v1/branding` (+`assets/[kind]`);
+`v1/business-units` (+`[id]`, `bulk-delete`); `v1/config-changes`
+(+`[id]/decision`, `[id]/withdraw`, `emergency`); `v1/dashboards/{bu,executive}`;
+`v1/disbursement-requests` (+`[id]/{review,approve,reject,disburse}`);
 `v1/employees` (+`[id]`, `[id]/roster`); `v1/finance/{fund,ledger}`; `v1/goals/[id]`
-(+`delete`, `tasks`); `v1/governance-sessions` (+attendance, finalize, skip-okr,
-outcome-corrections, emergency-outcome-correction); `v1/history-imports` (+rehearse/commit);
-`v1/holiday-amendment-requests` (+decision); `v1/holiday-amendments`;
-`v1/imports/[entity]/{parse,validate,commit}` + `v1/imports/batches`;
-`v1/integrations` (+request, test); `v1/integrity-corrections` (+preview);
-`v1/late-report-exceptions` (+candidates, apply, revoke); `v1/ledger` (+reversals);
-`v1/notifications`; `v1/organisation`; `v1/permissions`, `v1/roles`; `v1/reporting-weeks/current`;
-`v1/reports/*`; `v1/settings/*`; `v1/strategy/*`; `v1/users` (+suspend/reactivate);
-`v1/weekly-reports/*` (current, `[id]`, submit, edit-session + heartbeat);
-`v1/webhooks/*`.
+(+`delete`, `tasks`); `v1/governance-sessions` (+`[id]`, `[id]/attendance`,
+`[id]/attendance/finalize`, `[id]/skip-okr`, `[id]/outcome-corrections`,
+`[id]/emergency-outcome-correction`); `v1/history-imports` (+`[id]/rehearse`,
+`[id]/commit`); `v1/holiday-amendment-requests` (+`[id]/decision`);
+`v1/holiday-amendments`; `v1/imports/[entity]/{parse,validate,commit}` +
+`v1/imports/batches`; `v1/integrations` (+`request`, `test`);
+`v1/integrity-corrections` (+`preview`); `v1/late-report-exceptions`
+(+`candidates`, `[id]/apply`, `[id]/revoke`); `v1/ledger-entries/[id]/{reversal-requests,
+emergency-reversal}`, `v1/ledger-reversals` (+`[id]/decision`, `[id]/execute`);
+`v1/lock-schedule`; `v1/notification-preferences`, `v1/notification-settings`,
+`v1/notifications` (+`[id]/read`, `read-all`); `v1/permissions`, `v1/roles`;
+`v1/presentation/{current,last-week,weekly-reports/[reportId]}`;
+`v1/report-snapshots` (+`[id]`); `v1/reporting-weeks/{current,[id]/{quote,
+holiday-amendment,holiday-amendment-request},organization-holiday}`;
+`v1/reports/*` (+`[id]/export`, `[id]/snapshots`, `assistant`, `insights`);
+`v1/saved-reports` (+`[id]`); `v1/session-corrections` (+`[id]/decision`,
+`[id]/execute`); `v1/sign-in-imports` (+`commit`); `v1/site` (+`images/[slot]`);
+`v1/smart-evaluations`; `v1/strategy/*` (annual-theme(s), change-requests
+(+`[id]/decision`), history, objectives (+`current`, `[id]`, `[id]/key-results`),
+key-results/[id] (+`sub-key-results`), sub-key-results/[id], quarters (+`[id]`,
+`[id]/activate`)); `v1/strategy-imports` (+`commit`); `v1/tasks/[id]` (+`delete`,
+`execution-status`); `v1/users` (+`[id]/{roles,permissions,suspend,reactivate,
+mfa-reset,delete}`, `bulk-delete`); `v1/violations` (+`[id]`, `[id]/payment`),
+`v1/violation-types` (+`[id]`); `v1/weekly-reports/*` (current, `[id]`,
+`[id]/goals`, `[id]/review`, `[id]/skipped-summary`, `[id]/submit`,
+`[id]/edit-session` + `heartbeat`).
+
+Three more route handlers live outside `src/app/api` because the browser navigates
+to them directly: `src/app/auth/confirm`, `src/app/branding/[kind]` and
+`src/app/site-image/[slot]`.
 
 ### Shared UI (`src/components`)
 
@@ -408,16 +431,27 @@ Rules that the components encode and reviewers enforce:
 
 ## 7. Known specification ↔ code divergences
 
-These are recorded so that future work does not treat either side as silently correct. None of
-them were changed at baseline.
+These are recorded so that future work does not treat either side as silently correct.
 
 | # | Divergence | Reality |
 |---|---|---|
-| 1 | `13-UI-UX-SPEC.md:238` cites `/dashboard/admin`, `/dashboard/executive`, `/dashboard/finance/ledger`, `/dashboard/admin/users-bus`, `/settings/security` | Actual routes are `/admin`, `/dashboard`, `/finance/ledger`, `/admin/people`, `/account/security` |
-| 2 | `13-UI-UX-SPEC.md` references `src/utils/toast.ts` | No such file; toasts come from `src/components/ui/client.tsx` |
-| 3 | `12-API-CONTRACT.md` lists `POST /governance-sessions/{id}/cancel` | No `CANCELLED` state exists and no such route exists |
-| 4 | `12-API-CONTRACT.md` omits several implemented endpoint families | Auth password/MFA, and numerous governance, finance, and import endpoints are implemented but undocumented |
-| 5 | `src/lib/auth/permissions.ts` does not exist | Permission logic lives in `actor.ts` and in the database, by design |
+| 1 | `src/lib/auth/permissions.ts` does not exist | Permission logic lives in `actor.ts` and in the database, by design |
+
+Resolved after baseline (this change):
+
+- `13-UI-UX-SPEC.md` toast path now points at `src/components/ui/client.tsx`, and its
+  accessibility section now names `tests/e2e/02-accessibility.spec.ts` and the real
+  per-role routes.
+- `12-API-CONTRACT.md` no longer lists `POST /governance-sessions/{id}/cancel`,
+  `GET /organisation`, `GET /attendance-amendment-requests/{requestId}`,
+  `GET /strategy/sub-key-results/{id}/execution`, `GET /integrity-corrections/{id}` or
+  `POST /goals/{goalId}/smart-evaluation`; the real routes are
+  `GET /integrity-corrections/preview` and `POST /smart-evaluations`.
+- `12-API-CONTRACT.md` now itemises the implemented auth, branding/site, governance,
+  violation, finance (review/disburse), weekly-report (review/skipped-summary/delete),
+  user bulk/delete and strategy-quarter endpoints, and the unreviewed-report wording
+  matches ADR-081.
+- The route-handler total is 158 overall (155 under `src/app/api`); the page total is 42.
 
 Resolved after baseline (ADR-081, `24-DECISIONS.md`):
 

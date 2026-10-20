@@ -8,7 +8,7 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 
 | # | Conflict | Resolution |
 |---|---|---|
-| 1 | `12-API-CONTRACT` lists `POST /governance-sessions/{id}/cancel`; every other document forbids a CANCELLED outcome. | Not implemented. Only SCHEDULED / HELD / SKIPPED exist. |
+| 1 | `12-API-CONTRACT` listed `POST /governance-sessions/{id}/cancel`; every other document forbids a CANCELLED outcome. | Not implemented. Only SCHEDULED / HELD / SKIPPED exist. The false entry was removed from `12-API-CONTRACT` on 2026-10-20. |
 | 2 | `05-USER-JOURNEYS` UJ-15 debits the ledger on approval; ADR-022, `16-FINANCIAL-CONTROLS` and BR-FIN-007 separate approval from disbursement. | **Built:** the DEBIT posts at the DISBURSED step (ADR-041/046, DEC-009 still open). |
 | 3 | Violation status vocabularies differ (ADR-022 vs `08-STATE-MACHINES`). | **Built:** `OPEN → PAID \| DEDUCTION_RECORDED` (ADR-046). |
 | 4 | ADR numbering: the August package used ADR-033 for an attendance question; the current package uses ADR-031 / ADR-033 differently. | Current package numbering is used. |
@@ -20,7 +20,7 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 1 | Task execution window | BU Leads can set `UNDEFINED → DONE/NOT_DONE` only **after content lock** (Tue 18:00) until final lock, exactly as `04-BUSINESS-RULES` BR-WR-010 reads. Before content lock the task definition is editable but its status is not. | Confirm. |
 | 2 | Report creation cut-off | A BU can create its report from Monday 00:00 until content lock. After content lock nothing can be added, so a missing report stays missing (0.00 / NON_COMPLIANT at final lock). | Confirm. |
 | 3 | Report review | ADR-038: Presenter/Admin/SuperAdmin marks a final-locked, submitted report REVIEWED (audited, non-blocking). Provides the "normal review" referenced by skipped-week rules. | **Yes** — the specification defines no review state. |
-| 4 | Provisional quarter scores (DEC-020) | A quarterly snapshot is `PROVISIONAL` until the quarter is locked, every eligible week is finalised **and** every submitted report is reviewed. Pending review is never scored as zero. | **Yes**. |
+| 4 | Provisional quarter scores (DEC-020) | A quarterly snapshot is `PROVISIONAL` until the quarter is locked, every eligible week is finalised **and** every submitted report is reviewed. Pending review is never scored as zero (ADR-081). | Settled by ADR-081. |
 | 5 | Week → quarter assignment (DEC-004) | A reporting week belongs to the quarter containing its Monday. Reporting weeks keep their own lifecycle even after their quarter locks (a week whose Monday is in the last days of a quarter finalises after the next quarter starts). | **Yes**. |
 | 6 | Which BUs report weekly | **Every ACTIVE BU is expected to report** (including an "HQ"/admin BU if one exists). A BU created mid-quarter is excluded from earlier weeks (`created_at` after the week ended). | **Yes** — a "reports weekly" flag per BU is likely needed. |
 | 7 | Go-live mid-quarter | Weeks that have already ended when a quarter is activated are finalised as missing-report zeros by the scheduler, per the fixed-denominator rule. | **Yes** — production go-live should align with a quarter start, or an authorised exception / start-week setting is needed. |

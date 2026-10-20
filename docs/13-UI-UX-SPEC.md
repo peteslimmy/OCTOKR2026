@@ -231,11 +231,11 @@ Navigation is never blocked. The outgoing route unmounts immediately and the inc
 - Zero-data results use the Empty states section above.
 - Completed or failed actions show a toast.
 
-There is one toast API: `toast.success|info|warning|error` (`src/utils/toast.ts`) dispatches an event that only `ToastProvider` renders. Auto-dismiss is variant-driven: error 8000ms, warning 6000ms, everything else 5000ms, so a failure stays readable longer than a success.
+There is one toast API: `toast.success|info|warning|error` (`src/components/ui/client.tsx`) dispatches an event that only `ToastProvider` renders. Auto-dismiss is variant-driven: error 8000ms, warning 6000ms, everything else 5000ms, so a failure stays readable longer than a success.
 
 ## Accessibility verification
 
-Accessibility is gated automatically, not reviewed by eye. `tests/e2e/a11y.spec.ts` runs axe-core over `/login` (logged out) and the authenticated critical routes (`/dashboard`, `/dashboard/admin`, `/dashboard/executive`, `/dashboard/finance/ledger`, `/dashboard/admin/users-bus`, `/dashboard/notifications`, `/settings/security`) and asserts **zero violations of any impact** - not "no criticals". The check runs in the same command as the rest of the e2e gate, so a new violation fails the build.
+Accessibility is gated automatically, not reviewed by eye. `tests/e2e/02-accessibility.spec.ts` runs axe-core over `/login` (logged out) and, for each seeded role, every route in its `ROUTES` map: BU Lead (`/dashboard`, `/strategy`, `/weekly`, `/performance`, `/notifications`, `/account/security`, `/reports`, `/reports/bu-scorecard`, `/reports/weekly-compliance`), Presenter (`/dashboard`, `/presentation`, `/performance`), HR (`/governance`, `/governance/amendments`, `/governance/violations`, `/notifications`), Finance (`/finance`, `/finance/ledger`, `/dashboard`, `/reports/fund-actuals`), Executive (`/dashboard`, `/performance`, `/reports` and the executive report views) and Admin (`/dashboard`, `/admin`, `/admin/units`, `/admin/people`, `/admin/calendar`, `/admin/settings`, `/admin/branding`, `/audit`, `/governance`, `/governance/late-reports`, `/account/security`, `/strategy`). It asserts **zero violations of any impact** - not "no criticals". The check runs in the same command as the rest of the e2e gate, so a new violation fails the build.
 
 Consequences that are part of the spec, not implementation detail:
 

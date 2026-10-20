@@ -18,16 +18,30 @@ Do not expose unrestricted generic CRUD for critical operations.
 
 ## Organisation/people
 
-- `GET /api/v1/organisation`
 - `GET /api/v1/business-units`
 - `POST /api/v1/business-units`
-- `PATCH /api/v1/business-units/{id}`
+- `PATCH /api/v1/business-units/{id}` — name, status and weekly reporting; a change to status or weekly reporting takes a reason and becomes a config request (ADR-068).
+- `DELETE /api/v1/business-units/{id}` — `business_units.manage`; refused while the unit still has employees or reports.
+- `POST /api/v1/business-units/bulk-delete` — `{ids, reason?}`; step-up; each id is attempted separately and returns successes and failures.
 - `GET /api/v1/employees`
 - `POST /api/v1/employees`
 - `PATCH /api/v1/employees/{id}`
+- `PATCH /api/v1/employees/{id}/roster` — `{onRoster}`; `users.manage`; audited as `EMPLOYEE_ROSTER_CHANGED`.
 - `POST /api/v1/users`
+- `PUT /api/v1/users/{id}/roles` — `{roles}`; step-up. Role codes are checked for shape only; the database decides whether each role exists and may be granted (ADR-069).
+- `PUT /api/v1/users/{id}/permissions` — `{permission, grant}`; step-up. Only the delegable permissions are accepted.
 - `POST /api/v1/users/{id}/suspend`
 - `POST /api/v1/users/{id}/reactivate`
+- `POST /api/v1/users/{id}/mfa-reset` — `{reason}`; step-up; audited; ends the target's sessions.
+- `DELETE /api/v1/users/{id}/delete` — step-up; deletes the application user and the auth identity.
+- `POST /api/v1/users/bulk-delete` — `{ids, reason?}`; step-up; each id is attempted separately and returns successes and failures; the caller cannot delete themselves.
+
+## Branding and site content
+
+- `GET|PUT /api/v1/branding` — application name, short name and primary colour. The colour carries white text, so it must keep at least 4.5:1 contrast.
+- `PUT|DELETE /api/v1/branding/assets/{kind}` — `kind` is `logo` or `favicon`; base64 raster PNG, JPEG, WebP or ICO only (SVG is refused on purpose), size-capped and signature-checked.
+- `GET|PUT /api/v1/site` — landing and sign-in content, validated as a whole; images no longer referenced are pruned afterwards.
+- `PUT|DELETE /api/v1/site/images/{slot}` — base64 raster PNG, JPEG or WebP only; returns the new `version`.
 
 ## Strategy
 
@@ -35,6 +49,7 @@ Do not expose unrestricted generic CRUD for critical operations.
 - `POST /api/v1/strategy/annual-themes`
 - `POST /api/v1/strategy/annual-themes/{id}/change`
 - `GET /api/v1/strategy/quarters`
+- `POST /api/v1/strategy/quarters` — `{year}`; creates that year's quarters.
 - `GET /api/v1/strategy/quarters/{id}`
 - `POST /api/v1/strategy/quarters/{id}/activate`
 - `GET /api/v1/strategy/objectives/current`
@@ -55,13 +70,16 @@ Do not expose unrestricted generic CRUD for critical operations.
 - `POST /api/v1/weekly-reports/{id}/edit-session/heartbeat`
 - `DELETE /api/v1/weekly-reports/{id}/edit-session`
 - `POST /api/v1/weekly-reports/{id}/submit`
+- `POST /api/v1/weekly-reports/{id}/review` — reviews a submitted report (ADR-081). The report keeps its computed score; the quarter stays `PROVISIONAL` until every submitted report is reviewed.
+- `PUT /api/v1/weekly-reports/{id}/skipped-summary` — `{comment}`; the manually authored summary required for a BU report in a skipped week.
+- `DELETE /api/v1/weekly-reports/{id}` — deletes a draft (`NOT_SUBMITTED`, open) report; `weekly_report.create`.
 
 ## Goals
 
 - `POST /api/v1/weekly-reports/{reportId}/goals`
 - `PATCH /api/v1/goals/{goalId}`
 - `POST /api/v1/goals/{goalId}/delete`
-- `POST /api/v1/goals/{goalId}/smart-evaluation`
+- `POST /api/v1/smart-evaluations` — preview only: nothing is persisted. SMART warnings are guidance and never block saving (BR-GOAL-003).
 
 ## Tasks
 
@@ -73,7 +91,7 @@ Do not expose unrestricted generic CRUD for critical operations.
 ## Integrity
 
 - `POST /api/v1/integrity-corrections`
-- `GET /api/v1/integrity-corrections/{id}`
+- `GET /api/v1/integrity-corrections/preview?taskId=&target=DONE|NOT_DONE` — what the correction would do; nothing is written.
 
 ## Presentation
 
@@ -98,23 +116,28 @@ Do not expose unrestricted generic CRUD for critical operations.
 
 ## Attendance/governance
 
+- `GET /api/v1/governance-sessions` — sessions the caller may see.
 - `POST /api/v1/governance-sessions`
 - `GET /api/v1/governance-sessions/{id}`
 - `POST /api/v1/governance-sessions/{id}/attendance` — create the weekly roster from the active staff snapshot, defaulting each staff member to PRESENT.
+- `POST /api/v1/governance-sessions/{id}/attendance/finalize` — `{confirm: true}`; closes the roster. Later changes go through an amendment request.
 - `POST /api/v1/governance-sessions/{id}/skip-okr` — permissioned, idempotent action to mark the session SKIPPED and atomically tag every staff member in its roster scope VIRTUAL_PRESENT.
-- `POST /api/v1/governance-sessions/{id}/cancel`
+- `PATCH /api/v1/attendance-records/{attendanceRecordId}` — `{status, notes?}`; the ordinary attendance change while the roster is still open.
 - `POST /api/v1/attendance-records/{attendanceRecordId}/amendment-requests` — HR request with proposed status, mandatory reason, optional evidence references and idempotency key.
 - `GET /api/v1/attendance-amendment-requests` — list within authorized HR/Admin scope; support status and date filters.
-- `GET /api/v1/attendance-amendment-requests/{requestId}` — detail and read-only history, subject to scope.
 - `POST /api/v1/attendance-amendment-requests/{requestId}/approve` — independent authorized decision.
 - `POST /api/v1/attendance-amendment-requests/{requestId}/reject` — record rejection decision; reviewer comment policy is not yet approved as mandatory.
 - `POST /api/v1/reporting-weeks/{weekId}/quote`
 
 ## Violations
 
+- `GET /api/v1/violations`
 - `POST /api/v1/violations`
 - `PATCH /api/v1/violations/{id}`
 - `POST /api/v1/violations/{id}/payment`
+- `GET /api/v1/violation-types`
+- `POST /api/v1/violation-types` — creates a config request (ADR-068).
+- `PATCH /api/v1/violation-types/{id}` — creates a config request (ADR-068).
 
 ## Finance
 
@@ -122,8 +145,10 @@ Do not expose unrestricted generic CRUD for critical operations.
 - `GET /api/v1/finance/ledger`
 - `POST /api/v1/disbursement-requests`
 - `GET /api/v1/disbursement-requests`
+- `POST /api/v1/disbursement-requests/{id}/review` — starts the independent review of a requested disbursement.
 - `POST /api/v1/disbursement-requests/{id}/approve`
 - `POST /api/v1/disbursement-requests/{id}/reject`
+- `POST /api/v1/disbursement-requests/{id}/disburse` — `{reference, idempotencyKey}`; step-up; records the payment, posts the ledger entry and moves the request to DISBURSED.
 
 ## Ledger reversal (ADR-059)
 
@@ -199,7 +224,6 @@ Do not expose unrestricted generic CRUD for critical operations.
 
 - `GET /api/v1/dashboards/bu`
 - `GET /api/v1/dashboards/executive`
-- `GET /api/v1/strategy/sub-key-results/{id}/execution`
 
 ## Audit/notifications
 
@@ -295,7 +319,7 @@ Use idempotency keys for payment, integrity correction, and financial approval o
 - A late report exception must use a distinct server-side controlled amendment path protected by an explicit permission; never treat ordinary quarter/report update endpoints as an unlock mechanism. The authorised action must accept the late report, route it through normal review, require an approval and reason, and record an immutable amendment event.
 - On acceptance, create a new quarter-score version using the reviewed late-week score instead of zero while preserving the fixed denominator. Return the prior and new quarterly score/version references. Preserve historical snapshots and the initial non-submission event.
 - For a quarter already locked, the correction endpoint must not reopen general quarter editing. API responses and audit events must preserve actor, reason, decision, affected week, original/new weekly values, old/new quarterly values, timestamp and correlation ID.
-- A submitted-but-unreviewed report must not be treated as a missing report by the API. The handling of such a report at quarter finalisation remains an open decision and must not be guessed by endpoint code.
+- A submitted-but-unreviewed report must not be treated as a missing report by the API. It keeps its computed score in state `AWAITING_REVIEW`; the quarter stays `PROVISIONAL` while any submitted report is unreviewed; reviewing and recalculating writes a new FINAL version and never overwrites the provisional snapshot (ADR-081).
 
 
 ### Organization Holiday API semantics
