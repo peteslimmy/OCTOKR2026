@@ -86,7 +86,7 @@ If a lower-ranked source conflicts with a higher-ranked source, the lower-ranked
 - The quarterly denominator is all non-holiday calendar reporting weeks in the quarter. Normal weeks and SKIPPED physical-session weeks count; `ORGANIZATION_HOLIDAY` weeks are excluded. Missing-report weeks that remain reportable contribute 0.00 unless an authorised exception is approved. If no eligible reporting weeks exist in a quarter, report the quarterly score as `N/A` rather than dividing by zero.
 - A skipped physical OKR session does not remove a reporting week or exempt a BU from manual performance-summary entry, submission, review, scoring or compliance.
 - An authorised late-report exception can permit the report to be submitted and reviewed after the initial final lock or quarter lock. An accepted score correction replaces the zero in a new, versioned quarterly score snapshot; original zero and published score snapshots remain immutable. A locked quarter is not generally reopened.
-- A submitted report awaiting review is not a missing report and must not be automatically assigned zero solely because review is pending. The rule for handling such reports at quarter finalisation remains pending a separate decision.
+- A submitted report awaiting review is not a missing report and is never automatically assigned zero because review is pending. It keeps its computed weekly score, is reported as awaiting review, and keeps the quarterly score `PROVISIONAL` until it is reviewed; reviewing it and recalculating produces the FINAL quarterly version (ADR-081). A submitted report is never auto-reviewed.
 - Current scope measures goal execution against Sub-KRs; it does not claim that weekly goal completion equals KR business-outcome attainment.
 
 ### Integrity

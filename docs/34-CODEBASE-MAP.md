@@ -419,13 +419,16 @@ them were changed at baseline.
 | 4 | `12-API-CONTRACT.md` omits several implemented endpoint families | Auth password/MFA, and numerous governance, finance, and import endpoints are implemented but undocumented |
 | 5 | `src/lib/auth/permissions.ts` does not exist | Permission logic lives in `actor.ts` and in the database, by design |
 
-Open questions carried forward (not resolved here):
+Resolved after baseline (ADR-081, `24-DECISIONS.md`):
 
-- Treatment of a `SUBMITTED` but unreviewed report at quarter finalisation
-  (`00-SOURCE-OF-TRUTH.md:89`, `07-SCORING-ENGINE.md` §6).
-- Whether the quarterly denominator counts generated-but-future weeks
-  (`07-SCORING-ENGINE.md:100` vs the code's eligible-week set).
-- `docs/skills/skills/` is an accidental duplicate tree and is a cleanup candidate.
+- A `SUBMITTED` but unreviewed report keeps its computed score and `AWAITING_REVIEW`
+  state; the quarter stays `PROVISIONAL` until reviewed (`00-SOURCE-OF-TRUTH.md:89`,
+  `07-SCORING-ENGINE.md` §6). Ratifies `calculate_quarterly_score` as built.
+- The denominator counts every non-holiday week of the quarter, including weeks not yet
+  finalised; those contribute `0.00` as `PENDING` and keep the result `PROVISIONAL`
+  (`07-SCORING-ENGINE.md` §9). Ratifies the existing fixed-denominator behaviour.
+- `docs/skills/skills/` was a byte-identical duplicate of `docs/skills/`; it has been
+  deleted.
 
 ---
 

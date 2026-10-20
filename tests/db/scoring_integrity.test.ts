@@ -247,6 +247,40 @@ describe("quarterly score (fixed denominator, versions)", () => {
     });
   });
 
+  // ADR-081: a submitted report not yet reviewed is not a missing report. It keeps its computed score,
+  // is counted separately, and keeps the quarter PROVISIONAL until reviewed.
+  it("a submitted but unreviewed report keeps its score and holds the quarter PROVISIONAL (ADR-081)", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const { reportId } = await reportWith4Goals(c, w);
+      await c.setNow(W1.finalLock);
+      await c.rpc("finalize_reporting_week", w.wk);
+      expect((await c.q<{ review_status: string }>("select review_status from weekly_reports where id = $1", [reportId]))[0].review_status).toBe("NOT_REVIEWED");
+
+      type Calc = {
+        score: string; numerator: string; missing_report_zero_count: number; awaiting_review: number;
+        pending_weeks: number; calculation_status: string; contributions: { week_id: string; state: string; value: number }[];
+      };
+      const before = await c.rpc<Calc>("calculate_quarterly_score", w.strat.quarterId, w.buA);
+      expect(before.contributions.find((x) => x.week_id === w.wk)).toMatchObject({ state: "AWAITING_REVIEW", value: 75 });
+      expect(before.awaiting_review).toBe(1);
+      expect(before.missing_report_zero_count).toBe(0);
+      expect(Number(before.numerator)).toBe(75); // kept, never zeroed for want of a review
+      expect(before.calculation_status).toBe("PROVISIONAL");
+
+      // The contrast: a BU that filed nothing is a missing report and counts as 0.00.
+      const silent = await c.rpc<Calc>("calculate_quarterly_score", w.strat.quarterId, w.buC);
+      expect(silent.contributions.find((x) => x.week_id === w.wk)).toMatchObject({ state: "MISSING_ZERO", value: 0 });
+      expect(silent.missing_report_zero_count).toBe(1);
+
+      await c.rpc("review_weekly_report", w.admin, reportId);
+      const after = await c.rpc<Calc>("calculate_quarterly_score", w.strat.quarterId, w.buA);
+      expect(after.awaiting_review).toBe(0);
+      expect(after.contributions.find((x) => x.week_id === w.wk)).toMatchObject({ state: "REVIEWED", value: 75 });
+      expect(Number(after.numerator)).toBe(75);
+    });
+  });
+
   it("a quarter with no eligible weeks reports N/A (NO_ELIGIBLE_REPORTING_WEEKS), not 0 or a division error", async () => {
     await withTx(async (c) => {
       const w = await world(c);

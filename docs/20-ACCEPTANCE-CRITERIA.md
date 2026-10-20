@@ -195,13 +195,16 @@ At new-quarter start, previous quarter becomes read-only.
 The quarterly execution score uses all NORMAL and SKIPPED-session reporting weeks in the quarter and excludes officially declared ORGANIZATION_HOLIDAY weeks. A missing report in a reportable week contributes 0.00 unless an authorised exception applies. The denominator does not shrink because a report is missing, and each eligible week contributes exactly once. A quarter with no eligible weeks returns N/A.
 
 ### AC-SC-013 — Missing report compliance distinction
-At weekly final lock, a report not submitted scores 0.00 and is NON_COMPLIANT unless an authorised exception applies. A submitted report scoring 0.00 is distinguishable from non-submission. A submitted-but-unreviewed report is not assigned the missing-report zero merely because review is pending; quarter finalisation follows the separately approved rule.
+At weekly final lock, a report not submitted scores 0.00 and is NON_COMPLIANT unless an authorised exception applies. A submitted report scoring 0.00 is distinguishable from non-submission. A submitted-but-unreviewed report is not assigned the missing-report zero merely because review is pending; it keeps its score and is reported as awaiting review (AC-SC-016).
 
 ### AC-SC-014 — Controlled late-report correction after quarter lock
 An authorised late report can be submitted and reviewed after quarter lock under the controlled exception path. On acceptance, the application creates an immutable new quarterly score version using the reviewed weekly score in place of the missing-report zero. It preserves the original zero and prior published quarter snapshot, records reason/authorisation/actor/timestamps/old-new values/recalculation details, and does not reopen the quarter for ordinary edits.
 
 ### AC-SC-015 — Reproducible quarterly calculation
 A quarterly score snapshot stores its denominator, reporting-week references and values, missing-report zero count, numerator, score result, rule version, calculation timestamp and prior snapshot/reference where applicable. Identical inputs and rule versions produce the same result.
+
+### AC-SC-016 — Unreviewed reports and unfinalised weeks (ADR-081)
+A submitted report awaiting review keeps its computed weekly score, is reported with contribution state `AWAITING_REVIEW`, and is not counted as a missing report. While any submitted report is unreviewed the quarterly score is `PROVISIONAL`; reviewing it and recalculating produces a new FINAL version without overwriting the provisional snapshot. Weeks that have not yet reached final lock are included in the denominator, contribute `0.00` as `PENDING` (never as a missing-report zero), and also keep the quarter `PROVISIONAL`. Covered by the DB test `a submitted but unreviewed report keeps its score and holds the quarter PROVISIONAL (ADR-081)`.
 
 
 ## Organization Holiday acceptance criteria
