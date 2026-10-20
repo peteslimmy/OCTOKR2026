@@ -8,7 +8,7 @@ async function world(c: Ctx) {
   return { admin: await c.user(["ADMIN"], bu, "admin"), sa: await c.user(["SUPER_ADMIN"], bu, "sa"), hr: await c.user(["HR"], bu, "hr"), lead: await c.user(["BU_LEAD"], bu, "lead") };
 }
 
-describe("landing page and sign-in content (ADR-077)", () => {
+describe("landing page and sign-in content (ADR-082)", () => {
   it("lets an Admin or Super Admin save content, bumps the version and records old and new in the audit log", async () => {
     await withTx(async (c) => {
       const w = await world(c);

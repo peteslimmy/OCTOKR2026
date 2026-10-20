@@ -147,8 +147,8 @@ An authorised exception may permit a late report to be submitted and reviewed, i
 
 If a quarter has no eligible non-holiday reporting weeks, the quarterly score shall be `N/A` with reason `NO_ELIGIBLE_REPORTING_WEEKS`; the system shall not divide by zero or fabricate a 0.00 score.
 
-### FR-SCORE-008 (Decision Required)
-A submitted report that has not completed review is not a missing report. The business owner must decide whether a quarter with one or more submitted-but-unreviewed reports remains provisional and how/when its quarterly score can be finalised.
+### FR-SCORE-008 (Resolved — ADR-081)
+A submitted report that has not completed review is not a missing report; it keeps its computed weekly score and is shown as `AWAITING_REVIEW`. The quarter stays `PROVISIONAL` until the quarter is locked, every eligible week is finalised and every submitted report is reviewed. Review does not block the calendar-driven quarter lock, and at final lock any task still `UNDEFINED` becomes `NOT_DONE` before scoring.
 
 ## Integrity
 

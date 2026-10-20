@@ -226,9 +226,9 @@ Following Tuesday 11:00 → Final Lock (immutable, UNDEFINED→NOT_DONE)
 
 ## 9. Key Implementation Notes (docs/25-IMPLEMENTATION-NOTES.md)
 
-98 rows of specification gaps/ambiguities with resolutions and open owner decisions. Key themes:
+95 rows of specification gaps/ambiguities with resolutions and open owner decisions. Key themes:
 - AI integration gap: `activeAi()` exists but no feature calls it
-- Submitted-but-unreviewed report quarter-finalisation treatment (open decision)
+- Submitted-but-unreviewed report quarter finalisation: resolved by ADR-081 (keeps its score, quarter stays provisional, review does not block the lock)
 - Tie-breaker rules for ranking (configuration decision)
 - Password policy common list source (external vs bundled)
 - Organisation holiday notification channel (email vs in-app only)

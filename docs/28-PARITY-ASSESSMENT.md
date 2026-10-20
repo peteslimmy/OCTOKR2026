@@ -206,7 +206,7 @@ Also noted in `docs/00-SOURCE-OF-TRUTH.md`: payroll is outside 4CORE-OKR. No pay
 
 - **No legacy comparison** (section 1). This is the main limit of the assessment.
 - **Test results not verified in this pass.** Nothing was run; confirm the latest green run of `tests/db`, `tests/api`, `tests/concurrency` and `tests/e2e` before relying on the "Met" counts.
-- **Stale decision record.** ADR-054 item 3 says session-outcome correction is "not built" and item 9 says the parity assessment is "not started"; both are out of date. Update `docs/24-DECISIONS.md` (not edited here, by instruction).
+- **Stale decision record (resolved 2026-10-20).** ADR-054 items 3 and 9 have since been updated in `docs/24-DECISIONS.md`; the correction and parity statuses now read as built/done.
 - **ATT-009 notification failure rollback** has no dedicated test.
 - **Open owner decisions** in `docs/25-IMPLEMENTATION-NOTES.md` (for example the MFA role list, item 29; the attendance reviewer comment) remain unconfirmed and affect criteria wording.
 - **Requirements outside the acceptance document** (functional requirements in `docs/03`, business rules in `docs/04`, UI spec in `docs/13`) were only skimmed and are not traced here. A fuller matrix would add rows for those.

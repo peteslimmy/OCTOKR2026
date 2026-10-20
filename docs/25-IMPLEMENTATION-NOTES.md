@@ -110,7 +110,7 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 91 | Branding | Name, logo, favicon and main colour are applied immediately and audited, with no second-person approval, because it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
 | 92 | Department | A Department is a unit that does not file weekly reports; it is not a unit inside a Business Unit. Staff belong to exactly one unit. | Yes: confirm there is no Department-under-BU hierarchy. |
 | 93 | Dashboard completion rate | Done tasks / all tasks; average score = mean of stored weekly scores of reportable, scored weeks; on-time = submitted before the content lock. | Yes: confirm the definitions. |
-| 94 | Landing and sign-in content | Applied on save and audited, with no second-person approval (ADR-077); it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
+| 94 | Landing and sign-in content | Applied on save and audited, with no second-person approval (ADR-082); it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
 | 95 | Landing page copy | The built-in landing page copy (features, steps, trust points) is the previous wording; the figures band, gallery and testimonial are hidden by default so no invented numbers or quotes appear. | Yes: confirm the default wording. |
 
 ## C. Not yet built (explicit backlog)
