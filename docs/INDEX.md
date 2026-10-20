@@ -7,6 +7,13 @@ This directory is designed for AI-assisted development. The intended reading str
 - `../AGENTS.md`
 - `00-SOURCE-OF-TRUTH.md`
 - `04-BUSINESS-RULES.md`
+- `34-CODEBASE-MAP.md` — where code lives, which files to copy, and the invariants the code enforces
+
+## Before changing an area
+
+`34-CODEBASE-MAP.md` §2 lists every page, API group, shared component, and library so that new
+work extends an existing pattern instead of adding a parallel one. §7 records known
+specification ↔ code divergences.
 
 ## Weekly reporting work
 

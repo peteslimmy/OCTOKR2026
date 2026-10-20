@@ -2,18 +2,19 @@
 
 Generated as the repository-ready documentation set for vibe coding 4CORE-OKR.
 
-Files: 29 Markdown documents total (2 root, 26 docs, 1 AI prompt).
+Files: 39 Markdown documents under `docs/` plus 3 at the repository root.
 
 ## Root
 - AGENTS.md
 - README.md
-
-## AI
-- ai/MASTER-BUILD-PROMPT.md
+- DISCOVERY-SUMMARY.md
 
 ## Docs
-- docs/00-SOURCE-OF-TRUTH.md through docs/24-DECISIONS.md
+- docs/00-SOURCE-OF-TRUTH.md through docs/34-CODEBASE-MAP.md
 - docs/INDEX.md
+- docs/README.md
+- docs/MASTER-BUILD-PROMPT.md
+- docs/MANIFEST.md
 
 These documents are intended to be committed into the application repository and loaded by the coding agent according to task relevance.
 
