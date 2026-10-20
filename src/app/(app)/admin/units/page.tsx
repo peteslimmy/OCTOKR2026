@@ -65,11 +65,11 @@ export default async function UnitsPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader title={`Business Units (${reporting.length})`} description="Business Units, whether or not they currently report weekly." />
-          {reporting.length === 0 ? <EmptyState title="No Business Units yet">Use "Add unit" to create the first one.</EmptyState> : <ul className="divide-y divide-line">{reporting.map((b) => <Row key={b.id} b={b} />)}</ul>}
+          {reporting.length === 0 ? <EmptyState title="No Business Units yet">Use “Add unit” to create the first one.</EmptyState> : <ul className="divide-y divide-line">{reporting.map((b) => <Row key={b.id} b={b} />)}</ul>}
         </Card>
         <Card>
           <CardHeader title={`Departments (${departments.length})`} description="Departments. Some report weekly, some do not." />
-          {departments.length === 0 ? <EmptyState title="No Departments yet">A Department is a unit that does not file weekly reports. Add one with type "Department".</EmptyState> : <ul className="divide-y divide-line">{departments.map((b) => <Row key={b.id} b={b} />)}</ul>}
+          {departments.length === 0 ? <EmptyState title="No Departments yet">A Department is a unit that does not file weekly reports. Add one with type “Department”.</EmptyState> : <ul className="divide-y divide-line">{departments.map((b) => <Row key={b.id} b={b} />)}</ul>}
         </Card>
       </div>
     </>

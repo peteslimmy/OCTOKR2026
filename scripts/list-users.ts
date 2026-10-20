@@ -28,18 +28,22 @@ async function listUsers() {
   }
 
   const { data: users } = await sb.from("users").select("id, email, status");
-  const userMap = new Map((users || []).map((u: any) => [u.email, u]));
+  const userMap = new Map<string, string | null>();
+  for (const u of users ?? []) userMap.set(u.email, u.status);
 
   console.log("Employees & Users in the application:");
   console.log("=====================================\n");
 
   for (const emp of employees || []) {
-    const user: any = userMap.get(emp.email);
-    const bu = emp.business_units ? `${(emp.business_units as any).name} (${(emp.business_units as any).code})` : "N/A";
+    const status = userMap.get(emp.email);
+    const buRows: { name: string; code: string }[] = Array.isArray(emp.business_units)
+      ? emp.business_units
+      : [];
+    const bu = buRows[0] ? `${buRows[0].name} (${buRows[0].code})` : "N/A";
     console.log(`${emp.email}`);
     console.log(`  Name: ${emp.first_name} ${emp.last_name}`);
     console.log(`  Employment: ${emp.employment_status}`);
-    console.log(`  App User Status: ${user ? user.status : "NO APP USER"}`);
+    console.log(`  App User Status: ${status === undefined ? "NO APP USER" : status}`);
     console.log(`  BU: ${bu}`);
     console.log("");
   }
