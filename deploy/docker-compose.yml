@@ -1,0 +1,36 @@
+# A complete single-host deployment: the web application and the minute-by-minute scheduler (ADR-073).
+# It talks to a Supabase project you already have (hosted, or self-hosted); it does not start a database.
+#
+#   docker build -t 4core-okr --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... ..
+#   cp .env.production.example .env.production      # then fill it in; never commit it
+#   docker compose --env-file .env.production up -d
+#
+# Put a reverse proxy that terminates HTTPS in front of port 3000 (the application sets HSTS only when it is served over HTTPS).
+services:
+  web:
+    image: ${OKR_IMAGE:-4core-okr}
+    restart: unless-stopped
+    env_file: .env.production
+    ports: ["3000:3000"]
+    read_only: true
+    tmpfs: ["/tmp", "/app/.next/cache"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  scheduler:
+    # Calls the job runner every minute, the way a platform cron would. Locks, finalisation, reminders and email delivery depend on it.
+    # A failed call is retried by the next minute's call; the jobs are idempotent.
+    image: curlimages/curl:8.11.1
+    restart: unless-stopped
+    depends_on:
+      web: { condition: service_healthy }
+    env_file: .env.production
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          curl -fsS -m 50 -X POST -H "x-jobs-secret: $$JOBS_SECRET" http://web:3000/api/internal/jobs/run -o /dev/null || echo "scheduler call failed at $$(date -u +%FT%TZ)"
+          sleep 60
+        done
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]

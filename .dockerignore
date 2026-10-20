@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+.dev-mail
+.dev-mfa.json
+test-results
+playwright-report
+coverage
+tsconfig.tsbuildinfo
+supabase/.temp
+supabase/.branches
+*.log

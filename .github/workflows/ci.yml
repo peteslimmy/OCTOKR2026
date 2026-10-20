@@ -1,0 +1,121 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Every job starts the same local Supabase stack and writes the app's environment from that stack's own (throwaway) keys.
+# Nothing here needs a repository secret.
+
+jobs:
+  security:
+    # Dependencies with known serious flaws, and credentials that were committed by mistake. Needs no database.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Dependencies (high and critical advisories fail the build; moderate ones are listed)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Committed secrets
+        run: node scripts/scan-secrets.mjs
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx next typegen
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+      - name: Start local Supabase
+        run: npm run db:start
+      - name: Database integration tests (applies every migration from scratch)
+        run: |
+          npx supabase db reset
+          npx vitest run tests/db
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      - name: Concurrency tests (money, Skip OKR, amendments; committed data on a freshly reset database)
+        run: |
+          npx supabase db reset
+          npx vitest run --config vitest.concurrency.config.ts
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      - name: Environment for the app (local stack keys only)
+        run: bash scripts/ci-env.sh
+      - name: Build
+        run: npm run build
+
+  api:
+    # The HTTP tests: authentication, permissions, validation and the whole request path, one file per app start so the in-memory limits cannot interfere.
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx next typegen
+      - name: Start local Supabase
+        run: npm run db:start
+      - name: Environment for the app and the seed (local stack keys only)
+        run: bash scripts/ci-env.sh
+      - run: npx supabase db reset
+      - run: npm run dev:seed
+      - run: npm run build
+      - name: HTTP tests
+        run: npm run test:api:serial
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+  e2e:
+    # Real browser, real app, real local Supabase: the weekly lifecycle, the amendments, the imports, recovery, email settings and the accessibility gate.
+    # Chromium decides the build. Firefox and WebKit run the same suite so differences are visible, but do not fail the build yet.
+    runs-on: ubuntu-latest
+    needs: verify
+    continue-on-error: ${{ matrix.browser != 'chromium' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx next typegen
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Start local Supabase
+        run: npm run db:start
+      - name: Environment for the app and the seed (local stack keys only)
+        run: bash scripts/ci-env.sh
+      - run: npx supabase db reset
+      - run: npm run dev:seed
+      - run: npm run build
+      - name: End-to-end and accessibility tests
+        run: npx playwright test
+        env:
+          CI: "true"
+          E2E_BROWSER: ${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
