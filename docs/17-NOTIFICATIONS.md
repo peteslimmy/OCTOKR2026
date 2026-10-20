@@ -102,3 +102,10 @@ Important events should be idempotent so retries do not create duplicate notific
 | `LOCK_SCHEDULE_CHANGED` | report owners, calendar managers, session managers | Administration |
 
 Read notifications older than the retention period (default 12 months) and finished email rows older than 90 days are removed once a day (ADR-072); unread notifications are never removed.
+
+### Outbound webhooks (ADR-076)
+
+- Every audit-log row is offered to each enabled `WEBHOOK` integration whose event list matches it (`*`, an exact action, or a prefix ending in `*`). Delivery is asynchronous through `webhook_outbox` with leases, back-off of 2/4/8/16 minutes, give-up after five attempts and a 24-hour expiry.
+- The payload carries the audit action, entity type and id, outcome, actor role, time and correlation id. It never carries old or new values or a reason. Requests are signed `x-okr-signature: sha256=HMAC(secret, "<timestamp>.<body>")`; `TEXT` format posts `{"text": "..."}` for Slack and Teams.
+- An enqueue failure is a warning and never prevents the audit row being written; a delivery failure is recorded in the outbox and never rolls back the business operation. The outbox is closed to browser sessions.
+- Historical import sets the `app.historical_import` session flag, which suppresses notifications for the imported activity so old data does not produce new alerts. Strategy import records issues in its batch table and does not broadcast them.

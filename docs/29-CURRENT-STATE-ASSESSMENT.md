@@ -4,6 +4,8 @@
 **Date of inspection:** 14 October 2026. **Inspected:** the repository `4core-okr` (source, 26 migrations, tests, scripts, CI file, documentation) and the live local database (schema, permission matrix, seeded data) as left by the last end-to-end run.
 **Not inspected / not possible:** any deployed environment, the GitHub CI run (never executed), a real SMTP provider, a production Supabase project, the legacy application (no code or data was ever supplied), browser behaviour on devices other than Microsoft Edge under Playwright.
 
+**Update, 20 October 2026.** Several snapshot findings have since been closed, without rewriting the dated body below. Item 4 is largely resolved: `docs/07` now states stored two-decimal precision and one-decimal display; `docs/10` lists the tables and functions added through migration `20261027000001`; `docs/11` documents RLS for the branding, integration, site-content and import tables; `docs/16` already covers ledger reversal and violation reopening; `docs/17` now covers outbound webhooks and import notification suppression; `README.md` covers the features through ADR-076. Item 6 has changed: outbound webhooks are built (ADR-076), leaving evidence file storage and the AI narrative unbuilt. Section 8's “only SMTP” is superseded by the integrations module. The counts in sections 6 and 7 remain as at 14 October and are deliberately not recomputed here.
+
 ## How to read evidence levels
 
 | Label | Meaning in this report |

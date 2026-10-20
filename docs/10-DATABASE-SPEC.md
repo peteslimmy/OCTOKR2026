@@ -283,7 +283,7 @@ Privileged operations should use controlled functions/services for:
 - `VIRTUAL_PRESENT` means “OKR week skipped” and is not a claim of physical attendance. Reports/exports must include the session outcome so this status is not misinterpreted. No absence violation/penalty is generated for a SKIPPED session. Weekly reporting, submission, review, scoring and compliance obligations remain in force for all BUs.
 
 
-## Tables and functions added after the closing pass (migrations 20261019000007 to 20261020000005)
+## Tables and functions added after the closing pass (migrations 20261019000007 to 20261027000001)
 
 | Migration | Adds |
 |---|---|
@@ -298,5 +298,14 @@ Privileged operations should use controlled functions/services for:
 | 20261020000003 | `reporting_schedule_versions`, `reporting_weeks.schedule_version_id`, `active_schedule()`, `schedule_content_lock/final_lock`, `apply_lock_schedule`, `read_lock_schedule` |
 | 20261020000004 | `rate_limit_hits` (unlogged), `rate_limit_hit()`, `job_heartbeats`, `ops_health()`, `clock_override_present()` |
 | 20261020000005 | `retention_settings`, `purge_transient_data()`, `maybe_purge_transient_data()`, `record_audit_export`, table-driven topics (`applier`, `current_fn`) |
+| 20261021000001 | `app_branding`, `app_branding_assets` (`set_branding`, `set_branding_asset`, `clear_branding_asset`); `create_business_unit`; `read_dashboard_cells` (SECURITY INVOKER dashboard read model) |
+| 20261022000001 | `integration_kinds`, `integrations`, `webhook_outbox`; `validate_integration_payload`, `apply_integration_change`, `read_integrations`, `claim_webhook_batch`, `mark_webhook_result`, `ops_integration_*`; `ops_health` output folded in |
+| 20261022000002 | `site_content`, `site_images`; `set_site_content`, `set_site_image`, `delete_site_image`, `prune_site_images` |
+| 20261023000001 | `permissions.reserved` and reserved-permission guard; `historical_import_batches`, `historical_import_rows`; `history_*` stage/check/rehearse/commit functions; the `app.historical_import` session flag suppresses notifications and snapshots during an import |
+| 20261024000001 | `business_units.unit_type` (BUSINESS_UNIT / DEPARTMENT) with defaulting trigger |
+| 20261024000002 | `create_business_unit` accepts the unit type; the unit import accepts an optional `unitType` column |
+| 20261025000001 | `employees.on_attendance_roster`; `set_employee_roster`; roster and virtual-session creation honour the flag |
+| 20261026000001 | `strategy_import_batches`; `strategy_import_issues`, `strategy_import_commit` (empty, non-active quarters only) |
+| 20261027000001 | `delete_business_unit`, `delete_user`, `delete_weekly_report` (draft reports only), all service-role only and audited |
 
 Conventions kept: every mutation is `SECURITY DEFINER` and callable by `service_role` only (`lock_down_function_grants()` at the end of each migration); functions named `read_` are the only ones open to signed-in users, so operational functions are named `ops_`.
