@@ -194,9 +194,35 @@ create table weekly_quotes (
   speaker_name      text not null check (btrim(speaker_name) <> ''),
   quote             text not null check (char_length(btrim(quote)) between 1 and 1000),
   recorded_by       uuid not null references users(id),
-  created_at        timestamptz not null default app_now()
+  created_at        timestamptz not null default app_now(),
+  status            text not null default 'draft' check (status in ('draft', 'submitted', 'approved', 'published', 'archived'))
 );
 create trigger weekly_quotes_immutable before update or delete on weekly_quotes for each row execute function forbid_mutation();
+
+-- ---------------------------------------------------------------- quote operations
+create or replace function create_quote(p_actor uuid, p_week_id uuid, p_bu uuid, p_speaker text, p_quote text) returns uuid
+language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_id uuid;
+begin
+  perform require_permission(p_actor, 'attendance.session.manage');
+  -- Check week exists
+  if not exists (select 1 from reporting_weeks where id = p_week_id) then
+    raise exception 'NOT_FOUND' using detail = 'Reporting week not found';
+  end if;
+  -- Check BU exists
+  if not exists (select 1 from business_units where id = p_bu) then
+    raise exception 'NOT_FOUND' using detail = 'Business unit not found';
+  end if;
+  -- Check for existing quote for this week (unique constraint enforces one per week)
+  insert into weekly_quotes (reporting_week_id, business_unit_id, speaker_name, quote, recorded_by)
+  values (p_week_id, p_bu, btrim(p_speaker), btrim(p_quote), p_actor)
+  returning id into v_id;
+  perform write_audit(p_actor, 'QUOTE_CREATED', 'weekly_quote', v_id::text, null,
+    jsonb_build_object('weekId', p_week_id, 'buId', p_bu, 'speaker', p_speaker, 'chars', char_length(btrim(p_quote))));
+  return v_id;
+end $$;
+
+drop function if exists create_quote(uuid, uuid, uuid, text, text);
 
 -- ---------------------------------------------------------------- operations
 create or replace function create_governance_session(p_actor uuid, p_week_id uuid) returns uuid

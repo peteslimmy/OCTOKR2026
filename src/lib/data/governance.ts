@@ -67,6 +67,7 @@ export interface ViolationRow {
   id: string; employee_name: string; business_unit: string; type: string; type_code: string; criticality: string; fine_amount: number;
   status: "OPEN" | "PAID" | "DEDUCTION_RECORDED"; created_at: string; session_date: string | null; notes: string | null;
   override_reason: string | null; payment: { method: string; reference: string; paid_at: string } | null; reversed_payments?: number;
+  evidence_files?: EvidenceFileRow[];
 }
 
 export async function listViolations(): Promise<ViolationRow[]> {
@@ -99,10 +100,24 @@ export async function listPermissionGrants(): Promise<Record<string, string[]>> 
   return out;
 }
 
-export async function getWeekQuote(weekId: string) {
+export interface WeekQuote {
+  id: string; speaker_name: string; quote: string; business_unit_id: string;
+  status: "draft" | "submitted" | "approved" | "published" | "archived"; recorded_by: string; submitted_by: string | null;
+}
+
+export async function getWeekQuote(weekId: string): Promise<WeekQuote | null> {
   const sb = await userClient();
-  const { data } = await sb.from("weekly_quotes").select("speaker_name, quote, business_unit_id").eq("reporting_week_id", weekId).maybeSingle();
-  return data as { speaker_name: string; quote: string; business_unit_id: string } | null;
+  const { data } = await sb.from("weekly_quotes").select("id, speaker_name, quote, business_unit_id, status, recorded_by, submitted_by").eq("reporting_week_id", weekId).maybeSingle();
+  return data as WeekQuote | null;
+}
+
+export interface PublishedQuote { id: string; speaker_name: string; quote: string; business_unit: string; published_at: string }
+
+export async function getPublishedQuote(weekId: string): Promise<PublishedQuote | null> {
+  const sb = await userClient();
+  const { data, error } = await sb.rpc("read_published_quote", { p_week_id: weekId });
+  if (error) throw dbError(error, "published quote");
+  return (data as PublishedQuote | null) ?? null;
 }
 
 // ---------------------------------------------------------------- finance
@@ -246,4 +261,27 @@ export async function listSessionCorrections(): Promise<SessionCorrectionRow[]> 
   const { data, error } = await sb.rpc("read_session_corrections");
   if (error) throw dbError(error, "session corrections");
   return (data as SessionCorrectionRow[]) ?? [];
+}
+
+// ---------------------------------------------------------------- evidence files
+export interface EvidenceFileRow {
+  id: string;
+  entity_type: "VIOLATION" | "LEDGER" | "REPORT" | "SESSION";
+  entity_id: string;
+  file_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  checksum: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+}
+
+export async function listEvidenceFiles(entityType: EvidenceFileRow["entity_type"], entityId: string): Promise<EvidenceFileRow[]> {
+  const sb = await userClient();
+  const { data, error } = await sb.rpc("read_evidence_files", { p_entity_type: entityType, p_entity_id: entityId });
+  if (error) throw dbError(error, "evidence files");
+  return (data as EvidenceFileRow[]) ?? [];
 }

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiRequest, Modal, useAction } from "@/components/ui/client";
+import { apiRequest, ConfirmButton, Modal, useAction } from "@/components/ui/client";
 import { Button, Input, Label, Select, Textarea, Field } from "@/components/ui/primitives";
 
 export function CreateSessionButton({ weekId }: { weekId: string }) {
@@ -16,6 +16,22 @@ export function CreateSessionButton({ weekId }: { weekId: string }) {
       }, { refresh: false })}>
       {pending ? "Opening…" : "Create session"}
     </Button>
+  );
+}
+
+const QUOTE_STEPS = {
+  submit: { label: "Submit for approval", title: "Submit this quote for approval", description: "A different person with approval rights must approve it before it can be published.", done: "Quote submitted." },
+  approve: { label: "Approve", title: "Approve this quote", description: "You cannot approve a quote you recorded or submitted.", done: "Quote approved." },
+  publish: { label: "Publish", title: "Publish this quote", description: "It will show on every dashboard for the week.", done: "Quote published." },
+  archive: { label: "Archive", title: "Archive this quote", description: "It is removed from the dashboard. The record is kept.", done: "Quote archived." },
+} as const;
+
+export function QuoteStepButton({ quoteId, step }: { quoteId: string; step: keyof typeof QUOTE_STEPS }) {
+  const { run } = useAction();
+  const s = QUOTE_STEPS[step];
+  return (
+    <ConfirmButton label={s.label} title={s.title} description={s.description} variant={step === "archive" ? "secondary" : "primary"}
+      onConfirm={() => run(() => apiRequest("POST", `quotes/${quoteId}/${step}`), { success: s.done })} />
   );
 }
 

@@ -5,7 +5,7 @@ import { Badge, buttonClass, Card, CardHeader, EmptyState, PageHeader } from "@/
 import { can, requireActor } from "@/lib/auth/actor";
 import { activeWeeks, listBusinessUnits, recentFinalWeeks, type ReportingWeek } from "@/lib/data";
 import { getWeekQuote, listAmendments, listSessionCorrections, listViolations, sessionForWeek } from "@/lib/data/governance";
-import { CreateSessionButton, QuoteForm } from "./governance-actions";
+import { CreateSessionButton, QuoteForm, QuoteStepButton } from "./governance-actions";
 import { CorrectionQueue } from "./session-correction-actions";
 import { formatWeekLabel } from "@/lib/domain/week-label";
 
@@ -53,11 +53,15 @@ export default async function GovernancePage() {
                     {session ? <Badge tone={OUTCOME_TONE[session.outcome as keyof typeof OUTCOME_TONE] ?? "undefined"}>{session.outcome === "SKIPPED" ? "SKIPPED WEEK · VIRTUAL PRESENT" : `Session ${session.outcome.toLowerCase()}`}</Badge> : <Badge tone="undefined">No session yet</Badge>}
                     {session && session.roster_status !== "NONE" ? <Badge tone={session.roster_status === "FINALIZED" ? "locked" : "warn"}>{session.roster_status === "FINALIZED" ? "Roster finalised" : "Roster in draft"}</Badge> : null}
                   </div>
-                  {quote ? <p className="text-sm text-muted">“{quote.quote}” — {quote.speaker_name}</p> : null}
+                  {quote ? <p className="text-sm text-muted">“{quote.quote}” — {quote.speaker_name} <Badge tone={quote.status === "published" ? "done" : "info"}>{quote.status.toUpperCase()}</Badge></p> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {session ? <Link href={`/governance/sessions/${session.id}`} className={buttonClass("primary", "sm")}>Open session</Link>
                     : manage && week.reporting_state === "NORMAL" ? <CreateSessionButton weekId={week.id} /> : null}
+                  {quote && can(actor, "quote.record") && quote.status === "draft" ? <QuoteStepButton quoteId={quote.id} step="submit" /> : null}
+                  {quote && can(actor, "quote.approve") && quote.status === "submitted" && actor.id !== quote.recorded_by && actor.id !== quote.submitted_by ? <QuoteStepButton quoteId={quote.id} step="approve" /> : null}
+                  {quote && can(actor, "quote.approve") && quote.status === "approved" ? <QuoteStepButton quoteId={quote.id} step="publish" /> : null}
+                  {quote && can(actor, "quote.approve") && quote.status === "published" ? <QuoteStepButton quoteId={quote.id} step="archive" /> : null}
                   {can(actor, "quote.record") && !quote && week.reporting_state === "NORMAL" ? <QuoteForm weekId={week.id} bus={bus.filter((b) => b.status === "ACTIVE")} /> : null}
                 </div>
               </li>
