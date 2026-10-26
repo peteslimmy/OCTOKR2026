@@ -16,8 +16,8 @@ Partly remediated (notification error handling fixed; the rest are observations)
 | F-012 | LOW | High | Executed | Remediated 2026-10-26 (uncommitted) | Eight tables have no row-level security (not exposed today) |
 | F-013 | LOW | High | Source | Open | Dead duplicate `lib/auth/rate-limit.ts` in the project root |
 | F-014 | LOW | High | Observed | Remediated 2026-10-26 (uncommitted) | Dead, weaker CSP in `next.config.ts` (only the proxy CSP is sent) |
-| F-015 | LOW | High | Source | Open (decision needed) | `read_payment_is_reversed` is a security-definer function with no caller check |
-| F-016 | LOW | High | Executed | Open (needs approval to update dependencies) | Three moderate dependency advisories |
+| F-015 | LOW | High | Source | Accepted 2026-10-26 (owner: leave as is) | `read_payment_is_reversed` is a security-definer function with no caller check |
+| F-016 | LOW | High | Executed | Partly remediated: nodemailer updated to 10.2.1 (uncommitted at the time of writing); exceljs/uuid advisory accepted | Three moderate dependency advisories |
 | F-017 | LOW | High | Source | Remediated 2026-10-26 (uncommitted) | `kr-execution` route bypasses the shared handler's error and permission conventions |
 | F-018 | LOW | High | Observed | Remediated 2026-10-26 (uncommitted) | Repeated identical action buttons have no row context for assistive technology |
 | F-019 | LOW | Medium | Executed | Partly remediated (coverage report script added; the tests are still not tagged) | Acceptance criteria are weakly traceable to tests; the full browser suite is not run regularly |
@@ -103,9 +103,11 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - Declares `script-src 'unsafe-inline' https://cdn.tailwindcss.com`. Observed response headers carry only the strict nonce-based policy from `src/proxy.ts`. Remove the static one so nobody relies on it. Note `style-src 'unsafe-inline'` is deliberate (documented).
 
 ## F-015 — `read_payment_is_reversed` (LOW)
+- **Decision (owner, 2026-10-26):** leave as is. It needs an unguessable payment id and returns one yes/no; tightening it risked hiding reversal status from people who legitimately need it.
 - Security definer, executable by every signed-in user, no caller check; returns whether a given payment id was reversed. Needs a valid id; leak is a single boolean. Add a permission check or make it `security invoker`.
 
 ## F-016 — Dependency advisories (LOW)
+- **Second pass:** `nodemailer` updated to 10.2.1 (`^10.2.1` in package.json); the three address-parsing advisories (an address that could be split so mail goes to an unintended recipient) no longer apply to production. Typecheck, lint, 230 unit tests and the email HTTP test pass on the rebuilt app. `uuid` (via `exceljs`, "missing bounds check in v3/v5/v6 when a buffer is given") is **accepted**: `exceljs` 4.4 uses uuid v4 without a buffer, so the vulnerable path is not reached, and the suggested fix is a downgrade to `exceljs` 3.4.0. Production audit: 2 moderate (both this one).
 - `npm audit --omit=dev`: `nodemailer` (2 moderate, fix available), `uuid` via `exceljs` (moderate; suggested fix is a major change). No high/critical. CI "fails on high and critical", so these do not gate.
 
 ## F-017 — `kr-execution` route conventions (LOW)
@@ -158,6 +160,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - `GET /api/v1/history-imports` called `read_history_batches` (which identifies the caller from the JWT with `auth_has_permission`) through the service-role helper, where there is no JWT, so it raised PERMISSION_DENIED for everyone, the Super Admin included. A scan of all routes for the pattern (JWT-based function called through the helper) found no other instance. **Fix:** the route calls it with the caller's session. **Test:** `read-scope.api.test.ts`.
 
 ## F-029 — The whole employee directory is readable by every cross-unit role (LOW, decision needed)
+- **Second pass, evidence:** hiding the email in the Next.js API would be cosmetic. On the test stack the Presenter and Executive accounts read all 10 employees' emails **directly** from the database REST endpoint (`/rest/v1/employees`) with their own session, which is the same public address the browser uses; a BU Lead gets only their own unit's 2 rows. So the exposure is the table's read policy and column grants, not a route. **A real fix is a database change:** stop granting direct `select` of `email` (and any other personal columns) on `employees` to `authenticated`, serve names and units to the view-only roles through a narrow view or function, and give HR/Admin the full record through a permission-checked function; then update the server code that reads `employees` through the user's session. It touches several screens and the actor loader, so it was **not** done without a go-ahead.
 - Observed content: `GET /api/v1/employees` returns all 10 seeded people (names, emails, employment status) to Presenter, Director and Executive as well as HR/Admin/Super Admin; a BU Lead or Finance user sees only their own unit. This follows the RLS policy `read_scoped` (which includes `weekly_report.view_all`), not the `users.manage` gate the admin People page uses. It may be intended (presenters need names) but gives read-only roles every colleague's email. **Decision:** confirm, or narrow the policy to the columns/roles needed.
 
 ## F-030 — Small inconsistencies found by the sweep (INFO)
