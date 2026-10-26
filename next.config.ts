@@ -1,13 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // tests build and serve their own copy (NEXT_DIST_DIR=.next-test, set by scripts/test-stack.mjs) so they never disturb a running dev server
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   // Fully dynamic, authenticated application: no prerendered/cached shells.
   cacheComponents: false,
   poweredByHeader: false,
   // the container image (Dockerfile) builds a self-contained server; a normal build and `next start` are unchanged
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   // report exports: these load data files / native streams at runtime and must not be bundled
-  serverExternalPackages: ["pdfkit", "exceljs"],
+  serverExternalPackages: ["pdfkit", "exceljs", "@opentelemetry/sdk-node", "@opentelemetry/auto-instrumentations-node", "systeminformation"],   // the tracing packages are loaded at run time, not bundled (the bundler cannot process systeminformation on Windows)
   turbopack: { rules: { "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" } } },
   async headers() {
     return [

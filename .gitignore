@@ -61,3 +61,4 @@ deploy/.env.production
 
 # the generated second Supabase stack used by tests (scripts/test-stack.mjs)
 /.test-stack/
+/.next-test/

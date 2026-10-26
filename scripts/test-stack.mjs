@@ -75,6 +75,11 @@ async function reset() {
 const testEnv = () => ({
   ...process.env,
   OKR_TEST_STACK: "1",
+  NEXT_DIST_DIR: ".next-test",
+  // never the real mail provider: .env.local selects Resend with a live key, which a test run must not reach
+  EMAIL_TRANSPORT: "file",
+  EMAIL_FILE_DIR: ".dev-mail",
+  RESEND_API_KEY: "",
   DB_URL,
   NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${TEST_PORTS.api}`,
   E2E_BASE_URL: `http://localhost:${APP_PORT}`,

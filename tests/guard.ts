@@ -32,6 +32,7 @@ export async function assertTestEnvironment(): Promise<void> {
   if (!db) return refuse("DB_URL is not set.");
   if (!hostIsLocal(db)) return refuse(`DB_URL is not a local address (${new URL(db).hostname}).`);
   if (api && !hostIsLocal(api)) return refuse("the Supabase URL is not a local address.");
+  if (!ci && (process.env.EMAIL_TRANSPORT === "resend" || process.env.RESEND_API_KEY)) refuse("a live email provider is configured (EMAIL_TRANSPORT=resend or RESEND_API_KEY set); tests must use the file transport.");
   if (ci) return;
 
   if (portOf(db) !== TEST_DB_PORT) refuse(`DB_URL uses port ${portOf(db)}, not the test database port ${TEST_DB_PORT}.`);

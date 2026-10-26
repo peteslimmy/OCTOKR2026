@@ -100,6 +100,8 @@ npm run test:db           # resets the TEST database, then runs the database tes
 npm run test:concurrency  # resets the TEST database; multi-connection race tests for money, Skip OKR and amendments
 npm run test:e2e          # resets and seeds the TEST database, starts the app on port 3100 and drives it in a real browser (Playwright + axe)
 npm run test:api:serial   # every HTTP test file against the test stack (needs a build)
+node scripts/test-stack.mjs run -- npm run build   # builds the app into .next-test with the test stack's settings (separate from the dev server's .next)
+node scripts/test-stack.mjs run --reset --seed -- node scripts/run-api-tests.mjs route-authz   # the generated authorisation sweep over every route (also: evidence-access, read-scope)
 npm run test:stack -- status|start|stop|reset      # manage the test stack by hand
 node scripts/test-stack.mjs run --reset --seed -- <command>   # run any command against the test stack
 npm run db:backup         # backs up the REAL local database to .local/backups/
