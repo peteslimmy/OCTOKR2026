@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { ApiFailure, apiRequest, Modal, useAction } from "@/components/ui/client";
 import { Badge, Banner, Button, Card, CardHeader, EmptyState, Input, Label, PageHeader, Select, Textarea, Field, DataTable } from "@/components/ui/primitives";
 import { wat } from "@/components/status";
+import { EvidenceUploadButton } from "@/components/ui/evidence-upload";
 import type { RosterView } from "@/lib/data/governance";
 import { formatWeekLabel } from "@/lib/domain/week-label";
 
@@ -172,6 +173,7 @@ function CorrectionDialog({ row, onClose }: { row: RosterView["rows"][number]; o
           <Select id="am-status" value={proposed} onChange={(e) => setProposed(e.target.value)} required><option value="">Select…</option>{MANUAL.filter(([v]) => v !== row.effective_status).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></div>
         <Field id="am-reason" label="Reason (required)"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
         <Field id="am-ev" label="Supporting evidence reference (optional)"><Input value={evidence} onChange={(e) => setEvidence(e.target.value)} maxLength={500} placeholder="e.g. document or ticket reference" /></Field>
+        <EvidenceUploadButton entityType="SESSION" entityId={row.id} label="Attach supporting evidence" />
         {err ? <p role="alert" className="text-sm text-[var(--critical-fg)]">{err}</p> : null}
         <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" disabled={pending || !proposed || !reason.trim()}>Submit request</Button></div>
       </form>

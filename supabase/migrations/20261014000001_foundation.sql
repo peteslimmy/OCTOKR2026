@@ -45,6 +45,23 @@ create index audit_logs_time_idx   on audit_logs (occurred_at desc, seq desc);
 create or replace function forbid_mutation() returns trigger
 language plpgsql as $$
 begin
+  -- Allow soft-delete: only setting deleted_at and/or deleted_by is permitted
+  -- Check if the table has deleted_at and deleted_by columns
+  if tg_op = 'UPDATE' then
+    -- Check if NEW has deleted_at/deleted_by columns (tables with soft-delete support)
+    if exists (select 1 from information_schema.columns where table_name = tg_table_name and column_name = 'deleted_at')
+       and exists (select 1 from information_schema.columns where table_name = tg_table_name and column_name = 'deleted_by') then
+      if new.deleted_at is not distinct from old.deleted_at
+        and new.deleted_by is not distinct from old.deleted_by then
+        -- Neither deleted_at nor deleted_by changed - this is a regular update, forbid it
+        raise exception 'IMMUTABLE_RECORD' using detail = format('%s on %s is not permitted', tg_op, tg_table_name);
+      end if;
+      -- At least one of deleted_at/deleted_by changed - this is a soft-delete, allow it
+      return new;
+    end if;
+    -- Table doesn't support soft-delete - all updates are forbidden
+    raise exception 'IMMUTABLE_RECORD' using detail = format('%s on %s is not permitted', tg_op, tg_table_name);
+  end if;
   raise exception 'IMMUTABLE_RECORD' using detail = format('%s on %s is not permitted', tg_op, tg_table_name);
 end $$;
 

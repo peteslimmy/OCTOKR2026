@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { watDate } from "@/components/status";
-import { Badge, Card, CardHeader, EmptyState, PageHeader, DataTable } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
 import { listSessions, listViolations, listViolationTypes, listActiveEmployees } from "@/lib/data/governance";
 import { NewViolationButton, PayButton, ViolationTypeButton } from "./violation-actions";
 import { formatWeekLabel } from "@/lib/domain/week-label";
+import { EvidenceUploadButton, EvidenceFileList } from "@/components/ui/evidence-upload";
 
 export const metadata: Metadata = { title: "Violations" };
 
@@ -47,20 +48,33 @@ export default async function ViolationsPage() {
         <Card>
           <CardHeader title={`Violations (${rows.length})`} />
           {rows.length === 0 ? <EmptyState title="No violations recorded">Use “New violation” to raise one against a staff member.</EmptyState> : (
-            <DataTable caption="Violations" columns={[{ label: "Staff" }, { label: "Type" }, { label: "Criticality" }, { label: "Fine", align: "right" }, { label: "Status" }, { label: "Actions", srOnly: true }]}>
-                  {rows.map((v) => (
-                    <tr key={v.id} className="border-b border-line align-top last:border-0">
-                      <td><p className="font-medium">{v.employee_name}</p><p className="text-xs text-muted">{v.business_unit} · {watDate(v.created_at)}</p></td>
-                      <td>{v.type}{v.override_reason ? <p className="text-xs text-muted">Fine overridden: {v.override_reason}</p> : null}</td>
-                      <td>{v.criticality.toLowerCase()}</td>
-                      <td className="text-right tabular-nums">{money(v.fine_amount)}</td>
-                      <td><Badge tone={TONE[v.status]}>{v.status === "OPEN" ? "Open" : v.status === "PAID" ? "Paid" : "Deducted from salary"}</Badge>
-                        {v.status === "OPEN" && (v.reversed_payments ?? 0) > 0 ? <p className="mt-1 text-xs text-muted">Reopened: an earlier payment was reversed in the ledger.</p> : null}
-                        {v.payment ? <p className="mt-1 text-xs text-muted">Ref {v.payment.reference}</p> : null}</td>
-                      <td className="text-right">{v.status === "OPEN" && can(actor, "violation.payment.record") ? <PayButton id={v.id} amount={money(v.fine_amount)} /> : null}</td>
-                    </tr>
-                  ))}
-                </DataTable>
+            <div className="divide-y divide-line">
+              {rows.map((v) => (
+                <div key={v.id} className="px-6 py-4 space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{v.employee_name}</p>
+                      <p className="text-xs text-muted">{v.business_unit} · {watDate(v.created_at)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={TONE[v.status]}>{v.status === "OPEN" ? "Open" : v.status === "PAID" ? "Paid" : "Deducted from salary"}</Badge>
+                      <span className="tabular-nums font-medium">{money(v.fine_amount)}</span>
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                    <div><span className="text-muted">Type:</span> {v.type}{v.override_reason ? <p className="text-xs text-muted">Fine overridden: {v.override_reason}</p> : null}</div>
+                    <div><span className="text-muted">Criticality:</span> {v.criticality.toLowerCase()}</div>
+                    <div className="flex items-center gap-2">
+                      {v.status === "OPEN" && can(actor, "violation.payment.record") ? <PayButton id={v.id} amount={money(v.fine_amount)} /> : null}
+                      {can(actor, "violation.edit") ? <EvidenceUploadButton entityType="VIOLATION" entityId={v.id} label="Attach evidence" /> : null}
+                    </div>
+                  </div>
+                  {v.status === "OPEN" && (v.reversed_payments ?? 0) > 0 ? <p className="text-xs text-muted">Reopened: an earlier payment was reversed in the ledger.</p> : null}
+                  {v.payment ? <p className="text-xs text-muted">Ref {v.payment.reference}</p> : null}
+                  <EvidenceFileList files={v.evidence_files || []} />
+                </div>
+              ))}
+            </div>
           )}
         </Card>
       </div>
