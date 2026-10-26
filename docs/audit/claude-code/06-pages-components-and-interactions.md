@@ -22,3 +22,6 @@ Exercised: Add unit (open, fill, create, close), Delete unit (confirm with reaso
 
 ## Component notes
 `primitives.tsx` (server-safe) and `primitives-radix.tsx` (client) are now separated; `src/components/ui/table.tsx` has 8 `any` types; `sub-kr-contribution-card.tsx` now uses the shared `apiRequest`; `quote-banner.tsx` is now server-rendered and renders nothing when no quote is published.
+
+## Second pass: automated page smoke test
+`tests/api/page-smoke.api.test.ts` (4 tests, pass) discovers all 42 pages from `src/app` and requests each on the built application as each of 8 seeded roles and anonymously: no page may return a server error, anonymous visitors are redirected to sign in, and the public pages (`/`, `/login`, `/forgot-password`, `/reset-password`) render. Dynamic pages are requested with an unknown id (not found is acceptable, a crash is not). This is the automated form of the manual sweep in this report and closes the gap behind F-004.

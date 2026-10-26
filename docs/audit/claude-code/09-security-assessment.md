@@ -31,3 +31,6 @@ Horizontal/vertical privilege escalation by role; BU-scoped isolation (BU Lead A
 ## Notes on residual risk
 - The Super Admin account used for the audit authenticated successfully only after the owner enrolled a second factor; there is no way around it in the flows read.
 - The password for that account was supplied in chat for local testing; it should be changed (and the chat treated as containing it).
+
+## Second pass (2026-10-26): authorisation tested over HTTP
+Tested on the built application against the seeded test stack with real sign-in and second factors for 8 roles. Results: every route refuses an anonymous caller; no role can crash any route with a blind request; evidence access by role follows the database policy (10 tests) after F-025 was fixed; read routes return only what each role may see (4 tests). New high-severity finding **F-025** (evidence list disclosed every entity's files to any signed-in user) and medium findings F-026 to F-028. **Still unverified:** valid-body mutation authorisation per role over HTTP, horizontal access between two BU Leads of different units (the seed has one), webhook signing, SSRF filter bypasses, file-import parsers, log content, session expiry.

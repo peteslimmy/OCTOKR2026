@@ -1,0 +1,1773 @@
+{
+ "generatedBy": "tests/api/route-authz.api.test.ts",
+ "roles": {
+  "superadmin@4core.local": [
+   "SUPER_ADMIN"
+  ],
+  "admin@4core.local": [
+   "ADMIN"
+  ],
+  "hr@4core.local": [
+   "HR",
+   "BU_LEAD"
+  ],
+  "finance@4core.local": [
+   "FINANCE",
+   "BU_LEAD"
+  ],
+  "lead.eng@4core.local": [
+   "BU_LEAD"
+  ],
+  "presenter@4core.local": [
+   "PRESENTER"
+  ],
+  "director@4core.local": [
+   "DIRECTOR"
+  ],
+  "exec@4core.local": [
+   "EXECUTIVE"
+  ]
+ },
+ "statuses": {
+  "/api/v1/admin/penalty-rate POST": {
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/attendance-amendment-requests GET": {
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200,
+   "finance@4core.local": 200
+  },
+  "/api/v1/attendance-amendment-requests/[id]/approve POST": {
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/attendance-amendment-requests/[id]/reject POST": {
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/attendance-records/[id] PATCH": {
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/attendance-records/[id]/amendment-requests POST": {
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/audit GET": {
+   "presenter@4core.local": 403,
+   "director@4core.local": 403,
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "exec@4core.local": 403,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200,
+   "finance@4core.local": 403
+  },
+  "/api/v1/audit/export GET": {
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "exec@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/auth/me GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/branding GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/branding PUT": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/branding/assets/[kind] DELETE": {
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "presenter@4core.local": 404,
+   "exec@4core.local": 404,
+   "hr@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/branding/assets/[kind] PUT": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/business-units GET": {
+   "director@4core.local": 200,
+   "lead.eng@4core.local": 200,
+   "presenter@4core.local": 200,
+   "exec@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/business-units POST": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/business-units/[id] DELETE": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "presenter@4core.local": 403,
+   "exec@4core.local": 403,
+   "admin@4core.local": 404,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/business-units/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/business-units/bulk-delete POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/config-changes GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/config-changes POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/config-changes/[id]/decision POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/config-changes/[id]/withdraw POST": {
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "hr@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/config-changes/emergency POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/dashboards/bu GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/dashboards/executive GET": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 200,
+   "hr@4core.local": 403,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/disbursement-requests GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/disbursement-requests POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/disbursement-requests/[id]/approve POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/disbursement-requests/[id]/disburse POST": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/disbursement-requests/[id]/reject POST": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/disbursement-requests/[id]/review POST": {
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 403,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 403
+  },
+  "/api/v1/employees GET": {
+   "director@4core.local": 200,
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/employees POST": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/employees/[id] PATCH": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/employees/[id]/roster PATCH": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/evidence GET": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/evidence POST": {
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/evidence/[id] GET": {
+   "director@4core.local": 404,
+   "lead.eng@4core.local": 404,
+   "hr@4core.local": 404,
+   "presenter@4core.local": 404,
+   "exec@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/evidence/[id]/delete DELETE": {
+   "director@4core.local": 403,
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 404,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/evidence/download GET": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/finance/fund GET": {
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/finance/ledger GET": {
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/goals/[id] PATCH": {
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/goals/[id]/delete POST": {
+   "hr@4core.local": 404,
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/goals/[id]/tasks POST": {
+   "hr@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/governance-sessions GET": {
+   "hr@4core.local": 200,
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "exec@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/governance-sessions POST": {
+   "hr@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/governance-sessions/[id] GET": {
+   "hr@4core.local": 404,
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "presenter@4core.local": 404,
+   "exec@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/governance-sessions/[id]/attendance POST": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 404,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "exec@4core.local": 403,
+   "admin@4core.local": 404,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/governance-sessions/[id]/attendance/finalize POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/governance-sessions/[id]/emergency-outcome-correction POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/governance-sessions/[id]/outcome-corrections POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/governance-sessions/[id]/skip-okr POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/history-imports GET": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 403,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/history-imports POST": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 403,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/history-imports/[id]/commit POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/history-imports/[id]/rehearse POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/holiday-amendment-requests GET": {
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/holiday-amendment-requests/[id]/decision POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/holiday-amendments GET": {
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/imports/[entity]/commit POST": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 422,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/imports/[entity]/parse POST": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 422,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/imports/[entity]/validate POST": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 422,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/imports/batches GET": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/integrations GET": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/integrations/request POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/integrations/test POST": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 422,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/integrity-corrections POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/integrity-corrections/preview GET": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/late-report-exceptions GET": {
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/late-report-exceptions POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/late-report-exceptions/[id]/apply POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/late-report-exceptions/[id]/revoke POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/late-report-exceptions/candidates GET": {
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/ledger-entries/[id]/emergency-reversal POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/ledger-entries/[id]/reversal-requests POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/ledger-reversals GET": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/ledger-reversals/[id]/decision POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/ledger-reversals/[id]/execute POST": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/lock-schedule GET": {
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/notification-preferences GET": {
+   "lead.eng@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/notification-preferences PUT": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/notification-settings GET": {
+   "lead.eng@4core.local": 403,
+   "hr@4core.local": 403,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/notification-settings PUT": {
+   "lead.eng@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/notifications GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/notifications/[id]/read POST": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/notifications/read-all POST": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/permissions GET": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/presentation/current GET": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "hr@4core.local": 403,
+   "presenter@4core.local": 200,
+   "finance@4core.local": 403,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/presentation/last-week GET": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "hr@4core.local": 403,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 403,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/presentation/weekly-reports/[reportId] GET": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "hr@4core.local": 403,
+   "presenter@4core.local": 404,
+   "finance@4core.local": 403,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/quotes GET": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "hr@4core.local": 422,
+   "presenter@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/quotes/[id]/approve POST": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 404,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/quotes/[id]/archive POST": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 404,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/quotes/[id]/publish POST": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 404,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/quotes/[id]/submit POST": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 403
+  },
+  "/api/v1/report-snapshots GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/report-snapshots/[id] GET": {
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "hr@4core.local": 404,
+   "finance@4core.local": 404,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/reporting-weeks/[id]/holiday-amendment POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/reporting-weeks/[id]/holiday-amendment-request POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/reporting-weeks/[id]/quote POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/reporting-weeks/current GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/reporting-weeks/organization-holiday POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/reports GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/reports/[id] GET": {
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "hr@4core.local": 404,
+   "finance@4core.local": 404,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/reports/[id]/export GET": {
+   "lead.eng@4core.local": 404,
+   "director@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "hr@4core.local": 404,
+   "finance@4core.local": 404,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/reports/[id]/snapshots POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/reports/assistant POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/reports/insights GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/reports/kr-execution GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/roles GET": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/saved-reports GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/saved-reports POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/saved-reports/[id] DELETE": {
+   "lead.eng@4core.local": 404,
+   "presenter@4core.local": 404,
+   "exec@4core.local": 404,
+   "director@4core.local": 404,
+   "hr@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/saved-reports/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/session-corrections GET": {
+   "lead.eng@4core.local": 403,
+   "presenter@4core.local": 403,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/session-corrections/[id]/decision POST": {
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/session-corrections/[id]/execute POST": {
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/sign-in-imports POST": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/sign-in-imports/commit POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/site GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "finance@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/site PUT": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/site/images/[slot] DELETE": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "admin@4core.local": 200,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/site/images/[slot] PUT": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/smart-evaluations POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy-imports POST": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 403,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy-imports/commit POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/annual-theme GET": {
+   "exec@4core.local": 200,
+   "lead.eng@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/strategy/annual-themes POST": {
+   "exec@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/annual-themes/[id]/change POST": {
+   "exec@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/change-requests GET": {
+   "exec@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "director@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/change-requests POST": {
+   "exec@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/change-requests/[id]/decision POST": {
+   "exec@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/history GET": {
+   "exec@4core.local": 422,
+   "lead.eng@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/key-results/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/key-results/[id]/sub-key-results POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/objectives POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/objectives/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/objectives/[id]/key-results POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/objectives/current GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/strategy/quarters GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "director@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/strategy/quarters POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/strategy/quarters/[id] GET": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "director@4core.local": 404,
+   "hr@4core.local": 404,
+   "admin@4core.local": 404,
+   "finance@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/strategy/quarters/[id]/activate POST": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "director@4core.local": 403,
+   "hr@4core.local": 403,
+   "admin@4core.local": 404,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/strategy/sub-key-results/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/tasks/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/tasks/[id]/delete POST": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 404,
+   "presenter@4core.local": 404,
+   "director@4core.local": 404,
+   "hr@4core.local": 404,
+   "finance@4core.local": 404,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/tasks/[id]/execution-status POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/users POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/users/[id]/delete DELETE": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/users/[id]/mfa-reset POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "director@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/users/[id]/permissions PUT": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/users/[id]/reactivate POST": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 403,
+   "finance@4core.local": 403,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/users/[id]/roles PUT": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "finance@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/users/[id]/suspend POST": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 403,
+   "admin@4core.local": 404,
+   "finance@4core.local": 403,
+   "superadmin@4core.local": 404
+  },
+  "/api/v1/users/bulk-delete POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "finance@4core.local": 422,
+   "superadmin@4core.local": 422
+  },
+  "/api/v1/violation-types GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "finance@4core.local": 200,
+   "superadmin@4core.local": 200
+  },
+  "/api/v1/violation-types POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/violation-types/[id] PATCH": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/violations GET": {
+   "lead.eng@4core.local": 200,
+   "director@4core.local": 200,
+   "exec@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200,
+   "finance@4core.local": 200
+  },
+  "/api/v1/violations POST": {
+   "lead.eng@4core.local": 422,
+   "director@4core.local": 422,
+   "exec@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/violations/[id] PATCH": {
+   "lead.eng@4core.local": 403,
+   "director@4core.local": 403,
+   "exec@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 404,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404,
+   "finance@4core.local": 403
+  },
+  "/api/v1/violations/[id]/payment POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/weekly-reports POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/weekly-reports/[id] DELETE": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 404,
+   "admin@4core.local": 403,
+   "superadmin@4core.local": 403,
+   "finance@4core.local": 404
+  },
+  "/api/v1/weekly-reports/[id] GET": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 404,
+   "director@4core.local": 404,
+   "presenter@4core.local": 404,
+   "hr@4core.local": 404,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404,
+   "finance@4core.local": 404
+  },
+  "/api/v1/weekly-reports/[id]/edit-session DELETE": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200,
+   "finance@4core.local": 200
+  },
+  "/api/v1/weekly-reports/[id]/edit-session POST": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 404,
+   "admin@4core.local": 403,
+   "superadmin@4core.local": 403,
+   "finance@4core.local": 404
+  },
+  "/api/v1/weekly-reports/[id]/edit-session/heartbeat POST": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 404,
+   "admin@4core.local": 403,
+   "superadmin@4core.local": 403,
+   "finance@4core.local": 404
+  },
+  "/api/v1/weekly-reports/[id]/goals POST": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/weekly-reports/[id]/review POST": {
+   "lead.eng@4core.local": 403,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 404,
+   "hr@4core.local": 403,
+   "admin@4core.local": 404,
+   "superadmin@4core.local": 404,
+   "finance@4core.local": 403
+  },
+  "/api/v1/weekly-reports/[id]/skipped-summary PUT": {
+   "lead.eng@4core.local": 422,
+   "exec@4core.local": 422,
+   "director@4core.local": 422,
+   "presenter@4core.local": 422,
+   "hr@4core.local": 422,
+   "admin@4core.local": 422,
+   "superadmin@4core.local": 422,
+   "finance@4core.local": 422
+  },
+  "/api/v1/weekly-reports/[id]/submit POST": {
+   "lead.eng@4core.local": 404,
+   "exec@4core.local": 403,
+   "director@4core.local": 403,
+   "presenter@4core.local": 403,
+   "hr@4core.local": 404,
+   "admin@4core.local": 403,
+   "superadmin@4core.local": 403,
+   "finance@4core.local": 404
+  },
+  "/api/v1/weekly-reports/current GET": {
+   "lead.eng@4core.local": 200,
+   "exec@4core.local": 200,
+   "director@4core.local": 200,
+   "presenter@4core.local": 200,
+   "hr@4core.local": 200,
+   "admin@4core.local": 200,
+   "superadmin@4core.local": 200,
+   "finance@4core.local": 200
+  }
+ }
+}

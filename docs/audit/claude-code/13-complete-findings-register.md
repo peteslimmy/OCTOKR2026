@@ -1,36 +1,41 @@
-# 13 — Complete findings register
-
-Audit date: 2026-10-26. Auditor: Claude Code (Sonnet 5.5). Audited state: the working tree of `4core-okr` as found, including 103 uncommitted changes from earlier sessions. Mode: audit-only (see report 15 for the one disclosure about fixes made earlier in the same session, before the audit instruction).
-
-Severity: CRITICAL / HIGH / MEDIUM / LOW / INFO. Confidence: High (observed or read in source and consistent), Medium (source reading, not exercised), Low (plausible). Verification: **Observed** (seen running), **Executed** (a command/test produced it), **Source** (read in code only), **Inferred**.
-
-"Status" says what the working tree does about it today. Items marked *remediated in working tree* were fixed earlier in this session, before the audit instruction; they are uncommitted and have **no regression test yet**.
+Partly remediated (notification error handling fixed; the rest are observations) yet**.
 
 | ID | Sev | Conf | Verif | Status | Title |
 |---|---|---|---|---|---|
-| F-001 | HIGH | High | Observed + Executed | Remediated 2026-10-26 (uncommitted) | Test scripts erase the real local database |
-| F-002 | HIGH | High | Source (+ Executed after fix) | Remediated, untested | Evidence downloads bypassed row-level security |
-| F-003 | MEDIUM | High | Source | Remediated, untested | Evidence upload wrote to storage before the permission check |
-| F-004 | MEDIUM | High | Observed | Remediated, untested | Units page crashed (server page called a client-only function) |
+| F-001 | HIGH | High | Observed + Executed | Remediated and committed locally 2026-10-26 | Test scripts erase the real local database |
+| F-002 | HIGH | High | Source (+ Executed after fix) | Remediated and tested over HTTP (evidence-access test); uncommitted | Evidence downloads bypassed row-level security |
+| F-003 | MEDIUM | High | Source | Remediated (record-first ordering); the storage-failure path is untested; uncommitted | Evidence upload wrote to storage before the permission check |
+| F-004 | MEDIUM | High | Observed | Remediated; page smoke test added (page-smoke.api.test.ts); the first fix is committed locally | Units page crashed (server page called a client-only function) |
 | F-005 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | `npm run lint` fails, and CI runs lint |
-| F-006 | MEDIUM | High | Source + Observed | Remediated 2026-10-26 (uncommitted) | Earlier "complete" status documents overstated the state of the build |
+| F-006 | MEDIUM | High | Source + Observed | Open | Earlier "complete" status documents overstated the state of the build |
 | F-007 | MEDIUM | High | Source | Remediated 2026-10-26 (uncommitted) | User deletion records no reason and swallows identity-deletion failures |
 | F-008 | MEDIUM | Medium | Source | Remediated 2026-10-26 (uncommitted) | Evidence file type is trusted from the client; no content check |
-| F-009 | MEDIUM | High | Source | Remediated 2026-10-26 (uncommitted) (decision needed) | Quote workflow and report rejection are AI-designed, not specified |
-| F-010 | LOW | High | Source | Remediated 2026-10-26 (uncommitted) | Dev scripts write strategy through the service role and bypass the quarter lock |
+| F-009 | MEDIUM | High | Source | Open (decision needed) | Quote workflow and report rejection are AI-designed, not specified |
+| F-010 | LOW | High | Source | Open | Dev scripts write strategy through the service role and bypass the quarter lock |
 | F-011 | LOW | Medium | Source | Remediated 2026-10-26 (uncommitted) | Per-IP rate limit keys on a client-supplied header |
-| F-012 | LOW | High | Executed | Open | Eight tables have no row-level security (not exposed today) |
+| F-012 | LOW | High | Executed | Remediated 2026-10-26 (uncommitted) | Eight tables have no row-level security (not exposed today) |
 | F-013 | LOW | High | Source | Open | Dead duplicate `lib/auth/rate-limit.ts` in the project root |
-| F-014 | LOW | High | Observed | Open | Dead, weaker CSP in `next.config.ts` (only the proxy CSP is sent) |
-| F-015 | LOW | High | Source | Open | `read_payment_is_reversed` is a security-definer function with no caller check |
-| F-016 | LOW | High | Executed | Open | Three moderate dependency advisories |
-| F-017 | LOW | High | Source | Open | `kr-execution` route bypasses the shared handler's error and permission conventions |
-| F-018 | LOW | High | Observed | Open | Repeated identical action buttons have no row context for assistive technology |
-| F-019 | LOW | Medium | Executed | Open | Acceptance criteria are weakly traceable to tests; the full browser suite is not run regularly |
-| F-020 | INFO | High | Observed | Remediated | Metrics endpoint was public and recorded nothing; tracing absent |
+| F-014 | LOW | High | Observed | Remediated 2026-10-26 (uncommitted) | Dead, weaker CSP in `next.config.ts` (only the proxy CSP is sent) |
+| F-015 | LOW | High | Source | Open (decision needed) | `read_payment_is_reversed` is a security-definer function with no caller check |
+| F-016 | LOW | High | Executed | Open (needs approval to update dependencies) | Three moderate dependency advisories |
+| F-017 | LOW | High | Source | Remediated 2026-10-26 (uncommitted) | `kr-execution` route bypasses the shared handler's error and permission conventions |
+| F-018 | LOW | High | Observed | Remediated 2026-10-26 (uncommitted) | Repeated identical action buttons have no row context for assistive technology |
+| F-019 | LOW | Medium | Executed | Partly remediated (coverage report script added; the tests are still not tagged) | Acceptance criteria are weakly traceable to tests; the full browser suite is not run regularly |
+| F-020 | INFO | High | Observed | Remediated and committed locally (tracing re-verified only against a stand-in collector) | Metrics endpoint was public and recorded nothing; tracing absent |
 | F-021 | INFO | High | Source | Accepted | Scoring exists twice (TypeScript and SQL), kept in step by tests |
-| F-023 | LOW | High | Source | Open | The evidence HTTP tests assert almost nothing |
-| F-022 | INFO | High | Observed | Operational | No active quarter: the system cannot accept weekly reports until Q4 2026 strategy exists |
+| F-023 | LOW | High | Source | Partly remediated (new evidence-access test; the old file is still weak) | The evidence HTTP tests assert almost nothing |
+| F-024 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | The production build failed because of the tracing packages |
+| F-025 | HIGH | High | Executed | Remediated 2026-10-26 (uncommitted) | The evidence list endpoint disclosed every entity's evidence to any signed-in user |
+| F-026 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | Evidence routes returned 500 for every kind of bad input |
+| F-027 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | Evidence could never be attached to a session |
+| F-028 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | The history-import list refused every role, the Super Admin included |
+| F-029 | LOW | High | Executed | Open (decision needed) | The whole employee directory is readable through the API by every cross-unit role |
+| F-030 | INFO | High | Executed | Partly remediated (notification error handling fixed; the rest are observations) | Small inconsistencies found by the sweep (step-up, unknown ids) |
+| F-031 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | Test runs inherited the live email provider from .env.local |
+| F-032 | INFO | High | Observed | Operational (decision needed) | Activating Q4 2026 mid-quarter created weeks that are already past or about to lock without reports |
+| F-033 | MEDIUM | High | Executed | Open | A week past its final-lock time but not yet finalised can be declared a holiday by neither route |
+| F-034 | LOW | High | Executed | Open (owner decision) | Only one person holds the permissions that every after-lock correction needs, and those corrections need two |
+| F-022 | INFO | High | Observed | Operational (waiting on the Q4 2026 strategy) | No active quarter: the system cannot accept weekly reports until Q4 2026 strategy exists |
 
 No CRITICAL findings were substantiated. The absence of a critical finding is not proof there is none: see report 16 for what was not examined.
 
@@ -57,6 +62,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - **Affected:** `src/app/api/v1/evidence/route.ts`. The file was uploaded, then `ops_upsert_evidence_file` enforced `evidence.manage`. Anyone with a step-up session could place files in the private bucket. Now the record is created first (enforcing the permission) and removed if the upload fails; the path suffix uses `randomUUID`. The DB tests for evidence pass (7); the route itself is untested.
 
 ## F-004 — Units page crashed (MEDIUM)
+- **Second pass:** `tests/api/page-smoke.api.test.ts` discovers all 42 pages and requests each on the built app as each of 8 roles (no server error allowed) and anonymously (must redirect to sign in, public pages must render): 4 tests pass. A crash like this one now fails a test.
 - **Observed:** `/admin/units` returned 500: "Attempted to call buttonClass() from the server but buttonClass is on the client". Cause: an earlier session added `"use client"` to `src/components/ui/primitives.tsx` while merging Radix components into it. **Status:** Radix components moved to `primitives-radix.tsx` (client); the rest is server-safe; all ~30 screens then rendered. **Systemic cause:** no automated page-render smoke test runs on every change (see F-019). **Test needed:** a smoke test that renders every `(app)` page as an admin.
 
 ## F-005 — Lint fails and CI runs lint (MEDIUM)
@@ -82,6 +88,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - `scripts/direct-strategy-seed.ts` ("bypassing quarter_is_locked check") and `scripts/populate-strategy-2025-2026.ts` are untracked and write through the service role. They undermine the documented rule that locked quarters are historical records. Keep out of the repo or guard them behind an explicit flag.
 
 ## F-011 — Per-IP rate limit trusts `x-forwarded-for` (LOW)
+- **Remediation (2026-10-26):** `src/lib/api/client-ip.ts` takes the address from the RIGHT of the header by the number of proxies we trust (`TRUSTED_PROXY_HOPS`, default 1), so addresses a client prepends no longer matter; `TRUSTED_PROXY_HOPS=0` ignores the header (direct exposure) and falls back to one shared bucket plus the per-account limit. Used by sign-in and forgot-password. 6 unit tests; the HTTP sign-in, recovery, security and permission tests still pass. **Deployment note:** set `TRUSTED_PROXY_HOPS` to the real number of proxies; the default of 1 is wrong if the app sits behind two or none.
 - `src/app/api/v1/auth/login/route.ts` keys on the header as received. Behind a proxy that overwrites it this is fine; otherwise a client can rotate values. The per-account limit (10/min) remains. Document the proxy requirement or use the platform-provided client IP.
 
 ## F-012 — Eight tables without RLS (LOW)
@@ -110,6 +117,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - Units page: 18 "Delete" buttons and repeated "Stop weekly reporting"/"Require weekly reporting" with identical accessible names (WCAG 2.4.6, 2.5.3 risk). Add `aria-label="Delete <unit>"`.
 
 ## F-019 — Traceability and browser-suite health (LOW)
+- **Second pass:** `npm run ac:coverage` (`scripts/ac-coverage.mjs`) reports which of the 82 criteria are cited by a test: **11 of 82 (13%)**; full list in `artefacts/acceptance-criteria-coverage.md`. The tests are not tagged yet: I did not guess which test proves which criterion, because a wrong tag is worse than none. The full browser suite (Playwright, ~1 h) was still not run.
 - Only 13 of the 82 acceptance-criteria IDs in `docs/20` are cited in any test (coverage may exist uncited; the register cannot prove it). The last recorded full browser run (`e2e-run.log`, 16 Oct): 138 passed, 17 did not run, whole run timed out after 1 h. Not re-run in this audit.
 
 ## F-020 — Metrics and tracing (INFO, remediated)
@@ -128,3 +136,44 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - **F-015** (`read_payment_is_reversed`): the function is called from the violations read model running as the user; a caller check strict enough to matter could hide reversal status from legitimate viewers. It needs a decision on who may see payment reversals; left open.
 - **F-016** (advisories): fixing needs a dependency install/upgrade (`nodemailer` fix available; `uuid` via `exceljs` needs a major change), which needs approval.
 - **F-004 smoke test, F-011, F-013, F-010, F-006 files, F-019, F-009:** not addressed (the last needs the owner; F-013/F-010/F-006 involve deleting files the owner asked to keep for now).
+
+---
+## Second pass: role-by-route authorisation (2026-10-26)
+
+**What was done.** (1) A static classification of all 169 route files: how each enforces authorisation (inline permission, database function with a permission check, the caller's own session/RLS, or a public/secret route), cross-checked against the 300 database functions (`artefacts/route-authorisation-static-analysis.*`). Result: 107 routes enforce a named permission, 43 are scoped by identity or RLS, 2 are public, and the 17 the classifier could not place were each read by hand: none lacks an authorisation point (they delegate to `assert_report_editable`, the config-change engine, `quote_step`, identity-scoped functions, or their own secret). No route passes an actor id other than the signed-in user's. (2) A generated sweep (`tests/api/route-authz.api.test.ts`) that discovers all 192 route-and-method pairs at run time, on the built app against the seeded test stack: every non-public pair refuses an anonymous caller (401); for each of 8 seeded roles, no pair crashes and no mutating pair accepts a blind request (full table: `artefacts/role-route-status-matrix.json`). (3) Content probes of the read routes that answered 200 to every role (`tests/api/read-scope.api.test.ts`) and a per-role evidence access test (`tests/api/evidence-access.api.test.ts`, 10 tests). The earlier hand-written matrix covered 21 of 188 pairs.
+
+## F-024 — The production build failed because of the tracing packages (MEDIUM)
+- **Found by:** actually running `next build` (first time on this machine since tracing was added). The bundler panicked on `systeminformation` (a Windows-only path) pulled in by `@opentelemetry/auto-instrumentations-node`. **Cause:** my own F-020 change. **Fix:** the tracing packages are server-external (`serverExternalPackages`), loaded at run time. The build succeeds; tracing itself was not re-verified after the change.
+
+## F-025 — The evidence list endpoint disclosed every entity's evidence (HIGH)
+- `GET /api/v1/evidence` called `read_evidence_files` (security **invoker**, no checks of its own, relying on RLS) through the service-role helper, which bypasses RLS. Any signed-in user could list the file names, paths and checksums of any violation, ledger entry, report or session whose id they knew. Same family as F-002. **Fix:** the list is read with the caller's own session. **Verified:** `evidence-access.api.test.ts`, 10 tests: for each of 8 roles the list, fetch-by-id and fetch-by-path match the database policy (a role that may not see the record gets an empty list and 404). Before the fix this was not detectable by status codes alone.
+
+## F-026 — Evidence routes returned 500 for every kind of bad input (MEDIUM)
+- The routes threw plain `Error("VALIDATION_ERROR: …")`, which the shared handler cannot map, so a missing parameter, wrong type, bad checksum or oversize file all produced `500 INTERNAL_ERROR` (and a Zod failure an unhandled exception). The generated sweep found it for all 8 roles. **Fix:** every case now returns 422 (or 502 for a storage failure) through `fail()`; a missing file in storage is 404 and any other storage error 502 rather than a misleading 404.
+
+## F-027 — Evidence could never be attached to a session (MEDIUM)
+- The SESSION branch of `ops_upsert_evidence_file` contained a bare `select 1 from governance_sessions …` which PL/pgSQL rejects at run time ("query has no destination"). The existing tests never exercised that type. **Fix:** migration `20261030000008` (PERFORM). New database test records evidence for all four entity types and refuses a missing entity of each.
+
+## F-028 — The history-import list refused every role (MEDIUM)
+- `GET /api/v1/history-imports` called `read_history_batches` (which identifies the caller from the JWT with `auth_has_permission`) through the service-role helper, where there is no JWT, so it raised PERMISSION_DENIED for everyone, the Super Admin included. A scan of all routes for the pattern (JWT-based function called through the helper) found no other instance. **Fix:** the route calls it with the caller's session. **Test:** `read-scope.api.test.ts`.
+
+## F-029 — The whole employee directory is readable by every cross-unit role (LOW, decision needed)
+- Observed content: `GET /api/v1/employees` returns all 10 seeded people (names, emails, employment status) to Presenter, Director and Executive as well as HR/Admin/Super Admin; a BU Lead or Finance user sees only their own unit. This follows the RLS policy `read_scoped` (which includes `weekly_report.view_all`), not the `users.manage` gate the admin People page uses. It may be intended (presenters need names) but gives read-only roles every colleague's email. **Decision:** confirm, or narrow the policy to the columns/roles needed.
+
+## F-030 — Small inconsistencies found by the sweep (INFO)
+- **Second pass:** `POST /notifications/[id]/read` now maps a database error through `dbError` instead of throwing a plain `Error`. `DELETE /site/images/[slot]` already validates the slot name (idempotent delete is fine). Left as they are: no step-up on `PATCH /violation-types/[id]` (both go to approval; adding step-up is a friction decision) and the 200 for an unknown notification id.
+- `PATCH /violation-types/[id]` has no step-up whereas `POST /admin/penalty-rate` has (both go to a two-person approval anyway). `POST /notifications/[id]/read` returns 200 for an unknown id (RLS makes it a no-op) and throws a plain `Error` on a database error. `DELETE /site/images/[slot]` returns 200 for an empty or unknown slot. None is exploitable; each is a candidate for 404/validation.
+
+## F-031 — Test runs inherited the live email provider (MEDIUM)
+- **Found by:** the full HTTP suite: `email.api.test.ts` expected the file transport but the app under test reported `transport: "resend"`. `.env.local` sets `EMAIL_TRANSPORT=resend` with a live API key, and the test wrapper passed the whole environment through, so a test run could hand mail to the real provider. The seeded recipients are undeliverable `@4core.local` addresses and the failing test sent nothing (`sent: 0`), so no external mail is known to have gone out, but nothing prevented it. **Fix:** the test stack now forces `EMAIL_TRANSPORT=file`, `EMAIL_FILE_DIR=.dev-mail` and an empty `RESEND_API_KEY`, and `tests/guard.ts` refuses to run when a live provider is configured. **Verified:** the email test passes (5 of 5) on the file transport.
+- **Related, not addressed:** other live settings in `.env.local` (integration encryption key, jobs secret) are local-stack values, not production secrets, but the pattern "tests inherit the developer's environment" deserves a dedicated, minimal test environment file.
+
+## F-032 — Activating Q4 mid-quarter created weeks that are past or about to lock empty (INFO, decision needed)
+- **Observed:** Q4 2026 (1 Oct to 31 Dec) was activated on 26 Oct with the owner's objective, 3 key results and 6 Sub-KRs. The 13 weeks were generated for the whole quarter, so weeks 41 and 42 (5 to 18 Oct) are already past final lock, and week 43 (19 to 25 Oct) final-locks on Tue 27 Oct 11:00 WAT. No business unit could file against a strategy that did not exist. When the scheduled finalisation runs, each reporting unit gets a not-submitted result (0%, non-compliant) for those weeks, and the fixed quarterly denominator counts them. No scheduler runs locally, so nothing has been finalised yet.
+- **Options (owner's decision):** declare those weeks organisation holidays (excluded from scoring, two-person approval); authorise late-report exceptions per unit; or authorise late-report exceptions after the weeks have been finalised; or accept the zeros. (An earlier version of this entry also listed the historical import: that is wrong. It accepts only quarters that have ended and refuses weeks the application has already closed; the check is in `history_issues`.) The system supports all three; none has been applied.
+
+## F-033 — A week past its final-lock time but not yet finalised cannot be declared a holiday (MEDIUM)
+- **Found by:** advising on weeks 41 and 42 of Q4 2026 (final lock passed on 13 and 20 Oct, status still SCHEDULED because the finalisation job has not run). `declare_organization_holiday` decides by the clock (`report_phase` = FINAL_LOCKED) and answers HOLIDAY_AMENDMENT_REQUIRED; `request_holiday_amendment` decides by the stored status (not FINAL_LOCKED) and answers HOLIDAY_REQUEST_NOT_NEEDED ("amend it directly"). Each refers the caller to the other. It resolves only after the job has finalised the week, which records not-submitted zeros first. `tests/db/holiday_gap.test.ts` pins this behaviour. **Suggested fix:** let the amendment route accept a week whose clock phase is FINAL_LOCKED, or let the direct route accept an unfinalised week as long as nothing was submitted.
+
+## F-034 — Only one person can perform after-lock corrections (LOW, owner decision)
+- Holiday amendments, late-report exceptions and their reviews need `quarter.score.amend` (Admin and Super Admin only), and the design requires a second person to approve or to apply (`HOLIDAY_REQUEST_SELF_APPROVAL`, `TWO_PERSON_APPROVAL_REQUIRED`, `LATE_AMENDMENT_SEGREGATION`). The real organisation has one Super Admin and ten BU Leads, so none of those corrections can be completed today. This is the control working as designed; the owner needs a second Admin or Super Admin account before any of them is possible. Not a defect in code.

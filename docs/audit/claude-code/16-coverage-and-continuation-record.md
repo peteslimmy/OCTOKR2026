@@ -8,7 +8,7 @@ Status model: NOT STARTED → DISCOVERED → INSPECTED → TESTED → VERIFIED; 
 | Requirements located | INSPECTED | 43 docs + 2 sibling folders located; 5 docs read in depth | read `../spec`, `../spec2`, `docs/04,06,08,11,15,16,18,19` |
 | Pages (42) | 33 TESTED (loaded, no error); 9 DISCOVERED | browser | `/weekly*`, session/report detail pages need data |
 | Components | INSPECTED (shared primitives, quote/review/units/contribution) | source | ~380 other files not read |
-| API routes (169) | DISCOVERED (all, scripted); INSPECTED ~25; TESTED 5 (unauthenticated probes) | script + source | authorised/negative tests per role |
+| API routes (169) | DISCOVERED and statically classified (all); TESTED over HTTP: all 192 route-and-method pairs anonymously and as 8 roles with blind requests; evidence and read routes in depth | script, built app on the test stack | valid-body authorisation per role for mutating routes (the sweep cannot tell authorisation from validation when the body is empty); storage-backed paths; webhook and import-file handling |
 | Database objects | INSPECTED via catalogue queries (RLS, grants, definers, search_path) | live read-only SQL | orphan/duplicate scans; index/plan review; storage policies |
 | Business rules | scoring VERIFIED against spec (source + tests); review/quote/hierarchy TESTED (DB); others INSPECTED via test names only | | locks, attendance, fund, change control not re-derived |
 | Workflows | add/delete unit VERIFIED live; all others BLOCKED (no reporting week) | | Phase 2 of the roadmap |
