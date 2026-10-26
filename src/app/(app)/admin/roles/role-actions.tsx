@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { apiRequest, Modal, useAction } from "@/components/ui/client";
-import { Badge, Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { Badge, Button, Field, Input, NativeSelect, Select, Textarea } from "@/components/ui/primitives";
 
 export interface RoleView { id: string; code: string; name: string; description: string | null; members: number; permissions: string[]; requiresMfa: boolean; isSystem: boolean }
 export interface PermissionView { code: string; description: string; protected: boolean; reserved?: boolean }

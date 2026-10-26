@@ -3,7 +3,7 @@
 import { ArrowDown, ArrowUp, ImagePlus, Trash2 } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { apiRequest, useAction } from "@/components/ui/client";
-import { Button, Input, Select } from "@/components/ui/primitives";
+import { Button, Input, NativeSelect, Select } from "@/components/ui/primitives";
 import { ICON_LABELS } from "@/components/site/icons";
 import { ICON_NAMES, IMAGE_LIMIT_BYTES, newSlot, type IconName } from "@/lib/site-content";
 

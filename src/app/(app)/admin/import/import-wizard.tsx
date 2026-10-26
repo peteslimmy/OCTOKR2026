@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
-import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, Label, Select, DataTable } from "@/components/ui/primitives";
+import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, Label, NativeSelect, Select, DataTable } from "@/components/ui/primitives";
 import { ENTITIES, applyMappingFor, mappingProblemsFor, type EntityId, type Mapping } from "@/lib/import/entities";
 import { errorReportCsv, type Policy, type RowResult, type ValidationSummary } from "@/lib/import/employees";
 

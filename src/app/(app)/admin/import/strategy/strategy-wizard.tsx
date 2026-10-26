@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Upload } from "lucide-react";
+import { CheckCircle2, Upload, FileSpreadsheet, Download } from "lucide-react";
 import { useState } from "react";
 import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
 import { Button, Card, CardHeader, DataTable, Field, Input } from "@/components/ui/primitives";
@@ -8,6 +8,20 @@ import { Button, Card, CardHeader, DataTable, Field, Input } from "@/components/
 interface Row { row_no: number; year: number; quarter: number; objective: string; kr_no: number; kr_title: string; sub_no: number; sub_title: string }
 interface Checked { fileName: string; sha256: string; rows: Row[]; quarters: string[]; issues: { row: number; message: string }[]; issueCount: number }
 interface Done { objectives: number; key_results: number; sub_key_results: number; already_imported?: boolean; quarters: { year: number; quarter: number; status: string }[] }
+
+// Strategy import template CSV
+const STRATEGY_TEMPLATE = `Year,Quarter,Objective,KR,KR title,Sub-KR,Sub-KR title
+2025,Q1,Launch core product,1,Market readiness,1.1,Define MVP scope
+2025,Q1,Launch core product,1,Market readiness,1.2,Complete user testing
+2025,Q1,Launch core product,2,Technical excellence,2.1,API stability at 99.9%
+2025,Q1,Launch core product,2,Technical excellence,2.2,Zero critical bugs`;
+
+function download(name: string, text: string, type = "text/csv;charset=utf-8") {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function StrategyWizard() {
   const [busy, setBusy] = useState(false);
@@ -34,6 +48,13 @@ export function StrategyWizard() {
       <Card>
         <CardHeader title="1. Choose the spreadsheet" description="One row per Sub-KR: Year, Quarter, Objective, KR, KR title, Sub-KR, Sub-KR title. A blank Year, Quarter, Objective, KR or KR title repeats the row above. Each quarter needs one objective, 3 or 4 key results numbered from 1, and at least one Sub-KR under each." />
         <Field id="strat-file" label="Spreadsheet (.xlsx or .csv)"><Input id="strat-file" type="file" accept=".xlsx,.csv" disabled={busy || !!done} onChange={(e) => onFile(e.target.files?.[0])} /></Field>
+        <div className="flex flex-wrap items-center gap-3 text-sm mt-2">
+          <FileSpreadsheet className="h-4 w-4 text-muted" aria-hidden />
+          <span className="text-muted">Columns: Year, Quarter (1-4 or Q1-Q4), Objective, KR (1-4), KR title, Sub-KR, Sub-KR title</span>
+          <Button size="sm" variant="secondary" onClick={() => download("strategy-import-template.csv", STRATEGY_TEMPLATE)}>
+            <Download className="h-4 w-4" aria-hidden />Download template
+          </Button>
+        </div>
         {busy && !checked ? <p role="status" className="mt-3 text-sm">Reading and checking the file…</p> : null}
         {error ? <p role="alert" className="mt-3 text-sm text-danger-700">{error}</p> : null}
       </Card>

@@ -16,7 +16,7 @@ export class ApiFailure extends Error {
   }
 }
 
-// Step-up: the server answers STEP_UP_REQUIRED when a high-risk action needs a fresh authenticator code. The host component below
+// Step-up: the server answers STEP_UP_REQUIRED when a high-risk action needs a fresh second factor. The host component below
 // (mounted once in the app shell) asks for it, then the original request is retried exactly once.
 let stepUpPrompt: (() => Promise<boolean>) | null = null;
 export function setStepUpPrompt(fn: (() => Promise<boolean>) | null) { stepUpPrompt = fn; }
@@ -56,40 +56,89 @@ export async function apiUpload<T = unknown>(path: string, file: File): Promise<
   return json.data as T;
 }
 
-/** Mount once. Provides the authenticator-code dialog that apiRequest opens for STEP_UP_REQUIRED. */
+type Methods = { totp: boolean; email: boolean };
+
+/** Mount once. Provides the second-factor dialog that apiRequest opens for STEP_UP_REQUIRED. */
 export function StepUpHost() {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [methods, setMethods] = useState<Methods | null>(null);
+  const [method, setMethod] = useState<"totp" | "email">("totp");
+  const [sent, setSent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const resolver = useRef<((ok: boolean) => void) | null>(null);
   useEffect(() => {
-    setStepUpPrompt(() => new Promise<boolean>((resolve) => { resolver.current = resolve; setCode(""); setError(null); setOpen(true); }));
+    setStepUpPrompt(() => new Promise<boolean>((resolve) => {
+      resolver.current = resolve;
+      setCode(""); setError(null); setNotice(null); setMethods(null); setMethod("totp"); setSent(false); setCooldown(0); setOpen(true);
+      apiRequest<Methods>("GET", "auth/mfa/status")
+        .then((s) => { const m = { totp: !!s.totp, email: !!s.email }; setMethods(m); if (!m.totp && m.email) setMethod("email"); })
+        .catch(() => setMethods({ totp: true, email: false }));
+    }));
     return () => setStepUpPrompt(null);
   }, []);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((v) => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
   const finish = (ok: boolean) => { setOpen(false); resolver.current?.(ok); resolver.current = null; };
+  const send = async () => {
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      await apiRequest("POST", "auth/mfa/email/send", { purpose: "STEP_UP" });
+      setSent(true); setCooldown(60); setNotice("We sent a 6-digit code to your email address.");
+    } catch (err) {
+      setError((err as ApiFailure).message);
+    }
+    setBusy(false);
+  };
+  const longEnough = code.replace(/\s/g, "").length === 6;
   return (
-    <Modal open={open} onOpenChange={(o) => { if (!o) finish(false); }} title="Confirm with your authenticator"
-      description="This action needs a fresh 6-digit code from your authenticator app.">
+    <Modal open={open} onOpenChange={(o) => { if (!o) finish(false); }} title="Confirm this change"
+      description="This action needs a fresh second factor: a code from your authenticator app or one we email you.">
       <form className="space-y-3" onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
         setError(null);
         try {
-          await apiRequest("POST", "auth/mfa/verify", { code: code.replace(/\s/g, "") });
+          if (method === "email") await apiRequest("POST", "auth/mfa/email/verify", { code: code.replace(/\s/g, ""), purpose: "STEP_UP" });
+          else await apiRequest("POST", "auth/mfa/verify", { code: code.replace(/\s/g, "") });
           finish(true);
         } catch (err) {
           setError((err as ApiFailure).message);
         }
         setBusy(false);
       }}>
-        <label htmlFor="stepup-code" className="block text-sm font-medium">Authenticator code</label>
-        <input id="stepup-code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} required autoFocus
-          className="w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm" />
+        {methods && methods.totp && methods.email ? (
+          <div className="flex gap-2" role="group" aria-label="Second factor">
+            <button type="button" aria-pressed={method === "totp"} onClick={() => { setMethod("totp"); setError(null); }}
+              className={clsx("rounded-lg border px-3 py-1.5 text-sm", method === "totp" ? "border-brand-700 text-brand-700" : "border-line text-muted")}>Authenticator app</button>
+            <button type="button" aria-pressed={method === "email"} onClick={() => { setMethod("email"); setError(null); }}
+              className={clsx("rounded-lg border px-3 py-1.5 text-sm", method === "email" ? "border-brand-700 text-brand-700" : "border-line text-muted")}>Email code</button>
+          </div>
+        ) : null}
+        {method === "email" ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted">{sent ? "Enter the code we emailed you. It works once and expires in 10 minutes." : "We will email you a 6-digit code."}</p>
+            <Button type="button" variant="secondary" onClick={send} disabled={busy || cooldown > 0}>
+              {cooldown > 0 ? `Send another code in ${cooldown}s` : sent ? "Send another code" : "Email me a code"}
+            </Button>
+          </div>
+        ) : null}
+        <div>
+          <label htmlFor="stepup-code" className="block text-sm font-medium">{method === "email" ? "Email code" : "Authenticator code"}</label>
+          <input id="stepup-code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} required autoFocus
+            className="w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm" />
+        </div>
+        {notice ? <p role="status" className="text-sm text-[var(--done-fg)]">{notice}</p> : null}
         {error ? <p role="alert" className="text-sm text-[var(--critical-fg)]">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => finish(false)}>Cancel</Button>
-          <Button type="submit" disabled={busy || code.replace(/\s/g, "").length !== 6}>{busy ? "Verifying…" : "Confirm"}</Button>
+          <Button type="submit" disabled={busy || !longEnough || (method === "email" && !sent)}>{busy ? "Verifying…" : "Confirm"}</Button>
         </div>
       </form>
     </Modal>

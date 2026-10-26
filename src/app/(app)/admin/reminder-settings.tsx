@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { apiRequest, useAction } from "@/components/ui/client";
-import { Badge, Button, Field, Input, Select } from "@/components/ui/primitives";
+import { Badge, Button, Field, Input, NativeSelect, Select } from "@/components/ui/primitives";
 
 interface Props {
   settings: { remindersEnabled: boolean; reminderHours: number[]; maxPerWeek: number; emailEnabled: boolean };

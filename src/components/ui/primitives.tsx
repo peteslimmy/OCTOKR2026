@@ -1,26 +1,29 @@
+
 import clsx from "clsx";
 import { cloneElement, isValidElement } from "react";
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { cn } from "./utils";
 
 // ---------------------------------------------------------------- Button
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "outline";
 export function buttonClass(variant: Variant = "primary", size: "sm" | "md" = "md") {
-  return clsx(
+  return cn(
     "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
     size === "sm" ? "px-3 py-1 text-sm min-h-8" : "px-4 py-2 text-sm min-h-10",
     variant === "primary" && "bg-brand-700 text-white hover:bg-brand-800",
     variant === "secondary" && "border border-line bg-panel text-ink hover:bg-surface",
     variant === "danger" && "bg-[#991b1b] text-white hover:bg-[#7f1d1d]",
     variant === "ghost" && "text-ink hover:bg-surface",
+    variant === "outline" && "border border-line bg-panel text-ink hover:bg-surface",
   );
 }
 export function Button({ variant, size, className, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" }) {
-  return <button type="button" {...p} className={clsx(buttonClass(variant, size), className)} />;
+  return <button type="button" {...p} className={cn(buttonClass(variant, size), className)} />;
 }
 
 // ---------------------------------------------------------------- Card
 export function Card({ className, ...p }: HTMLAttributes<HTMLDivElement>) {
-  return <div {...p} className={clsx("rounded-xl border border-line bg-panel shadow-[var(--shadow-card)]", className)} />;
+  return <div {...p} className={cn("rounded-xl border border-line bg-panel shadow-[var(--shadow-card)]", className)} />;
 }
 export function CardHeader({ title, description, action }: { title: ReactNode; description?: ReactNode; action?: ReactNode }) {
   return (
@@ -47,9 +50,13 @@ const tone = {
   brand: "bg-brand-100 text-brand-800",
 } as const;
 export type Tone = keyof typeof tone;
-export function Badge({ tone: t = "undefined", children, title }: { tone?: Tone; children: ReactNode; title?: string }) {
+export function Badge({ tone: t = "undefined", children, title, variant }: { tone?: Tone; children: ReactNode; title?: string; variant?: "default" | "outline" }) {
   return (
-    <span title={title} className={clsx("inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap", tone[t])}>
+    <span title={title} className={cn(
+      "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap",
+      variant === "outline" ? "border border-line bg-transparent" : "",
+      tone[t],
+    )}>
       {children}
     </span>
   );
@@ -67,8 +74,16 @@ export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
 export function Textarea(p: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea rows={3} {...p} className={clsx(fieldClass, p.className)} />;
 }
-export function Select(p: SelectHTMLAttributes<HTMLSelectElement>) {
+export function NativeSelect(p: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...p} className={clsx(fieldClass, p.className)} />;
+}
+
+/**
+ * Backward-compatible Select component that mimics the native <select> API.
+ * Use this for simple dropdowns that don't need Radix Select's advanced features.
+ */
+export function Select({ value, onChange, children, className, ...p }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select value={value} onChange={onChange} className={clsx(fieldClass, className)} {...p}>{children}</select>;
 }
 
 /**
@@ -90,7 +105,7 @@ export function Field({ id, label, hint, error, required, children, className }:
   );
 }
 
-// ---------------------------------------------------------------- Data table
+// ---------------------------------------------------------------- Data table (simple, accessible HTML table)
 export interface Column { label: string; align?: "left" | "right"; srOnly?: boolean }
 /**
  * The one table layout: a scrollable wrapper (never widens the page), a screen-reader caption, a header row of real column headers,
@@ -162,3 +177,6 @@ export function PageHeader({ title, description, actions }: { title: string; des
     </div>
   );
 }
+
+
+export * from "./primitives-radix";

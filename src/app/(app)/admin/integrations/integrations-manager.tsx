@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { apiRequest, Modal, useAction } from "@/components/ui/client";
-import { Badge, Banner, Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { Badge, Banner, Button, Field, Input, NativeSelect, Select, Textarea } from "@/components/ui/primitives";
 import type { IntegrationKind, IntegrationView, SettingField, Slot, TestResult } from "@/lib/integrations/types";
 
 const SLOTS: { slot: Slot; title: string; blurb: string }[] = [

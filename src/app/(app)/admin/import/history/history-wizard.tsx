@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, FlaskConical, Upload } from "lucide-react";
+import { CheckCircle2, FlaskConical, Upload, FileSpreadsheet, Download } from "lucide-react";
 import { useState } from "react";
 import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
 import { Badge, Button, Card, CardHeader, DataTable, Field, Input } from "@/components/ui/primitives";
@@ -17,6 +17,19 @@ interface Outcome {
   per_quarter: { year: number; quarter: number; weeks: number; reports: number }[]; quarterly_scores: Score[]; rehearsal?: boolean; already_committed?: boolean;
 }
 const pct = (n: number | null) => (n === null || n === undefined ? "—" : `${Number(n).toFixed(1)}%`);
+
+// History import template CSV (one row per goal with tasks/statuses)
+const HISTORY_TEMPLATE = `Year,Week,BU/Depart,SubKR,Goal,Task 1,Status 1,Task 2,Status 2,Task 3,Status 3
+2025,1,ENG,1.1,"Improve API latency",Add caching,DONE,Optimize queries,NOT_DONE,Write tests,DONE
+2025,1,ENG,1.2,"Reduce error rate",Add retry logic,DONE,Improve monitoring,NOT_DONE,,
+2025,2,OPS,2.1,"Automate deployments",Create pipeline,DONE,Add staging,NOT_DONE,,`;
+
+function download(name: string, text: string, type = "text/csv;charset=utf-8") {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function HistoryWizard() {
   const [busy, setBusy] = useState(false);
@@ -52,6 +65,13 @@ export function HistoryWizard() {
         <Field id="hist-file" label="Spreadsheet (.xlsx or .csv, up to 10 MB and 20,000 rows)">
           <Input id="hist-file" type="file" accept=".xlsx,.csv" disabled={busy || !!result} onChange={(e) => onFile(e.target.files?.[0])} />
         </Field>
+        <div className="flex flex-wrap items-center gap-3 text-sm mt-2">
+          <FileSpreadsheet className="h-4 w-4 text-muted" aria-hidden />
+          <span className="text-muted">Columns: Year, Week, BU/Depart, SubKR (optional), Goal, Task 1, Status 1, Task 2, Status 2… (up to 10 tasks)</span>
+          <Button size="sm" variant="secondary" onClick={() => download("history-import-template.csv", HISTORY_TEMPLATE)}>
+            <Download className="h-4 w-4" aria-hidden />Download template
+          </Button>
+        </div>
         {busy && !up ? <p role="status" className="mt-3 text-sm text-ink-600">Reading and checking the file…</p> : null}
         {error ? <p role="alert" className="mt-3 text-sm text-danger-700">{error}</p> : null}
       </Card>
