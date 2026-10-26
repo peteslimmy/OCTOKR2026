@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { api, fail } from "@/lib/api/handler";
 import { rateLimited } from "@/lib/auth/rate-limit";
+import { clientIp } from "@/lib/api/client-ip";
 import { userClient } from "@/lib/supabase/server";
 
 const GENERIC = "Invalid email or password.";
@@ -8,7 +9,7 @@ const GENERIC = "Invalid email or password.";
 export const POST = api(
   { public: true, body: z.object({ email: z.string().trim().toLowerCase().email().max(200), password: z.string().min(1).max(200) }) },
   async ({ body, req, rpc }) => {
-    const ip = req.headers.get("x-forwarded-for") ?? "local";
+    const ip = clientIp(req);
     if (await rateLimited(`login:ip:${ip}`, 30, 60_000) || await rateLimited(`login:acct:${body.email}`, 10, 60_000)) {
       throw fail("RATE_LIMITED", 429, "Too many attempts. Please wait a minute and try again.");
     }
