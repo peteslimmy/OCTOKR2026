@@ -57,6 +57,7 @@ const MAP: Record<string, { status: number; message: string }> = {
   ATTENDANCE_SESSION_SKIPPED: { status: 409, message: "This OKR session was skipped; its roster is read-only." },
   VIOLATION_NOT_ALLOWED_SKIPPED_SESSION: { status: 409, message: "A skipped OKR session cannot generate an absence violation." },
   VIOLATION_ALREADY_SETTLED: { status: 409, message: "This violation has already been settled." },
+  VIOLATION_SELF_VOID: { status: 403, message: "The person who raised a violation cannot void it. Ask another administrator." },
   DUPLICATE_PAYMENT: { status: 409, message: "That payment reference has already been used." },
   DISBURSEMENT_SELF_APPROVAL: { status: 403, message: "You cannot approve or release a request you created." },
   QUOTE_SELF_APPROVAL: { status: 403, message: "The person who recorded or submitted a quote cannot approve it." },

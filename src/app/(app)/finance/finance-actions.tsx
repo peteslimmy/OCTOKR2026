@@ -12,8 +12,8 @@ export function NewRequestButton({ available }: { available: number | null }) {
   const { run, pending } = useAction();
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>New disbursement request</Button>
-      <Modal open={open} onOpenChange={setOpen} title="Request a disbursement" description="Finance will review and decide. You cannot approve or release your own request.">
+      <Button size="sm" onClick={() => setOpen(true)}>Request funds</Button>
+      <Modal open={open} onOpenChange={setOpen} title="Request funds" description="The request goes to Finance for approval, then release. Finance will review and decide. You cannot approve or release your own request.">
         <StepForm submitLabel="Submit request" pending={pending} onCancel={() => setOpen(false)}
           onSubmit={async () => {
             const ok = await run(() => apiRequest("POST", "disbursement-requests", { amount: Number(f.amount), purpose: f.purpose, justification: f.justification, idempotencyKey: key }), { success: "Request submitted to Finance." });

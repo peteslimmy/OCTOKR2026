@@ -16,7 +16,8 @@
         "strategy.annual_theme.view",
         "violation.create",
         "violation.edit",
-        "violation.payment.record"
+        "violation.payment.record",
+        "violation.void"
     ],
     "ADMIN": [
         "attendance.amendment.approve",
@@ -70,6 +71,7 @@
         "violation.create",
         "violation.edit",
         "violation.payment.record",
+        "violation.void",
         "weekly_report.review",
         "weekly_report.view_all"
     ],
@@ -154,6 +156,7 @@
         "config.emergency",
         "config.protected.approve",
         "dashboard.executive.view",
+        "disbursement.create",
         "evidence.manage",
         "finance.fund.view",
         "finance.ledger.view",
@@ -196,6 +199,7 @@
         "strategy.subkr.edit",
         "users.manage",
         "violation.edit",
+        "violation.void",
         "weekly_report.review",
         "weekly_report.view_all"
     ]

@@ -65,8 +65,8 @@ export async function listAmendments(status?: string): Promise<AmendmentRow[]> {
 
 export interface ViolationRow {
   id: string; employee_name: string; business_unit: string; type: string; type_code: string; criticality: string; fine_amount: number;
-  status: "OPEN" | "PAID" | "DEDUCTION_RECORDED"; created_at: string; session_date: string | null; notes: string | null;
-  override_reason: string | null; payment: { method: string; reference: string; paid_at: string } | null; reversed_payments?: number;
+  status: "OPEN" | "PAID" | "DEDUCTION_RECORDED" | "VOID"; created_at: string; session_date: string | null; notes: string | null;
+  override_reason: string | null; employee_email?: string | null; void_reason?: string | null; voided_at?: string | null; payment: { method: string; reference: string; paid_at: string } | null; reversed_payments?: number;
   evidence_files?: EvidenceFileRow[];
 }
 
