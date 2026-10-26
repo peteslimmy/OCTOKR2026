@@ -7,14 +7,14 @@ Partly remediated (notification error handling fixed; the rest are observations)
 | F-003 | MEDIUM | High | Source | Remediated (record-first ordering); the storage-failure path is untested; uncommitted | Evidence upload wrote to storage before the permission check |
 | F-004 | MEDIUM | High | Observed | Remediated; page smoke test added (page-smoke.api.test.ts); the first fix is committed locally | Units page crashed (server page called a client-only function) |
 | F-005 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | `npm run lint` fails, and CI runs lint |
-| F-006 | MEDIUM | High | Source + Observed | Open | Earlier "complete" status documents overstated the state of the build |
+| F-006 | MEDIUM | High | Source + Observed | Remediated 2026-10-26 (files deleted at the owner's request; copies in .local/removed-2026-10-26) | Earlier "complete" status documents overstated the state of the build |
 | F-007 | MEDIUM | High | Source | Remediated 2026-10-26 (uncommitted) | User deletion records no reason and swallows identity-deletion failures |
 | F-008 | MEDIUM | Medium | Source | Remediated 2026-10-26 (uncommitted) | Evidence file type is trusted from the client; no content check |
 | F-009 | MEDIUM | High | Source | Open (decision needed) | Quote workflow and report rejection are AI-designed, not specified |
-| F-010 | LOW | High | Source | Open | Dev scripts write strategy through the service role and bypass the quarter lock |
+| F-010 | LOW | High | Source | Remediated 2026-10-26 (files deleted at the owner's request; copies in .local/removed-2026-10-26) | Dev scripts write strategy through the service role and bypass the quarter lock |
 | F-011 | LOW | Medium | Source | Remediated 2026-10-26 (uncommitted) | Per-IP rate limit keys on a client-supplied header |
 | F-012 | LOW | High | Executed | Remediated 2026-10-26 (uncommitted) | Eight tables have no row-level security (not exposed today) |
-| F-013 | LOW | High | Source | Open | Dead duplicate `lib/auth/rate-limit.ts` in the project root |
+| F-013 | LOW | High | Source | Remediated 2026-10-26 (files deleted at the owner's request; copies in .local/removed-2026-10-26) | Dead duplicate `lib/auth/rate-limit.ts` in the project root |
 | F-014 | LOW | High | Observed | Remediated 2026-10-26 (uncommitted) | Dead, weaker CSP in `next.config.ts` (only the proxy CSP is sent) |
 | F-015 | LOW | High | Source | Accepted 2026-10-26 (owner: leave as is) | `read_payment_is_reversed` is a security-definer function with no caller check |
 | F-016 | LOW | High | Executed | Partly remediated: nodemailer updated to 10.2.1 (uncommitted at the time of writing); exceljs/uuid advisory accepted | Three moderate dependency advisories |
@@ -70,6 +70,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - **Executed:** `eslint .` → 9 errors, 41 warnings. Errors: 8 `no-explicit-any` in `src/components/ui/table.tsx`; 1 `require()` in `src/lib/api/handler.ts:17`. `.github/workflows/ci.yml` runs `npm run lint`, so CI would fail. Typecheck passes. Fix is small; not applied (audit mode).
 
 ## F-006 — Earlier status documents overstated the build (MEDIUM)
+- **Remediation (2026-10-26):** `IMPLEMENTATION_COMPLETE.md`, the root `MEMORY.md` and `docs/38-P1-STATUS-SUMMARY.md` were deleted at the owner's request (they were never committed). Copies are in `.local/removed-2026-10-26` (git-ignored). `docs/33` already states the real status.
 - **Evidence:** `IMPLEMENTATION_COMPLETE.md`, root `MEMORY.md`, `docs/38-P1-STATUS-SUMMARY.md` report features as complete that were not. Found and (during this session) repaired: report review comments/rejection (UI sent fields nothing stored); unit hierarchy (migration dropped the functions it created, so unit creation through the API failed); quote workflow (routes called three functions that did not exist; table could not change status); Sub-KR card (wrong response shape, could never render); metrics endpoint (public, nothing recorded); `lib/auth/rate-limit.ts` presented as the rate limiter while the live one pre-existed in `src/`.
 - **Impact:** decisions made on false "done" claims. **Recommendation:** treat those files as unreliable; delete or replace with the evidence-based state; require a test or screenshot as evidence for "complete".
 
@@ -85,6 +86,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - Built this session as ADR-083/ADR-084 on the strength of a gap-plan line ("only if the owner still uses quotes"). Both are the smallest design consistent with ADR-081, but they are invented behaviour. **Decision needed:** keep, change, or remove. Tests: `tests/db/quote_workflow.test.ts`, `tests/db/report_review.test.ts` (pass on a clean database).
 
 ## F-010 — Strategy seeding scripts bypass the quarter lock (LOW)
+- **Remediation (2026-10-26):** `scripts/direct-strategy-seed.ts` and `scripts/populate-strategy-2025-2026.ts` were deleted at the owner's request (never committed); copies in `.local/removed-2026-10-26`. Strategy is loaded through the documented import and the app's own routes.
 - `scripts/direct-strategy-seed.ts` ("bypassing quarter_is_locked check") and `scripts/populate-strategy-2025-2026.ts` are untracked and write through the service role. They undermine the documented rule that locked quarters are historical records. Keep out of the repo or guard them behind an explicit flag.
 
 ## F-011 — Per-IP rate limit trusts `x-forwarded-for` (LOW)
@@ -96,6 +98,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - `email_event_types, employee_kpi_snapshots, employee_kpis, financial_projections, kr_target_snapshots, kr_targets, notification_settings, rate_limit_hits`. Executed query: none of them grants any privilege to `anon` or `authenticated`, so they are unreachable from the browser. The KPI and financial tables are new and sensitive; enabling RLS with an explicit policy would keep them safe if a grant is added later.
 
 ## F-013 — Dead duplicate rate limiter in project root (LOW)
+- **Remediation (2026-10-26):** the root `lib/` folder was deleted at the owner's request (never committed, imported by nothing); a copy is in `.local/removed-2026-10-26`. Typecheck, lint and the unit tests still pass.
 - `lib/auth/rate-limit.ts` (outside `src/`, imported by nothing; `@/*` maps to `src/*`) is a weaker in-memory copy marked `"use server"` with an unbounded `setInterval`. It does no harm today and misleads readers. Delete.
 
 ## F-014 — Dead weak CSP in `next.config.ts` (LOW)
