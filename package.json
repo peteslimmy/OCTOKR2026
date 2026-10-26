@@ -32,7 +32,8 @@
     "test:e2e": "node scripts/test-stack.mjs run --reset --seed -- playwright test",
     "test:concurrency": "node scripts/test-stack.mjs run --reset -- vitest run --config vitest.concurrency.config.ts",
     "db:backup": "node scripts/db-backup.mjs",
-    "test:stack": "node scripts/test-stack.mjs"
+    "test:stack": "node scripts/test-stack.mjs",
+    "ac:coverage": "node scripts/ac-coverage.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
