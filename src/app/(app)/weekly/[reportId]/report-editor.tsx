@@ -24,11 +24,12 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
   const late = phase === "LATE_OPEN";
   const editable = (phase === "OPEN" || late) && caps.edit && !holiday;
   const { run, pending } = useAction();
-  const [lease, setLease] = useState<"idle" | "held" | "conflict" | "error">("idle");
+  const [lease, setLease] = useState<'idle' | 'held' | 'conflict' | 'error'>("idle");
   const [leaseMsg, setLeaseMsg] = useState("");
   const [goalModal, setGoalModal] = useState<{ goal?: GoalView } | null>(null);
   const [blockers, setBlockers] = useState<string[]>([]);
   const [summary, setSummary] = useState(report.skipped_session_summary_comment ?? "");
+  const [reviewText, setReviewText] = useState("");
 
   // Edit lease: one BU Lead edits at a time. Acquire on open, heartbeat every 2 min, release on leave.
   useEffect(() => {
@@ -153,10 +154,36 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
                 {view.snapshot?.state === "NOT_SUBMITTED" ? <Badge tone="critical">Not submitted at final lock → 0.0%</Badge> : null}
               </div>
             </Card>
-            {caps.review && phase === "FINAL_LOCKED" && submitted && report.review_status !== "REVIEWED" ? (
-              <Card><div className="space-y-3 px-6 py-4 text-sm"><p>Mark this finalised report as reviewed.</p>
-                <ConfirmButton label="Mark reviewed" title="Mark report reviewed" description="This records you as the reviewer of this finalised report. It does not change the score."
-                  onConfirm={() => run(() => apiRequest("POST", `weekly-reports/${report.id}/review`), { success: "Report reviewed." })} /></div></Card>
+            {caps.review && phase === "FINAL_LOCKED" && submitted ? (
+              <Card>
+                <div className="space-y-3 px-6 py-4 text-sm">
+                  {report.review_status === "REVIEWED" ? (
+                    <>
+                      <p>This report has already been reviewed.</p>
+                      {report.review_comments ? <p className="text-xs text-muted">Comments: {report.review_comments}</p> : null}
+                    </>
+                  ) : (
+                    <>
+                      {report.review_rejection_reason ? (
+                        <p className="text-xs text-muted">Rejected: {report.review_rejection_reason}</p>
+                      ) : null}
+                      <Label htmlFor="review-text">Comments or rejection reason</Label>
+                      <Textarea id="review-text" value={reviewText} onChange={(e) => setReviewText(e.target.value)} rows={3} maxLength={2000}
+                        placeholder="Optional for a review; required to reject" />
+                      <div className="flex gap-2">
+                        <ConfirmButton label="Review" title="Mark this finalised report as reviewed"
+                          description="Record that you have reviewed this finalised report. It does not change the score."
+                          onConfirm={() => run(() => apiRequest("POST", `weekly-reports/${report.id}/review`, { comments: reviewText.trim() || undefined }),
+                            { success: "Report reviewed." })} />
+                        <ConfirmButton label="Reject" variant="danger" title="Reject this report" confirmLabel="Reject" disabled={reviewText.trim() === ""}
+                          description="Record a rejection with the reason entered. The score is unchanged and the report stays awaiting review."
+                          onConfirm={() => run(() => apiRequest("POST", `weekly-reports/${report.id}/review`, { rejection_reason: reviewText.trim() }),
+                            { success: "Report rejected." })} />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Card>
             ) : null}
           </aside>
         </div>
@@ -246,8 +273,8 @@ function GoalCard({ goal, phase, canMutate, exec, integrity, version, onEdit }: 
           </>) : null}
         </div>
         {open && smart ? <SmartPanel data={smart} /> : null}
+        {ic ? <IntegrityDialog task={ic} open onOpenChange={(o) => !o && setIc(null)} /> : null}
       </div>
-      {ic ? <IntegrityDialog task={ic} open onOpenChange={(o) => !o && setIc(null)} /> : null}
     </Card>
   );
 }
@@ -286,7 +313,7 @@ function GoalForm({ reportId, version, subKrs, goal, onClose }: { reportId: stri
     if (!title.trim()) return;
     const t = setTimeout(() => {
       apiRequest<SmartData>("POST", "smart-evaluations", { goalType: type, subKeyResultId: type === "KR_ALIGNED" && subKr ? subKr : null, title, description: description || null, tasks: (goal ? goal.tasks.map((x) => x.description) : tasks).filter(Boolean) })
-        .then(setPreview).catch(() => setPreview(null));
+        .then(setPreview).catch(() => setPreview(null))
     }, 500);
     return () => clearTimeout(t);
   }, [title, description, type, subKr, tasks, goal]);

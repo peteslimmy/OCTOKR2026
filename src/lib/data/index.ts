@@ -119,6 +119,7 @@ export interface ReportView {
   report: {
     id: string; status: string; submission_status: "NOT_SUBMITTED" | "SUBMITTED"; review_status: "NOT_REVIEWED" | "REVIEWED";
     version: number; submitted_at: string | null; skipped_session_summary_comment: string | null; reviewed_at: string | null; final_locked_at: string | null;
+    review_comments: string | null; review_initiated_by: string | null; review_rejection_reason: string | null;
   };
   business_unit: { id: string; code: string; name: string };
   week: { id: string; week_number: number; week_year: number; week_start_at: string; content_lock_at: string; final_lock_at: string; reporting_state: string };
@@ -212,7 +213,7 @@ export async function unreadCount(): Promise<number> {
 
 export async function listBusinessUnits() {
   const sb = await userClient();
-  return unwrap(await sb.from("business_units").select("id, code, name, status, reports_weekly, unit_type").order("name"), "business units");
+  return unwrap(await sb.from("business_units").select("id, code, name, status, reports_weekly, unit_type, parent_unit_id, description, location").order("name"), "business units");
 }
 
 export interface EmployeeRow { id: string; email: string; first_name: string; last_name: string; employment_status: string; on_attendance_roster: boolean; business_units: { name: string } | null; users: { id: string } | null }
