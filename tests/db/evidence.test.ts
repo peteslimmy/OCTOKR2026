@@ -38,12 +38,10 @@ async function world(c: Ctx) {
   // Set time to when the reporting week is open
   await c.setNow("2031-01-06T09:00:00+01:00");
   const wk = await weekId(c);
-  const reportResult = await c.rpc<{ report_id: string }>("get_or_create_weekly_report", lead, wk);
-  const report = reportResult;
+  const report = await c.rpc<string>("get_or_create_weekly_report", lead, wk);
 
   // Create a governance session - SUPER_ADMIN has attendance.session.manage
-  const sessionResult = await c.rpc<{ session_id: string }>("create_governance_session", sa, wk);
-  const session = sessionResult.session_id;
+  const session = await c.rpc<string>("create_governance_session", sa, wk);
 
   return { bu, hr, admin, finance, sa, lead, staff, vt, violation, ledger, report, session, fundId };
 }
@@ -80,6 +78,22 @@ describe("evidence_files DB - upsert via ops_upsert_evidence_file", () => {
       const evidence = await c.asUser(w.hr, () => c.rpc<unknown[]>("read_evidence_files", "VIOLATION", w.violation));
       expect(evidence).toHaveLength(1);
       expect((evidence[0] as { file_name: string }).file_name).toBe("test-evidences.pdf");
+    });
+  });
+
+  it("records an evidence file for EVERY entity type (violation, ledger entry, report, session)", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const targets: [string, string][] = [["VIOLATION", w.violation], ["LEDGER", w.ledger], ["REPORT", w.report], ["SESSION", w.session]];
+      for (const [type, id] of targets) {
+        expect(id, type + " entity").toBeTruthy();
+        const rec = await c.rpc<string>("ops_upsert_evidence_file", w.hr, type, id, `evidence/${type}/${id}/proof.pdf`, "proof.pdf", "application/pdf", 1024, "b".repeat(64));
+        expect(typeof rec, type).toBe("string");
+      }
+      // a missing entity of each type is refused as not found
+      for (const [type] of targets) {
+        await c.expectError("NOT_FOUND", () => c.rpc("ops_upsert_evidence_file", w.hr, type, "00000000-0000-4000-8000-000000000001", "evidence/x/y.pdf", "y.pdf", "application/pdf", 10, "c".repeat(64)));
+      }
     });
   });
 

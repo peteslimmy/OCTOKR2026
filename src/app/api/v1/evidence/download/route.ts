@@ -30,7 +30,9 @@ export const GET = api({ stepUp: true }, async ({ req }) => {
   const { data: fileData, error: downloadError } = await adminClient().storage.from("evidence").download(filePath);
   if (downloadError || !fileData) {
     console.error("[evidence] download failed:", downloadError);
-    throw fail("NOT_FOUND", 404, "Evidence file not found.");
+    // the record exists and the caller may see it: a missing object is "not found", anything else is a storage failure, not a missing file
+    const missing = (downloadError as { status?: number; statusCode?: string | number } | null)?.status === 404 || String((downloadError as { statusCode?: string | number } | null)?.statusCode) === "404";
+    throw missing ? fail("NOT_FOUND", 404, "Evidence file not found.") : fail("STORAGE_ERROR", 502, "The file could not be retrieved. Please try again.");
   }
   const buffer = Buffer.from(await fileData.arrayBuffer());
 
