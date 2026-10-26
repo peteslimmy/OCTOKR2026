@@ -9,7 +9,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-const SKIP_DIRS = new Set(["node_modules", ".next", ".git", "test-results", "playwright-report", ".dev-mail", ".temp", "coverage"]);
+const SKIP_DIRS = new Set(["node_modules", ".next", ".next-test", ".test-stack", ".git", "test-results", "playwright-report", ".dev-mail", ".temp", "coverage"]);
 const SKIP_FILES = new Set([".env.local", ".dev-mfa.json", "package-lock.json", "tsconfig.tsbuildinfo"]);
 const TEXT = /\.(ts|tsx|js|mjs|cjs|json|md|sql|yml|yaml|toml|sh|env|example|txt|css|html)$/i;
 const RULES = [
