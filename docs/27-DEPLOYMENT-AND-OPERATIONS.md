@@ -110,3 +110,9 @@ PERF_RESULTS_PLACEHOLDER
 4. After the release, call the scheduler once by hand and check for 200.
 5. Check at least two people can manage roles (Administration warns otherwise) and that `GET /api/internal/health` shows no critical alert.
 6. Confirm `RATE_LIMIT_STORE` is unset or `database`, and that no development clock is set on the production database (`app.environment`, `app.dev_clock`).
+
+## Metrics endpoint
+
+`GET /api/metrics` serves Prometheus metrics (process figures plus `http_requests_total` and `http_request_duration_seconds` for every API route, with ids collapsed to `:id`). In production it requires `Authorization: Bearer <METRICS_TOKEN>` and answers 401 without it; if `METRICS_TOKEN` is unset in production it stays closed. Outside production it is open when no token is set. ## Tracing
+
+OpenTelemetry tracing starts from `src/instrumentation.ts` only when `OTEL_EXPORTER_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) is set; with neither set nothing is loaded. The exporter (OTLP over HTTP by default), headers and sampling follow the standard `OTEL_*` variables; the service name defaults to `4core-okr` (`OTEL_SERVICE_NAME` overrides it). Incoming requests, outgoing HTTP/fetch calls and database drivers are traced; file, DNS and socket spans are switched off as noise. Verified locally against a stand-in collector (spans arrived at `/v1/traces`); not yet run against a real collector, and the collector to use is a hosting decision.

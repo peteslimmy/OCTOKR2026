@@ -1,11 +1,22 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import pino from "pino";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { getActor, type Actor } from "@/lib/auth/actor";
-import { hasRecentTotp } from "@/lib/auth/mfa";
+import { hasRecentSecondFactor } from "@/lib/auth/mfa";
 import { adminClient } from "@/lib/supabase/admin";
 import { toDomainError, type DomainError } from "@/lib/domain/errors";
+import { httpRequestDuration, httpRequestsTotal } from "@/lib/observability/metrics";
+
+const logger = pino({
+  level: process.env.LOG_LEVEL ?? "info",
+  mixin: () => ({ service: "4core-okr" }),
+  base: {
+    pid: process.pid,
+    hostname: require("os").hostname(),
+  },
+});
 
 export class ApiError extends Error {
   constructor(public readonly err: DomainError) {
@@ -31,7 +42,7 @@ interface Options<S extends z.ZodObject<z.ZodRawShape> | undefined> {
   public?: boolean;
   /** Allow a session that has not completed (or not yet enrolled in) MFA: only the account/MFA endpoints use this. */
   partial?: boolean;
-  /** High-risk action: an enrolled user must have passed a TOTP check in the last 15 minutes (re-prompted by the client). */
+  /** High-risk action: an enrolled user must have passed a second-factor check (authenticator app or emailed code) in the last 15 minutes (re-prompted by the client). */
   stepUp?: boolean;
 }
 
@@ -60,7 +71,13 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
     const respond = (status: number, payload: unknown) => {
       const res = NextResponse.json(payload, { status });
       marks.push(`total;dur=${(performance.now() - t0).toFixed(1)}`);
-      res.headers.set("server-timing", marks.join(", "));         // where the time went: visible in the browser's network panel, and to the performance baseline
+      try {
+        // the route path with ids collapsed keeps the label set small
+        const route = new URL(req.url).pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, ":id");
+        httpRequestsTotal.inc({ method: req.method, handler: route, status_code: String(status) });
+        httpRequestDuration.observe({ method: req.method, handler: route }, (performance.now() - t0) / 1000);
+      } catch { /* metrics never break a request */ }
+      res.headers.set("server-timing", marks.join(", ")); // where the time went: visible in the browser's network panel, and to the performance baseline
       res.headers.set("x-correlation-id", correlationId);
       res.headers.set("cache-control", "no-store");
       return res;
@@ -74,11 +91,11 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
       seen = actor;
       if (!actor && !opts.public) throw fail("AUTHENTICATION_REQUIRED", 401, "Please sign in to continue.");
       if (actor && !opts.public && !opts.partial) {
-        if (actor.mfa.required && !actor.mfa.enrolled) throw fail("MFA_ENROLMENT_REQUIRED", 403, "Your role requires an authenticator app. Set one up under Account security.");
-        if (actor.mfa.enrolled && actor.mfa.aal !== "aal2") throw fail("MFA_REQUIRED", 401, "Enter your authenticator code to continue.");
+        if (actor.mfa.required && !actor.mfa.enrolled) throw fail("MFA_ENROLMENT_REQUIRED", 403, "Your role requires a second factor. Set one up under Account security.");
+        if (actor.mfa.enrolled && actor.mfa.aal !== "aal2") throw fail("MFA_REQUIRED", 401, "Enter your authenticator or email code to continue.");
       }
-      if (actor && opts.stepUp && actor.mfa.enrolled && !(await hasRecentTotp())) {
-        throw fail("STEP_UP_REQUIRED", 401, "Confirm with your authenticator code to continue.");
+      if (actor && opts.stepUp && actor.mfa.enrolled && !(await hasRecentSecondFactor())) {
+        throw fail("STEP_UP_REQUIRED", 401, "Confirm with your authenticator or email code to continue.");
       }
 
       let body: unknown = undefined;
@@ -117,7 +134,7 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
         await adminClient(correlationId).rpc("record_access_denied", { p_actor: seen.id, p_method: req.method, p_route: route, p_code: e.err.code }).then(() => undefined, () => undefined);
       }
       if (e instanceof ApiError) return respond(e.err.status, { error: { code: e.err.code, message: e.err.message, details: e.err.details, correlationId } });
-      console.error(`[${correlationId}] unhandled`, e);
+      logger.error({ correlationId, error: e }, "Unhandled error in API handler");
       return respond(500, { error: { code: "INTERNAL_ERROR", message: "Something went wrong on our side. Nothing was changed; please try again.", correlationId } });
     }
   };

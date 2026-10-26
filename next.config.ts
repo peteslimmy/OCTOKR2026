@@ -14,6 +14,22 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          // CSP — restrict to same-origin scripts/styles, data URIs, and self; allow charts/fonts from trusted sources
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+              "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+              "img-src 'self' data:",
+              "font-src 'self' data:",
+              "connect-src 'self'",
+              "frame-src 'none'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
