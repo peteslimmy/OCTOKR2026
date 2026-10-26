@@ -2,15 +2,21 @@ import { api, fail, requirePerm } from "@/lib/api/handler";
 import { HISTORY_LIMITS, parseHistoryRows } from "@/lib/import/history";
 import { ImportFileError, readImportFile } from "@/lib/import/read-file";
 import { adminClient } from "@/lib/supabase/admin";
+import { userClient } from "@/lib/supabase/server";
+import { dbError } from "@/lib/data/errors";
 
 /**
  * Historical weekly reports (ADR-077). Super Admin tier only (the reserved permission history.import).
  * GET lists recent uploads. POST reads the uploaded sheet as data, checks the layout and the units here, saves it as a STAGING batch, and returns every
  * problem the database finds with the row it came from. Nothing becomes a report until it is rehearsed and then committed.
  */
-export const GET = api({}, async ({ actor, rpc }) => {
+// read_history_batches decides who the caller is from the caller's own session (auth.uid()), so it must be called with that session.
+// Called through the service-role helper it saw nobody and refused every role, the Super Admin included.
+export const GET = api({}, async ({ actor }) => {
   requirePerm(actor, "history.import");
-  return rpc("read_history_batches", {});
+  const { data, error } = await (await userClient()).rpc("read_history_batches");
+  if (error) throw dbError(error, "history batches");
+  return data;
 });
 
 export const POST = api({}, async ({ actor, req, rpc }) => {
