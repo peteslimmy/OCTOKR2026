@@ -19,7 +19,9 @@ No CRITICAL finding was substantiated. That is not a statement that none exists:
 Before the audit instruction, in the same session, I changed application code to fix F-002, F-003, F-004 and F-020, to repair the unit hierarchy, quote workflow, review panel and contribution card, and to add the report-review, hierarchy and quote database tests. All of that is **uncommitted** in the working tree alongside ~100 earlier uncommitted changes. During the audit itself I changed no application code, schema or data; I created only these reports. The audit therefore examines the working tree as it stands, and findings marked *remediated* need independent verification and regression tests.
 
 ## Findings by severity
-HIGH 2 · MEDIUM 7 · LOW 11 · INFO 3 (22 total). Details: report 13.
+HIGH 2 · MEDIUM 7 · LOW 11 · INFO 3 (23 total; an earlier version of this line said 22 with 11 low, which miscounted the low findings by one). Details: report 13.
+
+**Status at 2026-10-26 (after the first remediation passes, all uncommitted unless noted):** remediated: F-001, F-002, F-003, F-004, F-005, F-007, F-008, F-012, F-014, F-017, F-018, F-020 (F-001 to F-004 and F-020 were committed locally on 2026-10-26 in earlier slices). Still open: F-006 (unreliable status files), F-009 (owner decision), F-010, F-011, F-013, F-015, F-016, F-019, F-023; F-021 and F-022 are informational. Nothing here has been independently re-reviewed.
 
 ## Release blockers (recommended)
 - Before this application holds production data: fix **F-001** (never let a test run touch real data) and add regression tests for **F-002/F-003**.

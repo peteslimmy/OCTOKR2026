@@ -13,10 +13,10 @@ Severity and order differ: order reflects dependencies and the cost of leaving a
 | Step | Findings | Prerequisite | Risk | Verification |
 |---|---|---|---|---|
 | 1.1 Regression tests for evidence access by role; magic-byte check; storage compensation test | F-002, F-003, F-008 | 0.3 | Low | Role matrix of allow/deny cases passes |
-| 1.2 Audit and reason for user deletion; surface identity-deletion failure | F-007 | none | Low | Audit row with reason; partial-failure result |
-| 1.3 Green lint | F-005 | none | Very low | `npm run lint` exits 0 in CI |
+| 1.2 Audit and reason for user deletion; surface identity-deletion failure — **done 2026-10-26** | F-007 | none | Low | Audit row with reason; partial-failure result |
+| 1.3 Green lint — **done 2026-10-26** | F-005 | none | Very low | `npm run lint` exits 0 in CI |
 | 1.4 Render smoke test for every page | F-004 | 0.3 | Low | Fails if any page returns 500 |
-| 1.5 RLS on the eight tables; caller check on `read_payment_is_reversed` | F-012, F-015 | none | Low | DB tests: denied for ordinary users, allowed for the intended role |
+| 1.5 RLS on the eight tables — **done 2026-10-26**; caller check on `read_payment_is_reversed` still open | F-012, F-015 | none | Low | DB tests: denied for ordinary users, allowed for the intended role |
 | 1.6 Decide and finish quote workflow / report rejection (keep, change or remove) | F-009 | owner | Medium (data model) | Owner sign-off, ADR updated |
 
 ## Phase 2 — workflow verification (the largest unexamined area)

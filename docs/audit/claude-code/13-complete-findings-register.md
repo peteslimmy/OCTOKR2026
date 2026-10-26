@@ -12,13 +12,13 @@ Severity: CRITICAL / HIGH / MEDIUM / LOW / INFO. Confidence: High (observed or r
 | F-002 | HIGH | High | Source (+ Executed after fix) | Remediated, untested | Evidence downloads bypassed row-level security |
 | F-003 | MEDIUM | High | Source | Remediated, untested | Evidence upload wrote to storage before the permission check |
 | F-004 | MEDIUM | High | Observed | Remediated, untested | Units page crashed (server page called a client-only function) |
-| F-005 | MEDIUM | High | Executed | Open | `npm run lint` fails, and CI runs lint |
-| F-006 | MEDIUM | High | Source + Observed | Open | Earlier "complete" status documents overstated the state of the build |
-| F-007 | MEDIUM | High | Source | Open | User deletion records no reason and swallows identity-deletion failures |
-| F-008 | MEDIUM | Medium | Source | Open | Evidence file type is trusted from the client; no content check |
-| F-009 | MEDIUM | High | Source | Open (decision needed) | Quote workflow and report rejection are AI-designed, not specified |
-| F-010 | LOW | High | Source | Open | Dev scripts write strategy through the service role and bypass the quarter lock |
-| F-011 | LOW | Medium | Source | Open | Per-IP rate limit keys on a client-supplied header |
+| F-005 | MEDIUM | High | Executed | Remediated 2026-10-26 (uncommitted) | `npm run lint` fails, and CI runs lint |
+| F-006 | MEDIUM | High | Source + Observed | Remediated 2026-10-26 (uncommitted) | Earlier "complete" status documents overstated the state of the build |
+| F-007 | MEDIUM | High | Source | Remediated 2026-10-26 (uncommitted) | User deletion records no reason and swallows identity-deletion failures |
+| F-008 | MEDIUM | Medium | Source | Remediated 2026-10-26 (uncommitted) | Evidence file type is trusted from the client; no content check |
+| F-009 | MEDIUM | High | Source | Remediated 2026-10-26 (uncommitted) (decision needed) | Quote workflow and report rejection are AI-designed, not specified |
+| F-010 | LOW | High | Source | Remediated 2026-10-26 (uncommitted) | Dev scripts write strategy through the service role and bypass the quarter lock |
+| F-011 | LOW | Medium | Source | Remediated 2026-10-26 (uncommitted) | Per-IP rate limit keys on a client-supplied header |
 | F-012 | LOW | High | Executed | Open | Eight tables have no row-level security (not exposed today) |
 | F-013 | LOW | High | Source | Open | Dead duplicate `lib/auth/rate-limit.ts` in the project root |
 | F-014 | LOW | High | Observed | Open | Dead, weaker CSP in `next.config.ts` (only the proxy CSP is sent) |
@@ -29,6 +29,7 @@ Severity: CRITICAL / HIGH / MEDIUM / LOW / INFO. Confidence: High (observed or r
 | F-019 | LOW | Medium | Executed | Open | Acceptance criteria are weakly traceable to tests; the full browser suite is not run regularly |
 | F-020 | INFO | High | Observed | Remediated | Metrics endpoint was public and recorded nothing; tracing absent |
 | F-021 | INFO | High | Source | Accepted | Scoring exists twice (TypeScript and SQL), kept in step by tests |
+| F-023 | LOW | High | Source | Open | The evidence HTTP tests assert almost nothing |
 | F-022 | INFO | High | Observed | Operational | No active quarter: the system cannot accept weekly reports until Q4 2026 strategy exists |
 
 No CRITICAL findings were substantiated. The absence of a critical finding is not proof there is none: see report 16 for what was not examined.
@@ -59,6 +60,7 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - **Observed:** `/admin/units` returned 500: "Attempted to call buttonClass() from the server but buttonClass is on the client". Cause: an earlier session added `"use client"` to `src/components/ui/primitives.tsx` while merging Radix components into it. **Status:** Radix components moved to `primitives-radix.tsx` (client); the rest is server-safe; all ~30 screens then rendered. **Systemic cause:** no automated page-render smoke test runs on every change (see F-019). **Test needed:** a smoke test that renders every `(app)` page as an admin.
 
 ## F-005 — Lint fails and CI runs lint (MEDIUM)
+- **Remediation (2026-10-26):** typed `ui/table.tsx` with the library's own types, replaced `require("os")` with an import, excluded `docs/audit` and `.test-stack` from lint. `eslint .`: 0 errors, 44 warnings (unused variables remain); `npm run lint` exits 0.
 - **Executed:** `eslint .` → 9 errors, 41 warnings. Errors: 8 `no-explicit-any` in `src/components/ui/table.tsx`; 1 `require()` in `src/lib/api/handler.ts:17`. `.github/workflows/ci.yml` runs `npm run lint`, so CI would fail. Typecheck passes. Fix is small; not applied (audit mode).
 
 ## F-006 — Earlier status documents overstated the build (MEDIUM)
@@ -66,9 +68,11 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - **Impact:** decisions made on false "done" claims. **Recommendation:** treat those files as unreliable; delete or replace with the evidence-based state; require a test or screenshot as evidence for "complete".
 
 ## F-007 — User deletion: no reason, silent partial failure (MEDIUM)
+- **Remediation (2026-10-26):** migration `20261030000006` makes the reason mandatory and stores it on the `USER_DELETED` audit entry (the screens already asked for it and the routes dropped it); both routes now pass it and report an identity-deletion failure instead of success. New `tests/db/user_deletion.test.ts` (3 tests): reason recorded; blank/missing/oversize refused; permission, self-deletion and last Super Admin refused. Route-level behaviour of the identity failure was not exercised.
 - `src/app/api/v1/users/bulk-delete/route.ts` accepts `reason` and never uses it; single delete takes none (unlike unit deletion, which requires an audited reason). If the identity deletion fails the error is only logged and the call reports success, leaving a sign-in identity with no application user. **Test needed:** deletion records actor and reason in `audit_logs`; identity failure surfaces as a partial failure.
 
 ## F-008 — Evidence file type trusted from the client (MEDIUM)
+- **Remediation (2026-10-26):** `src/lib/validators/evidence-signature.ts` checks the file's first bytes against its claimed type (PDF, PNG, JPEG, GIF, WebP, OLE .doc/.xls, zip-based .docx/.xlsx, UTF-8 text with no NUL bytes) and the upload route returns 422 on a mismatch. 4 unit tests. No malware scanning is added. The route itself was not exercised with real uploads (needs the storage service, which the test stack excludes).
 - `UploadEvidenceBodySchema` allows 10 MIME types, but the type and checksum both come from the client, and the server compares them to each other only. A non-PDF can be stored as `application/pdf`. Mitigations present: private bucket, `attachment` disposition, `nosniff`, 50 MiB cap, SHA-256 integrity. Missing: magic-byte check (the site-image uploader already does this) and any malware scanning.
 
 ## F-009 — Quote workflow and report rejection are not in the specification (MEDIUM, decision needed)
@@ -81,12 +85,14 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - `src/app/api/v1/auth/login/route.ts` keys on the header as received. Behind a proxy that overwrites it this is fine; otherwise a client can rotate values. The per-account limit (10/min) remains. Document the proxy requirement or use the platform-provided client IP.
 
 ## F-012 — Eight tables without RLS (LOW)
+- **Remediation (2026-10-26):** migration `20261030000007` enables RLS on all eight. New `tests/db/rls_invariants.test.ts` fails if any public table lacks RLS, if `anon`/`authenticated` hold any write privilege, if `anon` can call any function, or if a definer function leaves `search_path` unpinned. 274 database tests pass on the test stack.
 - `email_event_types, employee_kpi_snapshots, employee_kpis, financial_projections, kr_target_snapshots, kr_targets, notification_settings, rate_limit_hits`. Executed query: none of them grants any privilege to `anon` or `authenticated`, so they are unreachable from the browser. The KPI and financial tables are new and sensitive; enabling RLS with an explicit policy would keep them safe if a grant is added later.
 
 ## F-013 — Dead duplicate rate limiter in project root (LOW)
 - `lib/auth/rate-limit.ts` (outside `src/`, imported by nothing; `@/*` maps to `src/*`) is a weaker in-memory copy marked `"use server"` with an unbounded `setInterval`. It does no harm today and misleads readers. Delete.
 
 ## F-014 — Dead weak CSP in `next.config.ts` (LOW)
+- **Remediation (2026-10-26):** removed; one CSP header (the nonce-based one from `proxy.ts`) is sent, confirmed by response headers.
 - Declares `script-src 'unsafe-inline' https://cdn.tailwindcss.com`. Observed response headers carry only the strict nonce-based policy from `src/proxy.ts`. Remove the static one so nobody relies on it. Note `style-src 'unsafe-inline'` is deliberate (documented).
 
 ## F-015 — `read_payment_is_reversed` (LOW)
@@ -96,9 +102,11 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 - `npm audit --omit=dev`: `nodemailer` (2 moderate, fix available), `uuid` via `exceljs` (moderate; suggested fix is a major change). No high/critical. CI "fails on high and critical", so these do not gate.
 
 ## F-017 — `kr-execution` route conventions (LOW)
+- **Remediation (2026-10-26):** now throws `fail()` for 403/404 so errors use the standard envelope and correlation id. No raw `new Response(JSON.stringify(...))` remains under `src/app/api`.
 - Returns hand-built `new Response(JSON.stringify({error}))` for 403/404 and checks `can()` inline instead of throwing through `api()`, so errors lack the standard envelope and correlation id.
 
 ## F-018 — Action buttons without context (LOW)
+- **Remediation (2026-10-26):** the Units page Delete and weekly-reporting buttons and the People page Delete button now carry the unit or person in their accessible name. Not re-probed with a screen reader.
 - Units page: 18 "Delete" buttons and repeated "Stop weekly reporting"/"Require weekly reporting" with identical accessible names (WCAG 2.4.6, 2.5.3 risk). Add `aria-label="Delete <unit>"`.
 
 ## F-019 — Traceability and browser-suite health (LOW)
@@ -112,3 +120,11 @@ No CRITICAL findings were substantiated. The absence of a critical finding is no
 
 ## F-022 — No active quarter (INFO / operational)
 - All stored quarters are locked; Q4 2026 now exists (planned) without an objective. Until it is completed and activated no reporting weeks exist and the dashboards show "no reporting weeks". The system correctly refuses to activate an incomplete quarter.
+
+## F-023 — Evidence HTTP tests assert almost nothing (LOW)
+- `tests/api/evidence.api.test.ts` sends a flat object where the route expects multipart `file` + `metadata`, and its success case accepts either 200 or 422, so it passes whether or not an upload works. It cannot catch F-002/F-003/F-008. Needs rewriting against the real multipart contract, with a storage-enabled test stack, and with allow/deny cases per role.
+
+## Findings deliberately not changed in this pass
+- **F-015** (`read_payment_is_reversed`): the function is called from the violations read model running as the user; a caller check strict enough to matter could hide reversal status from legitimate viewers. It needs a decision on who may see payment reversals; left open.
+- **F-016** (advisories): fixing needs a dependency install/upgrade (`nodemailer` fix available; `uuid` via `exceljs` needs a major change), which needs approval.
+- **F-004 smoke test, F-011, F-013, F-010, F-006 files, F-019, F-009:** not addressed (the last needs the owner; F-013/F-010/F-006 involve deleting files the owner asked to keep for now).
