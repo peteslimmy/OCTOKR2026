@@ -7,6 +7,13 @@ interface Row {
   reporting_state: string; week_status: string; submitted_before_content_lock: boolean | null; late_exception_status: string | null;
 }
 
+interface KrExecRow {
+  key_result_id: string; kr_code: string; kr_title: string; kr_sequence: number;
+  sub_key_result_id: string; sub_code: string; sub_title: string; sub_sequence: number;
+  reporting_week_id: string; week_number: number; week_start_at: string;
+  mapped_goals: number; done_goals: number;
+}
+
 /** Three BUs. A files and completes its only goal (100). B and C file nothing (0, non-compliant). The week is finalised. */
 async function world(c: Ctx) {
   await c.q("update business_units set status = 'INACTIVE'");
@@ -79,6 +86,49 @@ describe("report read models reconcile with the authoritative snapshots", () => 
         expect(mine.reduce((a, r) => a + r.done_goals, 0)).toBe(s.done_goals);
       }
       expect(tree.key_results[0].sub_key_results[0].mapped_goals).toBe(1);
+    });
+  });
+
+  it("Sub-KR contribution card verifies weekly execution totals reconcile", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const krExecutionData = await c.asUser(w.admin, () => c.rpc<KrExecRow[]>("read_report_kr_execution", w.quarterId));
+
+      // Manually compute summaries similar to sub-kr-contribution-card.tsx
+      const bySubKr = new Map<string, KrExecRow[]>();
+      for (const row of krExecutionData) {
+        const key = row.sub_key_result_id;
+        if (!bySubKr.has(key)) bySubKr.set(key, []);
+        bySubKr.get(key)!.push(row);
+      }
+
+      const summaries: { sub_key_result_id: string; total_mapped_goals: number; total_done_goals: number }[] = [];
+      for (const [subId, entries] of bySubKr) {
+        const totalMapped = entries.reduce((sum, e) => sum + e.mapped_goals, 0);
+        const totalDone = entries.reduce((sum, e) => sum + e.done_goals, 0);
+        summaries.push({ sub_key_result_id: subId, total_mapped_goals: totalMapped, total_done_goals: totalDone });
+      }
+
+      // Assertions - read_report_kr_execution returns all 3 Sub-KRs, but only first has goals
+      expect(summaries).toHaveLength(3);
+
+      // Verify each Sub-KR has valid data (done <= mapped)
+      summaries.forEach((s) => {
+        expect(s.total_done_goals).toBeLessThanOrEqual(s.total_mapped_goals);
+      });
+
+      // The first Sub-KR (Pipeline) should have the data from the fixture
+      const pipelineSummary = summaries.find((s) => s.sub_key_result_id === w.strat.subKrIds[0]);
+      expect(pipelineSummary).toBeDefined();
+      expect(pipelineSummary?.total_mapped_goals).toBe(1);
+      expect(pipelineSummary?.total_done_goals).toBe(1);
+
+      // The other two Sub-KRs should have 0 mapped/done goals
+      const otherSummaries = summaries.filter((s) => s.sub_key_result_id !== w.strat.subKrIds[0]);
+      otherSummaries.forEach((s) => {
+        expect(s.total_mapped_goals).toBe(0);
+        expect(s.total_done_goals).toBe(0);
+      });
     });
   });
 });
