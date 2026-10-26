@@ -11,7 +11,7 @@ import { completeMfa } from "./mfa-login";
 
 config({ path: ".env.local" });
 const BASE = process.env.API_BASE ?? "http://localhost:3000";
-const DB_URL = process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB_URL = process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54422/postgres";
 const PASSWORD = "DevPassword!2026";
 
 class Session {

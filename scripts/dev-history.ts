@@ -16,6 +16,10 @@ import { evaluateSmart } from "../src/lib/domain/smart";
 config({ path: ".env.local" });
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(URL_)) { console.error("dev-history refuses to run against a non-local Supabase URL:", URL_); process.exit(1); }
+if (process.env.OKR_TEST_STACK !== "1" && process.env.CI !== "true") {
+  console.error("dev-history writes DEMO history and only runs against the separate test stack, never your real database.\nUse: node scripts/test-stack.mjs run --seed -- npx tsx scripts/dev-history.ts 6");
+  process.exit(1);
+}
 const sb = createClient(URL_, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 const weeksToPlay = Math.max(1, Math.min(12, Number(process.argv[2] ?? 6)));
 

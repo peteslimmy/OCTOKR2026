@@ -7,7 +7,7 @@ import { DEV_MFA_FILE, totp } from "../../scripts/totp";
 import { formatWeekLabel } from "../../src/lib/domain/week-label";
 
 export const PASSWORD = "DevPassword!2026"; // local-only seed credential (scripts/dev-seed.ts)
-const DB_URL = process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB_URL = process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54422/postgres";
 
 type Cookie = Awaited<ReturnType<ReturnType<Page["context"]>["cookies"]>>[number];
 const sessionCache = new Map<string, Cookie[]>();   // one real sign-in per account; the server limits sign-ins to 10 per minute per account

@@ -15,7 +15,11 @@ if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(URL_)) {
   console.error("dev-seed refuses to run against a non-local Supabase URL:", URL_);
   process.exit(1);
 }
-export const DEV_PASSWORD = "DevPassword!2026"; // local-only credential, documented in README
+if (process.env.OKR_TEST_STACK !== "1" && process.env.CI !== "true") {
+  console.error("dev-seed writes SAMPLE data and only runs against the separate test stack, never your real database.\nUse: node scripts/test-stack.mjs run --seed -- <command>   (or npm run test:e2e)");
+  process.exit(1);
+}
+export const DEV_PASSWORD ="DevPassword!2026"; // local-only credential, documented in README
 
 const sb: SupabaseClient = createClient(URL_, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 

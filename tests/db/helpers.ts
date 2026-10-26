@@ -1,7 +1,7 @@
 import { Client } from "pg";
 import { randomUUID } from "node:crypto";
 
-export const DB_URL = process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+export const DB_URL = process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54422/postgres";
 
 export type Role = "SUPER_ADMIN" | "ADMIN" | "BU_LEAD" | "PRESENTER" | "EXECUTIVE" | "DIRECTOR" | "HR" | "FINANCE";
 
@@ -11,7 +11,7 @@ export interface Ctx {
   rpc<T = unknown>(fn: string, ...args: unknown[]): Promise<T>;
   setNow(iso: string): Promise<void>;
   expectError(code: string, fn: () => Promise<unknown>): Promise<void>;
-  asUser<T>(userId: string, fn: () => Promise<T>, aal?: "aal1" | "aal2"): Promise<T>;
+  asUser<T>(userId: string, fn: () => Promise<T>, aal?: "aal1" | "aal2", claims?: Record<string, unknown>): Promise<T>;
   org: string;
   bu(code: string): Promise<string>;
   user(roles: Role[], buId: string, name?: string): Promise<string>;
@@ -57,10 +57,10 @@ export async function withTx<T>(fn: (ctx: Ctx) => Promise<T>): Promise<T> {
         await client.query("rollback to savepoint expect_err");
         throw new Error(`expected error ${code} but call succeeded`);
       },
-      async asUser(userId, f, aal = "aal2") {
+      async asUser(userId, f, aal = "aal2", claims = {}) {
         await client.query("savepoint as_user");
         await client.query("set local role authenticated");
-        await client.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: userId, role: "authenticated", aal })]);
+        await client.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: userId, role: "authenticated", aal, ...claims })]);
         try {
           return await f();
         } catch (e) {

@@ -35,7 +35,7 @@ fund ledger, the disbursement workflow (request → Finance review → approve/r
 
 **Integrations module (ADR-076): implemented.** Administration → Integrations configures email (SMTP), AI providers (Anthropic Claude, any OpenAI-compatible service) and signed outbound webhooks in the application: forms drawn from data, secrets encrypted before storage and never shown again, changes approved by a Super Admin, a Test button that sends only harmless content, an SMTP integration that carries the application's email, and a webhook outbox with retries. No feature sends data to an AI provider yet.
 
-**Still to do:** choosing hosting and the production email provider, running the CI workflow on GitHub, a restore drill on the real host and a performance baseline on production-sized data. Reports that need data the system does not hold (employee KPIs, key-result targets, financial projections), evidence file storage and historical-data migration are not built. See `docs/25-IMPLEMENTATION-NOTES.md`, `docs/27-DEPLOYMENT-AND-OPERATIONS.md` and `docs/30-ENHANCEMENT-REVIEW.md`.
+**Still to do:** choosing hosting and the production email provider, running the CI workflow on GitHub, a restore drill on the real host and a performance baseline on production-sized data. Reports that need data the system does not hold (employee KPIs, key-result targets, financial projections) and historical-data migration are not built. Evidence file storage is implemented (Supabase Storage bucket + `evidence_files` metadata with SHA-256 verification and UI integration across violations and attendance amendments). See `docs/25-IMPLEMENTATION-NOTES.md`, `docs/27-DEPLOYMENT-AND-OPERATIONS.md` and `docs/30-ENHANCEMENT-REVIEW.md`.
 
 ## Architecture in one paragraph
 
@@ -92,17 +92,22 @@ while it is active. Never set it in production.
 
 ## Tests
 
+**Tests never touch your real database.** They run on a second, separate Supabase stack (own containers, own database, ports 54421/54422; the real one is 54321/54322), generated into `.test-stack/` from `supabase/`. Every test entry point checks this first (`tests/guard.ts`) and refuses to run if it is pointed anywhere else; the database must also carry a marker that only the test stack's reset sets. The real database is only ever erased by `npm run db:reset -- --erase-real-data` or `npm run org:restore`, and both take a backup first.
+
 ```bash
-npm run test:unit    # scoring, WAT boundaries, SMART engine
-npm run test:db      # RESETS the local database, then runs DB integration tests (re-run dev:seed afterwards)
-npm run test:concurrency  # RESETS the database; real multi-connection race tests for money, Skip OKR and amendments
-npm run test:api     # needs `npm run dev` and a seeded DB
-npm run dev:history -- 6   # LOCAL ONLY: plays 6 weeks through the real workflow so Reports has history (then: npm run dev:clock -- off)
-npm run test:e2e     # RESETS the DB, seeds it, then drives the app in a real browser (Playwright + axe); set E2E_CHANNEL=msedge to use an installed browser
+npm run test:unit         # scoring, WAT boundaries, SMART engine (no database)
+npm run test:db           # resets the TEST database, then runs the database tests on it
+npm run test:concurrency  # resets the TEST database; multi-connection race tests for money, Skip OKR and amendments
+npm run test:e2e          # resets and seeds the TEST database, starts the app on port 3100 and drives it in a real browser (Playwright + axe)
+npm run test:api:serial   # every HTTP test file against the test stack (needs a build)
+npm run test:stack -- status|start|stop|reset      # manage the test stack by hand
+node scripts/test-stack.mjs run --reset --seed -- <command>   # run any command against the test stack
+npm run db:backup         # backs up the REAL local database to .local/backups/
 npm run typecheck && npm run lint
-npm run test:api:serial   # every HTTP test file, one app start per file (needs a build and a seeded DB)
 node scripts/scan-secrets.mjs && npm audit --omit=dev --audit-level=high   # what CI's security job runs
 ```
+
+Sample-data scripts (`dev:seed`, `dev:history`) also refuse to run against the real database. To explore the app with demo data, run it against the test stack. In CI the stack is a throwaway one, so the guard accepts it when `CI=true`.
 
 ## Production
 

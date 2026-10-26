@@ -9,6 +9,7 @@
  * only and is never stored. The Super Admin will be asked to set up an authenticator app again after a reset.
  */
 import { spawnSync } from "node:child_process";
+import { backupRealDatabase } from "./db-backup.mjs";
 
 const password = process.env.RESTORE_ADMIN_PASSWORD;
 if (!password) { console.error("Set RESTORE_ADMIN_PASSWORD first (the password you want for the Super Admin)."); process.exit(1); }
@@ -19,6 +20,7 @@ const run = (cmd, args, env = {}) => {
   if (r.status !== 0) { console.error(`Step failed: ${cmd} ${args.join(" ")}`); process.exit(r.status ?? 1); }
 };
 
+console.log("Backup of the current database:", backupRealDatabase());   // this command erases it
 run("npx", ["supabase", "db", "reset"]);
 await new Promise((r) => setTimeout(r, 25000));      // the sign-in service takes a few seconds to come back after a reset
 run("npm", ["run", "bootstrap"], {

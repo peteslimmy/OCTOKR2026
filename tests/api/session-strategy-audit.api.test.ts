@@ -122,7 +122,7 @@ describe("refused requests are audited", () => {
     const secret = randomUUID();                       // the idempotency key: request content must never reach the audit row
     const r = await lead.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, idempotencyKey: secret });
     expect(r.status).toBe(403);
-    const db = new Client({ connectionString: process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres" });
+    const db = new Client({ connectionString: process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54422/postgres" });
     await db.connect();
     try {
       const rows = (await db.query(

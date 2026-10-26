@@ -83,7 +83,7 @@ beforeAll(async () => {
     onData(stream, _s, cb) { let m = ""; stream.on("data", (c) => (m += c)); stream.on("end", () => { mails.push(m); cb(); }); } });
   await new Promise<void>((r) => smtp.listen(0, "127.0.0.1", r));
   smtpPort = (smtp.server.address() as AddressInfo).port;
-  db = new Client({ connectionString: process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres" });
+  db = new Client({ connectionString: process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54422/postgres" });
   await db.connect();
 });
 afterAll(async () => { sink.close(); await new Promise((r) => smtp.close(() => r(null))); await db.end(); });
