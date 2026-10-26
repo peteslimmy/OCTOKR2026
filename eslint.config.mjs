@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // audit reports and their helper scripts are documentation, not application code
+    "docs/audit/**",
+    // the generated second Supabase project used by tests
+    ".test-stack/**",
   ]),
 ]);
 

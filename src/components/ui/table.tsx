@@ -58,20 +58,20 @@ export function DataTable<TData extends RowData, TValue>({
   const [currentPageSize, setCurrentPageSize] = useState(pageSize);
 
   const table = useLegacyTable({
-    data: data as any[],
-    columns: columns as any[],
+    data: data as TData[],
+    columns: columns as unknown as LegacyColumnDef<TData>[],
     state: {
       sorting,
       columnFilters,
       globalFilter,
       rowSelection,
       pagination: { pageIndex, pageSize: currentPageSize }
-    } as any,
+    } as unknown as LegacyTableOptions<TData>["state"],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPageIndex as any,
+    onPaginationChange: setPageIndex as unknown as LegacyTableOptions<TData>["onPaginationChange"],
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -111,9 +111,9 @@ export function DataTable<TData extends RowData, TValue>({
       <div className="relative overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm" role="grid">
           <thead className="bg-surface">
-            {table.getHeaderGroups().map((headerGroup: any) => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-line">
-                {headerGroup.headers.map((header: any) => (
+                {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
                     scope="col"
@@ -144,7 +144,7 @@ export function DataTable<TData extends RowData, TValue>({
                 <td colSpan={columns.length} className="px-4 py-12 text-center text-muted">No data found</td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row: any, i: number) => (
+              table.getRowModel().rows.map((row, i: number) => (
                 <tr
                   key={row.id}
                   className={cn(
@@ -155,7 +155,7 @@ export function DataTable<TData extends RowData, TValue>({
                   )}
                   onClick={() => onRowClick?.(row.original)}
                 >
-                  {row.getVisibleCells().map((cell: any) => (
+                  {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
                       className="px-4 py-3 align-top"

@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { hostname } from "node:os";
 import pino from "pino";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
@@ -14,7 +15,7 @@ const logger = pino({
   mixin: () => ({ service: "4core-okr" }),
   base: {
     pid: process.pid,
-    hostname: require("os").hostname(),
+    hostname: hostname(),
   },
 });
 
