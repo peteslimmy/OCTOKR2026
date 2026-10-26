@@ -1,6 +1,6 @@
 import "server-only";
-import { api } from "@/lib/api/handler";
-import { can, requireActor } from "@/lib/auth/actor";
+import { api, fail } from "@/lib/api/handler";
+import { can } from "@/lib/auth/actor";
 import { currentQuarter, listQuarters } from "@/lib/data";
 import { userClient } from "@/lib/supabase/server";
 import { dbError } from "@/lib/data/errors";
@@ -13,7 +13,7 @@ import { dbError } from "@/lib/data/errors";
 export const GET = api({}, async ({ actor, req }) => {
   // Require reports.view permission
   if (!can(actor, "reports.view")) {
-    return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403 });
+    throw fail("PERMISSION_DENIED", 403, "You do not have permission to do this.");
   }
 
   let quarterId = new URL(req.url).searchParams.get("quarterId");
@@ -22,7 +22,7 @@ export const GET = api({}, async ({ actor, req }) => {
   if (!quarterId) {
     const active = await currentQuarter();
     if (!active) {
-      return new Response(JSON.stringify({ error: "No active quarter" }), { status: 404 });
+      throw fail("NOT_FOUND", 404, "There is no active quarter.");
     }
     quarterId = active.id;
   }
@@ -31,7 +31,7 @@ export const GET = api({}, async ({ actor, req }) => {
   const quarters = await listQuarters();
   const quarter = quarters.find((q) => q.id === quarterId);
   if (!quarter) {
-    return new Response(JSON.stringify({ error: "Quarter not found" }), { status: 404 });
+    throw fail("NOT_FOUND", 404, "Quarter not found.");
   }
 
   // Call the RPC function

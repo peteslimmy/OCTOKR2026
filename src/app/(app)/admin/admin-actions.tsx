@@ -43,7 +43,7 @@ export function BuReportingToggle({ id, name, status, reportsWeekly }: { id: str
   const { run, pending } = useAction();
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{reportsWeekly ? "Stop weekly reporting" : "Require weekly reporting"}</Button>
+      <Button size="sm" variant="secondary" aria-label={`${reportsWeekly ? "Stop weekly reporting" : "Require weekly reporting"} for ${name}`} onClick={() => setOpen(true)}>{reportsWeekly ? "Stop weekly reporting" : "Require weekly reporting"}</Button>
       <Modal open={open} onOpenChange={setOpen} title={reportsWeekly ? `${name}: stop requiring weekly reports?` : `${name}: require weekly reports?`}
         description={(reportsWeekly
           ? "No report, missing-report zero or ranking will apply from the next finalised week. Weeks already finalised keep their recorded scores."
@@ -342,7 +342,7 @@ export function DeleteBu({ id, name, code, hasEmployees, hasReports }: { id: str
 
   return (
     <>
-      <Button size="sm" variant="danger" disabled={disabled} onClick={() => setOpen(true)}>Delete</Button>
+      <Button size="sm" variant="danger" disabled={disabled} aria-label={`Delete ${name} (${code})`} onClick={() => setOpen(true)}>Delete</Button>
       <Modal open={open} onOpenChange={setOpen} title={`Delete ${name} (${code})?`}
         description={disabled
           ? (hasEmployees ? "This unit has employees and cannot be deleted. Reassign them first." : "This unit has weekly reports and cannot be deleted.")
@@ -410,7 +410,7 @@ export function DeleteUserButton({ id, name, email, roles, isSelf, grantPrivileg
 
   return (
     <>
-      <Button size="sm" variant="danger" disabled={isSelf} onClick={() => setOpen(true)}>Delete</Button>
+      <Button size="sm" variant="danger" disabled={isSelf} aria-label={`Delete ${name} (${email})`} onClick={() => setOpen(true)}>Delete</Button>
       <Modal open={open} onOpenChange={setOpen} title={isSelf ? "Cannot delete your own account" : `Delete ${name}?`}
         description={isSelf
           ? "You cannot delete your own account. Ask another Admin to do it."
