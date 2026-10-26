@@ -58,3 +58,6 @@ deploy/.env.production
 # the organisation's real people and one-time sign-in links (personal data)
 /scripts/data/
 /.local/
+
+# the generated second Supabase stack used by tests (scripts/test-stack.mjs)
+/.test-stack/
