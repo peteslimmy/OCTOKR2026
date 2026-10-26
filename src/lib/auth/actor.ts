@@ -11,9 +11,25 @@ export interface Actor {
   buName: string | null;
   roles: string[];
   permissions: ReadonlySet<string>;
-  /** Second-factor situation of this session (ADR-052). */
-  mfa: { required: boolean; enrolled: boolean; aal: "aal1" | "aal2" };
+  /** Second-factor situation of this session (ADR-052). `totp` and `email` say which methods are set up; `aal` is effective. */
+  mfa: {
+    required: boolean;
+    enrolled: boolean;
+    totp: boolean;
+    email: boolean;
+    emailVerified: boolean;
+    aal: "aal1" | "aal2";
+  };
 }
+
+type MfaStatus = {
+  required: boolean;
+  enrolled: boolean;
+  totp: boolean;
+  email: boolean;
+  emailVerifiedAt: string | null;
+  aal: "aal1" | "aal2";
+};
 
 export const can = (a: Actor, code: string) => a.permissions.has(code);
 
@@ -49,7 +65,15 @@ export const getActor = cache(async (): Promise<Actor | null> => {
   const roles = data.user_roles.map((ur) => ur.roles?.code).filter((c): c is string => !!c);
   const permissions = new Set<string>();
   for (const ur of data.user_roles) for (const rp of ur.roles?.role_permissions ?? []) if (rp.permissions) permissions.add(rp.permissions.code);
-  const mfa = (m as { required: boolean; enrolled: boolean; aal: "aal1" | "aal2" } | null) ?? { required: false, enrolled: false, aal: "aal1" as const };
+  const status = (m as MfaStatus | null) ?? { required: false, enrolled: false, totp: false, email: false, emailVerifiedAt: null, aal: "aal1" as const };
+  const mfa: Actor["mfa"] = {
+    required: status.required,
+    enrolled: status.enrolled,
+    totp: status.totp,
+    email: status.email,
+    emailVerified: status.emailVerifiedAt !== null,
+    aal: status.aal,
+  };
   return {
     id: data.id,
     email: data.email,

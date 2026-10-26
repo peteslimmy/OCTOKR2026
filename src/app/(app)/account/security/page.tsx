@@ -14,7 +14,7 @@ export default async function AccountSecurityPage({ searchParams }: PageProps<"/
   const { data: rec } = await sb.rpc("read_my_recovery_status");
   return (
     <>
-      <PageHeader title="Account security" description={`${actor.email} — your password and authenticator app.`} />
+      <PageHeader title="Account security" description={`${actor.email} — your password, authenticator app and email codes.`} />
       <SecurityPanel mfa={{ ...actor.mfa, recoveryCodesRemaining: (rec as { remaining?: number } | null)?.remaining ?? 0 }} mustEnrol={sp.enrol === "1"} />
     </>
   );

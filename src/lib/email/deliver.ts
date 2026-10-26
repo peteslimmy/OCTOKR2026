@@ -16,10 +16,13 @@ export interface DeliveryResult { claimed: number; sent: number; failed: number;
 
 const RECIPIENT = /^[^\s<>()",;\\]+@[^\s<>()",;\\]+$/;
 
+/** True when this is one plain address: no display name, no list, no line break. */
+export const isPlainRecipient = (address: string) => RECIPIENT.test(address) && address.length <= 254;
+
 /** What the person reads: the same words as the in-app notification, and where to act on it. Plain text only: nothing is rendered as markup. */
 export function composeMail(row: OutboxRow, appUrl?: string): Mail {
   // defence in depth: addresses come from the database, but nothing with a space, a line break or a list separator may ever reach an SMTP command
-  if (!RECIPIENT.test(row.to_email) || row.to_email.length > 254) throw new Error("the recipient address is not a single plain address");
+  if (!isPlainRecipient(row.to_email)) throw new Error("the recipient address is not a single plain address");
   const link = appUrl ? `\n\nOpen the application: ${appUrl.replace(/\/+$/, "")}/notifications` : "";
   return {
     to: row.to_email,

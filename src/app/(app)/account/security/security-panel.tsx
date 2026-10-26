@@ -5,7 +5,7 @@ import { useState } from "react";
 import { apiRequest, ApiFailure, useAction } from "@/components/ui/client";
 import { Badge, Banner, Button, Card, CardHeader, Input, Label, Field } from "@/components/ui/primitives";
 
-type Mfa = { required: boolean; enrolled: boolean; aal: "aal1" | "aal2"; recoveryCodesRemaining?: number };
+type Mfa = { required: boolean; enrolled: boolean; totp: boolean; email: boolean; emailVerified?: boolean; aal: "aal1" | "aal2"; recoveryCodesRemaining?: number };
 type Enrolment = { factorId: string; qrCode: string; secret: string };
 
 /** The one-time list of recovery codes. Shown right after setup and after "make new codes"; it cannot be shown again, so the person must confirm they kept it. */
@@ -34,9 +34,10 @@ export function SecurityPanel({ mfa, mustEnrol }: { mfa: Mfa; mustEnrol: boolean
   return (
     <div className="space-y-6">
       {mustEnrol && !mfa.enrolled ? (
-        <Banner tone="warn" title="Set up your authenticator app to continue.">Your role requires a second sign-in step. Until it is set up, the rest of the application is unavailable to you.</Banner>
+        <Banner tone="warn" title="Set up a second factor to continue.">Your role requires a second sign-in step: an authenticator app or a code sent to your email. Until one is set up, the rest of the application is unavailable to you.</Banner>
       ) : null}
       <AuthenticatorCard mfa={mfa} />
+      <EmailCodesCard mfa={mfa} />
       <PasswordCard />
     </div>
   );
@@ -56,9 +57,9 @@ function AuthenticatorCard({ mfa }: { mfa: Mfa }) {
     <Card>
       <CardHeader title="Authenticator app"
         description="A 6-digit code from an app such as Google Authenticator, Microsoft Authenticator or 1Password protects your account even if your password is stolen."
-        action={mfa.enrolled ? <Badge tone="done">Active</Badge> : mfa.required ? <Badge tone="critical">Required</Badge> : <Badge tone="undefined">Not set up</Badge>} />
+        action={mfa.totp ? <Badge tone="done">Active</Badge> : mfa.required ? <Badge tone="critical">Required</Badge> : <Badge tone="undefined">Not set up</Badge>} />
       <div className="space-y-4 px-6 py-4 text-sm">
-        {!mfa.enrolled && !enrolment ? (
+        {!mfa.totp && !enrolment ? (
           <Button disabled={pending}
             onClick={async () => { const r = await run(() => apiRequest<Enrolment>("POST", "auth/mfa/enroll"), { refresh: false }); if (r) setEnrolment(r.value); }}>
             Set up authenticator
@@ -93,7 +94,7 @@ function AuthenticatorCard({ mfa }: { mfa: Mfa }) {
 
         {codes ? <RecoveryCodesDialog codes={codes} onDone={() => { setCodes(null); router.replace("/dashboard"); router.refresh(); }} /> : null}
 
-        {mfa.enrolled && !codes ? (
+        {mfa.totp && !codes ? (
           <div className="space-y-2 rounded-lg border border-line p-4">
             <h3 className="font-semibold">Recovery codes</h3>
             <p className="text-muted">{(remaining ?? mfa.recoveryCodesRemaining ?? 0) > 0 ? `${remaining ?? mfa.recoveryCodesRemaining} unused code${(remaining ?? mfa.recoveryCodesRemaining) === 1 ? "" : "s"} left.` : "You have no unused recovery codes."} Making new codes cancels the old ones, and asks for a fresh authenticator code.</p>
@@ -104,7 +105,7 @@ function AuthenticatorCard({ mfa }: { mfa: Mfa }) {
           </div>
         ) : null}
 
-        {mfa.enrolled && !mfa.required ? (
+        {mfa.totp && !mfa.required ? (
           <form className="space-y-3" onSubmit={async (e) => {
             e.preventDefault();
             await run(() => apiRequest("POST", "auth/mfa/disable", { code: clean }), { success: "Authenticator removed." });
@@ -118,7 +119,90 @@ function AuthenticatorCard({ mfa }: { mfa: Mfa }) {
             <Button type="submit" variant="danger" disabled={pending || clean.length !== 6}>Remove authenticator</Button>
           </form>
         ) : null}
-        {mfa.enrolled && mfa.required ? <p className="text-muted">Your role requires an authenticator app, so it cannot be removed. If you lose your device, ask an administrator to reset it.</p> : null}
+        {mfa.totp && mfa.required ? <p className="text-muted">Your role requires an authenticator app, so it cannot be removed. If you lose your device, ask an administrator to reset it.</p> : null}
+      </div>
+    </Card>
+  );
+}
+
+function EmailCodesCard({ mfa }: { mfa: Mfa }) {
+  const router = useRouter();
+  const { run, pending } = useAction();
+  const [phase, setPhase] = useState<"idle" | "enrolling" | "disabling">("idle");
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const clean = code.replace(/\s/g, "");
+
+  const blocked = mfa.email && mfa.required && !mfa.totp;
+
+  const send = async (purpose: "ENROL" | "STEP_UP") => {
+    setError(null);
+    const ok = await run(() => apiRequest("POST", "auth/mfa/email/send", { purpose }).catch((err: ApiFailure) => { setError(err.message); throw err; }),
+      { success: "We sent a 6-digit code to your email address.", refresh: false });
+    if (ok) setSent(true);
+  };
+
+  return (
+    <Card>
+      <CardHeader title="Email codes"
+        description="Instead of a code from an app, we can email a 6-digit code each time you sign in. Codes expire after 10 minutes and work once."
+        action={mfa.email ? <Badge tone="done">Active</Badge> : <Badge tone="undefined">Not set up</Badge>} />
+      <div className="space-y-4 px-6 py-4 text-sm">
+        {phase === "idle" ? (
+          mfa.email ? (
+            blocked ? (
+              <p className="text-muted">Your role requires a second factor. Set up an authenticator app before removing email codes.</p>
+            ) : (
+              <div className="space-y-2 rounded-lg border border-line p-4">
+                <p className="text-muted">Email codes are on for this account. Each sign-in asks for a fresh code.</p>
+                <Button variant="danger" size="sm" disabled={pending} onClick={() => { setPhase("disabling"); setSent(false); setCode(""); setError(null); }}>
+                  Turn off email codes
+                </Button>
+              </div>
+            )
+          ) : (
+            <Button disabled={pending} onClick={() => { setPhase("enrolling"); setSent(false); setCode(""); setError(null); }}>
+              Set up email codes
+            </Button>
+          )
+        ) : null}
+
+        {phase !== "idle" ? (
+          <form className="space-y-3" onSubmit={async (e) => {
+            e.preventDefault();
+            setError(null);
+            if (phase === "enrolling") {
+              const ok = await run(() => apiRequest("POST", "auth/mfa/email/verify", { code: clean, purpose: "ENROL" }).catch((err: ApiFailure) => { setError(err.message); throw err; }),
+                { success: "Email codes activated.", refresh: false });
+              if (ok) { setPhase("idle"); setSent(false); setCode(""); router.refresh(); }
+            } else {
+              const ok = await run(() => apiRequest("POST", "auth/mfa/email/disable", { code: clean }).catch((err: ApiFailure) => { setError(err.message); throw err; }),
+                { success: "Email codes turned off.", refresh: false });
+              if (ok) { setPhase("idle"); setSent(false); setCode(""); router.refresh(); }
+            }
+          }}>
+            <p className="text-muted">
+              {phase === "enrolling"
+                ? "Confirm the address by entering the code we send it."
+                : "Confirm with a code sent to your email, then email codes are turned off for this account."}
+            </p>
+            <Button type="button" variant="secondary" size="sm" onClick={() => send(phase === "enrolling" ? "ENROL" : "STEP_UP")} disabled={pending}>
+              {sent ? "Send another code" : "Email me a code"}
+            </Button>
+            <div className="max-w-xs">
+              <Label htmlFor="email-code">{phase === "enrolling" ? "Email code" : "Confirmation code"}</Label>
+              <Input id="email-code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={7} required />
+            </div>
+            {error ? <p role="alert" className="text-[var(--critical-fg)]">{error}</p> : null}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={pending || !sent || clean.length !== 6}>
+                {phase === "enrolling" ? "Turn on email codes" : "Turn off email codes"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => { setPhase("idle"); setSent(false); setCode(""); setError(null); }}>Cancel</Button>
+            </div>
+          </form>
+        ) : null}
       </div>
     </Card>
   );

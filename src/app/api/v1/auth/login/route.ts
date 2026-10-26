@@ -27,11 +27,14 @@ export const POST = api(
       throw fail("AUTHENTICATION_FAILED", 401, GENERIC);
     }
     // Second factor: a password alone yields an AAL1 session, which the API, the pages and row-level security all treat as incomplete.
-    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") return { ok: false, mfaRequired: true };
-    await rpc("record_login_success", { p_user: data.user.id });
+    // Supabase only raises the level itself for authenticator apps, so ask our own status (it also covers emailed codes).
     const { data: status } = await sb.rpc("read_my_mfa_status");
-    const s = status as { required: boolean; enrolled: boolean } | null;
-    return { ok: true, mfaEnrolmentRequired: !!s?.required && !s.enrolled };
+    const s = status as { required: boolean; enrolled: boolean; totp: boolean; email: boolean; aal: "aal1" | "aal2" } | null;
+    const enrolled = !!s?.enrolled;
+    if (enrolled && (s?.aal ?? "aal1") !== "aal2") {
+      return { ok: false, mfaRequired: true, methods: { totp: !!s?.totp, email: !!s?.email } };
+    }
+    await rpc("record_login_success", { p_user: data.user.id });
+    return { ok: true, mfaEnrolmentRequired: !!s?.required && !enrolled };
   },
 );

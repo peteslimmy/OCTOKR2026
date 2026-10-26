@@ -17,3 +17,19 @@ export async function hasRecentTotp(): Promise<boolean> {
   const at = await lastTotpAt();
   return at !== null && Date.now() / 1000 - at <= STEP_UP_WINDOW_SECONDS;
 }
+
+/** When this session last passed the emailed-code check, while that verification is still live. */
+export async function lastEmailFactorAt(): Promise<number | null> {
+  const sb = await userClient();
+  const { data } = await sb.rpc("read_my_mfa_status");
+  const at = (data as { emailVerifiedAt?: string | null } | null)?.emailVerifiedAt;
+  const seconds = at ? Date.parse(at) / 1000 : Number.NaN;
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
+/** Either second factor, recently enough for a high-risk action: an authenticator check or an emailed code. */
+export async function hasRecentSecondFactor(): Promise<boolean> {
+  if (await hasRecentTotp()) return true;
+  const at = await lastEmailFactorAt();
+  return at !== null && Date.now() / 1000 - at <= STEP_UP_WINDOW_SECONDS;
+}

@@ -17,7 +17,7 @@ export const POST = api({ partial: true, body: z.object({ password: z.string().m
   if (!recoveredAt || Date.now() / 1000 - recoveredAt > 15 * 60) {
     throw fail("RECOVERY_REQUIRED", 403, "This reset link has expired. Request a new one.");
   }
-  if (actor.mfa.enrolled && actor.mfa.aal !== "aal2") throw fail("MFA_REQUIRED", 401, "Enter your authenticator code to continue.");
+  if (actor.mfa.enrolled && actor.mfa.aal !== "aal2") throw fail("MFA_REQUIRED", 401, "Enter your second-factor code to continue.");
   const issues = checkPassword(body.password, actor.email);
   if (issues.length) throw fail("PASSWORD_POLICY", 422, `Choose a stronger password: ${describeIssues(issues).join("; ")}.`, issues);
   const { error } = await sb.auth.updateUser({ password: body.password });

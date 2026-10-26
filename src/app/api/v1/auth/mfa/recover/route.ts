@@ -12,7 +12,7 @@ import { userClient } from "@/lib/supabase/server";
  */
 export const POST = api({ partial: true, body: z.object({ code: z.string().trim().min(8).max(40) }) }, async ({ actor, body, rpc, correlationId }) => {
   if (await rateLimited(`mfa:recover:${actor.id}`, 5, 600_000)) throw fail("RATE_LIMITED", 429, "Too many attempts. Please wait and try again.");
-  if (!actor.mfa.enrolled) throw fail("MFA_NOT_ENROLLED", 409, "No authenticator is set up for this account.");
+  if (!actor.mfa.totp) throw fail("MFA_NOT_ENROLLED", 409, "No authenticator is set up for this account.");
   const invalid = fail("AUTHENTICATION_FAILED", 401, "That recovery code is not valid.");
   if (!looksLikeRecoveryCode(body.code)) { await rpc("record_mfa_failure", { p_user: actor.id }); throw invalid; }
   const ok = await rpc<boolean>("consume_recovery_code", { p_user: actor.id, p_hash: hashRecoveryCode(actor.id, body.code) });
