@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { NavSelect } from "@/components/ui/nav-select";
 import { ScoreText, watDate } from "@/components/status";
 import { Badge, Banner, Card, CardHeader, EmptyState, PageHeader, DataTable } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
@@ -32,11 +33,10 @@ export default async function PerformancePage({ searchParams }: PageProps<"/perf
     <>
       <PageHeader title="Performance" description={`Quarterly execution for Q${quarter.quarter_number} ${quarter.year}. Every number below traces to a stored weekly snapshot.`} />
       {all ? (
-        <div className="mb-4 flex flex-wrap gap-2" role="navigation" aria-label="Business units">
-          {bus.filter((b) => b.status === "ACTIVE").map((b) => (
-            <Link key={b.id} href={`/performance?bu=${b.id}`} aria-current={b.id === buId ? "page" : undefined}
-              className={`rounded-full border px-3 py-1 text-sm ${b.id === buId ? "border-brand-700 bg-brand-100 text-brand-800" : "border-line bg-panel"}`}>{b.name}</Link>
-          ))}
+        <div className="mb-4" role="group" aria-label="Business unit filter">
+          <NavSelect id="performance-unit" label="Unit" value={buId} hrefBase="/performance?bu="
+            options={[...bus].filter((b) => b.status === "ACTIVE").sort((x, y) => x.name.localeCompare(y.name))
+              .map((b) => ({ value: b.id, label: b.name, group: b.unit_type === "DEPARTMENT" ? "Departments" : "Business Units" }))} />
         </div>
       ) : null}
       <Card>

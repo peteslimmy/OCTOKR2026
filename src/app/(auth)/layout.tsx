@@ -6,7 +6,7 @@ import { getSite } from "@/lib/data/site";
 export default async function AuthLayout({ children }: LayoutProps<"/">) {
   const [{ config, images }, brand] = await Promise.all([getSite(), getBranding()]);
   return (
-    <AuthFrame login={config.login} images={images} brand={{ name: brand.appName, shortName: brand.shortName, logoUrl: brand.logoUrl, primaryColor: brand.primaryColor }}>
+    <AuthFrame login={config.login} images={images} brand={{ name: brand.appName, shortName: brand.shortName, logoUrl: brand.logoUrl, primaryColor: brand.primaryColor, logoHeight: brand.logoHeight }}>
       {children}
     </AuthFrame>
   );

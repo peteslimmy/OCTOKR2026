@@ -42,7 +42,7 @@ export function SignInWizard() {
         <CardHeader title="1. Choose the spreadsheet" description="Two columns: Email and Roles. Roles are role codes or names, separated by commas or semicolons (for example BU_LEAD, or BU Lead; Presenter). The person must already be an active employee without a sign-in." />
         <Field id="si-file" label="Spreadsheet (.xlsx or .csv)"><Input id="si-file" type="file" accept=".xlsx,.csv" disabled={busy || !!done} onChange={(e) => onFile(e.target.files?.[0])} /></Field>
         {busy && !checked ? <p role="status" className="mt-3 text-sm">Reading and checking the file…</p> : null}
-        {error ? <p role="alert" className="mt-3 text-sm text-danger-700">{error}</p> : null}
+        {error ? <p role="alert" className="mt-3 rounded-lg bg-[var(--critical-bg)] px-3 py-2 text-sm font-medium text-[var(--critical-fg)]">{error}</p> : null}
       </Card>
 
       {checked && checked.problemCount > 0 ? (

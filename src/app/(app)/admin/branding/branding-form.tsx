@@ -5,8 +5,9 @@ import { useState } from "react";
 import { apiRequest, useAction } from "@/components/ui/client";
 import { Button, Field, Input } from "@/components/ui/primitives";
 import { brandShades, contrastWithWhite, DEFAULT_PRIMARY, MIN_CONTRAST } from "@/lib/branding-theme";
+import { BrandLogo, LOGO_DEFAULT_HEIGHT, LOGO_MAX_HEIGHT, LOGO_MIN_HEIGHT } from "@/components/brand-logo";
 
-interface Initial { appName: string; shortName: string; primaryColor: string; logoUrl: string | null; faviconUrl: string | null }
+interface Initial { appName: string; shortName: string; primaryColor: string; logoUrl: string | null; faviconUrl: string | null; logoHeight: number }
 
 const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
   const r = new FileReader();
@@ -18,7 +19,7 @@ const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
 export function BrandingForm({ initial }: { initial: Initial }) {
   const router = useRouter();
   const { run, pending } = useAction();
-  const [f, setF] = useState({ appName: initial.appName, shortName: initial.shortName, primaryColor: initial.primaryColor });
+  const [f, setF] = useState({ appName: initial.appName, shortName: initial.shortName, primaryColor: initial.primaryColor, logoHeight: initial.logoHeight || LOGO_DEFAULT_HEIGHT });
   const contrast = contrastWithWhite(f.primaryColor);
   const shades = brandShades(f.primaryColor);
   const readable = contrast >= MIN_CONTRAST;
@@ -47,6 +48,18 @@ export function BrandingForm({ initial }: { initial: Initial }) {
             {readable ? `Contrast with white text: ${contrast.toFixed(1)}:1 — readable.` : `Contrast with white text: ${contrast.toFixed(1)}:1 — too light. Buttons would be hard to read; choose a darker colour.`}
           </p>
         </div>
+        {initial.logoUrl ? (
+          <div>
+            <label htmlFor="br-logo-size" className="mb-1 block text-sm font-medium">Logo size</label>
+            <div className="flex items-center gap-3">
+              <input id="br-logo-size" type="range" min={LOGO_MIN_HEIGHT} max={LOGO_MAX_HEIGHT} step={2} value={f.logoHeight} aria-valuetext={`${f.logoHeight} pixels tall`}
+                onChange={(e) => setF({ ...f, logoHeight: Number(e.target.value) })} className="w-48 accent-[var(--brand-700)]" />
+              <span className="w-16 text-sm tabular-nums">{f.logoHeight} px</span>
+              <Button variant="secondary" size="sm" onClick={() => setF({ ...f, logoHeight: LOGO_DEFAULT_HEIGHT })}>Reset</Button>
+            </div>
+            <p className="mt-1 text-xs text-muted">How tall the logo appears in the header, on the sign-in page and on the landing page. The width follows the picture, so any shape works.</p>
+          </div>
+        ) : null}
         <Button type="submit" disabled={pending || !readable}>{pending ? "Saving…" : "Save branding"}</Button>
       </form>
 
@@ -56,8 +69,7 @@ export function BrandingForm({ initial }: { initial: Initial }) {
           <div className="rounded-lg border border-line p-4">
             <div className="flex items-center gap-2 font-semibold">
               {initial.logoUrl
-                // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={initial.logoUrl} alt="" className="h-8 w-8 rounded-lg object-contain" />
+                ? <BrandLogo src={initial.logoUrl} height={f.logoHeight} />
                 : <span className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white" style={{ background: shades["700"] }} aria-hidden>{f.shortName}</span>}
               {f.appName}
             </div>
@@ -76,7 +88,7 @@ export function BrandingForm({ initial }: { initial: Initial }) {
               <div className="flex items-center gap-3">
                 {url
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={url} alt={`Current ${kind}`} className="h-12 w-12 rounded border border-line object-contain" />
+                  ? <img src={url} alt={`Current ${kind}`} className={kind === "logo" ? "h-12 w-auto max-w-40 rounded border border-line object-contain" : "h-12 w-12 rounded border border-line object-contain"} />
                   : <span className="flex h-12 w-12 items-center justify-center rounded border border-dashed border-line text-xs text-muted">None</span>}
                 <input id={`br-${kind}`} type="file" accept={kind === "logo" ? "image/png,image/jpeg,image/webp" : "image/png,image/x-icon,.ico"} disabled={pending}
                   onChange={(e) => { void upload(kind, e.target.files?.[0]); e.target.value = ""; }} className="text-sm" />

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getBranding } from "@/lib/data/branding";
 import { getSite } from "@/lib/data/site";
 import { LoginForm } from "./login-form";
+import { BrandLogo } from "@/components/brand-logo";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -15,8 +16,7 @@ export default async function LoginPage() {
     <div className="w-full max-w-sm">
       <div className="mb-8">
         {brand.logoUrl
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={brand.logoUrl} alt="" className="mb-4 h-12 w-12 rounded-xl object-contain lg:hidden" />
+          ? <BrandLogo src={brand.logoUrl} height={Math.round(brand.logoHeight * 1.5)} className="mb-4 lg:hidden" />
           : <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white lg:hidden" aria-hidden>{brand.shortName}</div>}
         <h1 className="text-3xl font-semibold tracking-tight">{f.title}</h1>
         {f.subtitle ? <p className="mt-2 text-sm text-muted">{f.subtitle}</p> : null}

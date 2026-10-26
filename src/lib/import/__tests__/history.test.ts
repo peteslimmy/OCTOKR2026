@@ -40,3 +40,24 @@ describe("historical sheet parser", () => {
     expect([normaliseSubKr("KR 2.3"), normaliseSubKr(" 1.1 "), normaliseSubKr("-"), normaliseSubKr("Stretch"), normaliseSubKr("x")]).toEqual(["2.3", "1.1", null, null, "x"]);
   });
 });
+
+describe("goal column names (a real sheet used the heading Goal Title)", () => {
+  it("accepts Goal Title, Goal Name and similar headings, in any case or punctuation", () => {
+    for (const heading of ["Goal Title", "goal title", "GOAL_TITLE", "Goal Name", "SMART Goal", "Goal description", "Title"]) {
+      const r = detectLayout(["Year", "Week", "BU/Depart", "SubKR", heading, "Task 1", "Status 1"]);
+      expect("layout" in r, heading).toBe(true);
+      if ("layout" in r) expect(r.layout.goal, heading).toBe(4);
+    }
+  });
+
+  it("still asks for a goal column when there is none, and says what the accepted names are", () => {
+    const r = detectLayout(["Year", "Week", "BU/Depart", "SubKR", "Task 1", "Status 1"]);
+    expect(r).toEqual({ error: expect.stringContaining("Goal") });
+  });
+
+  it("reads the exact header row of the owner's sheet (a trailing '...' column is ignored)", () => {
+    const r = detectLayout(["Year", "Week", "BU/Depart", "SubKR", "Goal Title", "Task 1", "Status 1", "Task 2", "Status 2", "..."]);
+    expect("layout" in r).toBe(true);
+    if ("layout" in r) expect(r.layout.tasks).toHaveLength(2);
+  });
+});

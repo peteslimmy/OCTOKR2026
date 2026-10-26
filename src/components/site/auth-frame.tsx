@@ -5,6 +5,7 @@ import type { LoginConfig } from "@/lib/site-content";
 import { DashboardArt } from "./art";
 import { ICONS } from "./icons";
 import type { SiteBrand } from "./landing-view";
+import { BrandLogo } from "@/components/brand-logo";
 
 const imageUrl = (slot: string | null, images: Record<string, number>) => (slot ? `/site-image/${slot}?v=${images[slot] ?? 0}` : null);
 const TONE = {
@@ -24,8 +25,7 @@ export function AuthFrame({ login, brand, images, children, preview = false }: {
   const logo = (
     <span className="inline-flex w-fit items-center gap-3 font-semibold tracking-tight">
       {brand.logoUrl
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={brand.logoUrl} alt="" className="h-10 w-10 rounded-xl bg-white object-contain p-0.5" />
+        ? <BrandLogo src={brand.logoUrl} height={Math.round((brand.logoHeight ?? 32) * 1.25)} onDark={login.panel.tone === "brand"} />
         : <span className={clsx("flex h-10 w-10 items-center justify-center rounded-xl text-lg font-bold", tone.mark)} aria-hidden>{brand.shortName}</span>}
       {brand.name}
     </span>

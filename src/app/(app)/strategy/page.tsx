@@ -5,6 +5,7 @@ import { Badge, Banner, Card, CardHeader, EmptyState, PageHeader, ScoreBar } fro
 import { can, requireActor } from "@/lib/auth/actor";
 import { currentQuarter, getAnnualTheme, getStrategyHistory, getStrategyTree, getThemeChanges, listQuarters, listStrategyChanges } from "@/lib/data";
 import { ChangeQueue, RequestChange } from "./strategy-change-actions";
+import { NavSelect } from "@/components/ui/nav-select";
 import { ActivateButton, AddKeyResult, AddSubKr, CreateQuarters, CreateTheme, ChangeTheme, EditText, ObjectiveForm } from "./strategy-actions";
 
 export const metadata: Metadata = { title: "Strategy" };
@@ -36,7 +37,7 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
           <CardHeader title={`Annual Theme ${year}`}
             action={theme && can(actor, "strategy.annual_theme.change_exception") ? <ChangeTheme themeId={theme.id} current={theme.theme} /> : undefined} />
           <div className="space-y-3 px-6 py-4">
-            {theme ? <p className="text-xl font-semibold">{theme.theme}</p> : (
+            {theme ? <p className="text-sm font-medium leading-6 text-ink">{theme.theme}</p> : (
               <EmptyState title="No annual theme for this year">
                 {can(actor, "strategy.annual_theme.create") ? "Set the single theme that frames the year's quarterly objectives." : "A SuperAdmin or Admin sets the annual theme."}
                 {can(actor, "strategy.annual_theme.create") ? <CreateTheme year={year} /> : null}
@@ -50,15 +51,13 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
           </div>
         </Card>
 
-        <div className="flex flex-wrap items-center gap-2" role="navigation" aria-label="Quarters">
-          {quarters.length === 0 ? <span className="text-sm text-muted">No quarters yet.</span> : null}
-          {quarters.map((q) => (
-            <Link key={q.id} href={`/strategy?quarter=${q.id}`} aria-current={quarter?.id === q.id ? "page" : undefined}
-              className={`rounded-full border px-3 py-1 text-sm ${quarter?.id === q.id ? "border-brand-700 bg-brand-100 text-brand-800" : "border-line bg-panel hover:bg-surface"}`}>
-              Q{q.quarter_number} {q.year} · {q.status.toLowerCase()}
-            </Link>
-          ))}
-          {can(actor, "strategy.quarter.manage") ? <CreateQuarters year={year} /> : null}
+        <div className="flex flex-wrap items-center justify-between gap-3" role="group" aria-label="Quarter filter">
+          {quarters.length === 0 ? <span className="text-sm text-muted">No quarters yet.</span> : (
+            <NavSelect id="strategy-quarter" label="Quarter" value={quarter?.id ?? ""} hrefBase="/strategy?quarter="
+              options={[...quarters].sort((x, y) => y.year - x.year || y.quarter_number - x.quarter_number)
+                .map((q) => ({ value: q.id, group: String(q.year), label: `Q${q.quarter_number} ${q.year} · ${q.status.toLowerCase()}` }))} />
+          )}
+          {can(actor, "strategy.quarter.manage") && quarters.filter((q) => q.year === year).length < 4 ? <CreateQuarters year={year} /> : null}
         </div>
 
         {quarter && tree ? (

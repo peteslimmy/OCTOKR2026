@@ -1,16 +1,25 @@
 import { redirect } from "next/navigation";
-import { Shell, type CreateItem, type NavGroup, type NavItem } from "@/components/shell";
+import { Shell, type CreateItem, type LockChip, type NavGroup, type NavItem } from "@/components/shell";
 import { ClockProvider, StepUpHost } from "@/components/ui/client";
 import { can, getActor } from "@/lib/auth/actor";
-import { currentQuarter, environmentInfo, serverNow, unreadCount } from "@/lib/data";
+import { activeWeeks, currentQuarter, environmentInfo, serverNow, unreadCount } from "@/lib/data";
 import { getBranding } from "@/lib/data/branding";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const actor = await getActor();
   if (!actor) redirect("/login");
-  const [quarter, unread, env, branding] = await Promise.all([currentQuarter(), unreadCount(), environmentInfo(), getBranding()]);
+  const [quarter, unread, env, branding, weeks] = await Promise.all([currentQuarter(), unreadCount(), environmentInfo(), getBranding(), activeWeeks().catch(() => [])]);
   const now = await serverNow();
   const devClock = env.clock_overridden ? now : null;
+  // the deadlines that matter right now: the content lock of an open week, the final lock of a week that is locked but still being executed
+  const lockText = (iso: string) => new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Lagos" }).format(new Date(iso));
+  const locks: LockChip[] = weeks
+    .filter((w) => w.reporting_state === "NORMAL")
+    .flatMap((w): LockChip[] =>
+      w.phase === "OPEN" ? [{ key: `c${w.id}`, kind: "content", weekNumber: w.week_number, at: w.content_lock_at, atText: lockText(w.content_lock_at) }]
+      : w.phase === "CONTENT_LOCKED" ? [{ key: `f${w.id}`, kind: "final", weekNumber: w.week_number, at: w.final_lock_at, atText: lockText(w.final_lock_at) }]
+      : [])
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const any = (...p: string[]) => p.some((x) => can(actor, x));
 
   // Navigation is grouped by what the person is trying to do. Each entry still shows only when the signed-in role may open it.
@@ -66,12 +75,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   ].filter((c): c is CreateItem => !!c);
 
   return (
-    <Shell groups={groups} create={create} brand={{ name: branding.appName, shortName: branding.shortName, logoUrl: branding.logoUrl }}
+    <ClockProvider serverNow={now}>
+    <Shell groups={groups} create={create} brand={{ name: branding.appName, shortName: branding.shortName, logoUrl: branding.logoUrl, logoHeight: branding.logoHeight }}
       user={{ name: actor.name, roles: actor.roles, bu: actor.buName }} unread={unread}
-      quarterLabel={quarter ? `Q${quarter.quarter_number} ${quarter.year}${quarter.status === "ACTIVE" ? "" : ` · ${quarter.status.toLowerCase()}`}` : null}>
+      locks={locks} quarterLabel={quarter ? `Q${quarter.quarter_number} ${quarter.year}${quarter.status === "ACTIVE" ? "" : ` · ${quarter.status.toLowerCase()}`}` : null}>
       {devClock ? <div role="status" className="mb-4 rounded-lg bg-[var(--warn-bg)] px-4 py-2 text-sm font-medium text-[var(--warn-fg)]">DEVELOPMENT CLOCK ACTIVE — server time is frozen at {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(devClock))} WAT. Never enabled in production.</div> : null}
-      <ClockProvider serverNow={now}>{children}</ClockProvider>
+      {children}
       <StepUpHost />
     </Shell>
+    </ClockProvider>
   );
 }

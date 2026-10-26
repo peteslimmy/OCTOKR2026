@@ -4,13 +4,14 @@ import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
 import {
   AlertTriangle, Banknote, Bell, BookOpen, Bookmark, Building2, CalendarDays, ChevronDown, FileBarChart, FileClock, Inbox, Landmark, LayoutDashboard, Lightbulb, ListChecks,
-  LogOut, Menu, Palette, PanelsTopLeft, Plus, Presentation, ScrollText, Search, ShieldCheck, SlidersHorizontal, Target, TrendingUp, Upload, UserCog, Users, Wallet, Wrench, X,
+  Lock, LogOut, Menu, Palette, PanelsTopLeft, Presentation, ScrollText, Search, ShieldCheck, SlidersHorizontal, Target, TrendingUp, Upload, UserCog, Users, Wallet, Wrench, X,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { apiRequest } from "@/components/ui/client";
+import { apiRequest, Countdown } from "@/components/ui/client";
+import { BrandLogo } from "@/components/brand-logo";
 
 const ICONS = {
   dashboard: LayoutDashboard, strategy: Target, weekly: ListChecks, performance: TrendingUp, presentation: Presentation, reports: FileBarChart, insights: Lightbulb,
@@ -22,7 +23,10 @@ export type IconName = keyof typeof ICONS;
 export interface NavItem { href: string; label: string; icon: IconName; hint?: string; exact?: boolean }
 export interface NavGroup { label: string; items: NavItem[] }
 export interface CreateItem { href: string; label: string; hint: string }
-export interface Brand { name: string; shortName: string; logoUrl: string | null }
+/** An upcoming deadline shown in the header: the content lock of an open week or the final lock of a week still being executed. */
+export interface LockChip { key: string; kind: "content" | "final"; weekNumber: number; at: string; atText: string }
+
+export interface Brand { name: string; shortName: string; logoUrl: string | null; logoHeight?: number }
 
 const STORE = "okr.nav.collapsed";
 // Which groups the person collapsed is a per-browser convenience, read without an effect so the server render stays stable.
@@ -30,22 +34,18 @@ const subscribeNav = (cb: () => void) => { window.addEventListener("okr-nav", cb
 const readNav = () => { try { return localStorage.getItem(STORE) ?? "[]"; } catch { return "[]"; } };
 const matches = (path: string, href: string) => path === href || path.startsWith(href + "/");
 
-export function Shell({ groups, create, brand, user, quarterLabel, unread, children }: {
-  groups: NavGroup[]; create: CreateItem[]; brand: Brand; user: { name: string; roles: string[]; bu: string | null }; quarterLabel: string | null; unread: number; children: ReactNode;
+export function Shell({ groups, create, brand, user, quarterLabel, locks = [], unread, children }: {
+  groups: NavGroup[]; create: CreateItem[]; brand: Brand; user: { name: string; roles: string[]; bu: string | null }; quarterLabel: string | null; locks?: LockChip[]; unread: number; children: ReactNode;
 }) {
   const path = usePathname();
   const router = useRouter();
   // menus belong to the page they were opened on, so moving to another page closes them
   const [openFor, setOpenFor] = useState<string | null>(null);
-  const [createFor, setCreateFor] = useState<string | null>(null);
   const open = openFor === path;
-  const createOpen = createFor === path;
   const setOpen = (v: boolean) => setOpenFor(v ? path : null);
-  const setCreateOpen = (v: boolean | ((x: boolean) => boolean)) => setCreateFor((cur) => ((typeof v === "function" ? v(cur === path) : v) ? path : null));
   const rawCollapsed = useSyncExternalStore(subscribeNav, readNav, () => "[]");
   const collapsed = useMemo<string[]>(() => { try { return JSON.parse(rawCollapsed) as string[]; } catch { return []; } }, [rawCollapsed]);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const createRef = useRef<HTMLDivElement>(null);
 
   const toggle = (label: string) => {
     const next = collapsed.includes(label) ? collapsed.filter((x) => x !== label) : [...collapsed, label];
@@ -55,13 +55,11 @@ export function Shell({ groups, create, brand, user, quarterLabel, unread, child
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setOpen(false); setCreateOpen(false); }
+      if (e.key === "Escape") setOpen(false);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen(true); }
     };
-    const click = (e: MouseEvent) => { if (createRef.current && !createRef.current.contains(e.target as Node)) setCreateOpen(false); };
     window.addEventListener("keydown", key);
-    window.addEventListener("mousedown", click);
-    return () => { window.removeEventListener("keydown", key); window.removeEventListener("mousedown", click); };
+    return () => window.removeEventListener("keydown", key);
   }, []);
 
   const reduceMotion = useReducedMotion();
@@ -103,18 +101,27 @@ export function Shell({ groups, create, brand, user, quarterLabel, unread, child
   return (
     <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-2">Skip to content</a>
-      <header className="glass sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line px-4">
+      <header className="glass sticky top-0 z-30 flex min-h-14 items-center py-1 gap-3 border-b border-line px-4">
         <button className="rounded-lg p-2 hover:bg-surface lg:hidden" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(true)}>
           <Menu className="h-5 w-5" aria-hidden />
         </button>
         <Link href="/dashboard" aria-label={`${brand.name}: dashboard`} className="flex items-center gap-2 font-semibold">
           {brand.logoUrl
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={brand.logoUrl} alt="" className="h-8 w-8 rounded-lg object-contain" />
+            ? <BrandLogo src={brand.logoUrl} height={brand.logoHeight} />
             : <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700 text-sm font-bold text-white" aria-hidden>{brand.shortName}</span>}
           <span className="hidden min-[430px]:inline">{brand.name}</span>
         </Link>
         {quarterLabel ? <span className="hidden rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 sm:inline">{quarterLabel}</span> : null}
+        {locks.length > 0 ? (
+          <ul className="hidden shrink-0 items-center gap-1.5 xl:flex" aria-label="Upcoming locks">
+            {locks.map((l) => (
+              <li key={l.key} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3 py-1 text-xs text-ink" title={`Week ${l.weekNumber}: ${l.kind === "content" ? "content lock" : "final lock"} ${l.atText} WAT`}>
+                <Lock className="h-3.5 w-3.5 text-muted" aria-hidden />
+                <Countdown to={l.at} label={`Wk ${l.weekNumber} ${l.kind === "content" ? "content lock" : "final lock"}`} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <button type="button" onClick={() => setPaletteOpen(true)}
           className="ml-2 hidden min-w-56 items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-muted hover:border-brand-700 md:flex" aria-label="Search pages and actions">
@@ -122,25 +129,6 @@ export function Shell({ groups, create, brand, user, quarterLabel, unread, child
         </button>
 
         <div className="ml-auto flex items-center gap-2">
-          {create.length > 0 ? (
-            <div className="relative" ref={createRef}>
-              <button type="button" aria-haspopup="menu" aria-expanded={createOpen} onClick={() => setCreateOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-brand-800 sm:px-3">
-                <Plus className="h-4 w-4" aria-hidden /><span className="hidden sm:inline">Create</span><span className="sr-only sm:hidden">Create</span>
-              </button>
-              {createOpen ? (
-                <ul role="menu" className="absolute right-0 mt-2 w-72 rounded-xl border border-line bg-panel p-1 shadow-xl">
-                  {create.map((c) => (
-                    <li key={c.href} role="none">
-                      <Link role="menuitem" href={c.href} className="block rounded-lg px-3 py-2 hover:bg-surface">
-                        <span className="block text-sm font-medium">{c.label}</span><span className="block text-xs text-muted">{c.hint}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
           <button type="button" className="rounded-lg p-2 hover:bg-surface md:hidden" aria-label="Search pages and actions" onClick={() => setPaletteOpen(true)}><Search className="h-5 w-5" aria-hidden /></button>
           {user.bu ? <span className="hidden text-sm text-muted xl:inline">{user.bu}</span> : null}
           <Link href="/notifications" className="relative rounded-lg p-2 hover:bg-surface" aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}>

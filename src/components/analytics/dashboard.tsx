@@ -170,14 +170,14 @@ export function AnalyticsDashboard({ cells, nowIso, quarterLabel }: { cells: Cel
 
       {/* ---------------------------------------------------------------- figures */}
       <Stagger className="grid gap-4 [&>*]:min-w-0 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={ListChecks} accent="#2563eb" label="Total tasks" value={t.tasksTotal} trend={trends.total} footer={`${periodText} · ${num(t.goalsTotal)} goals`} />
-        <StatCard icon={CheckCircle2} accent="#16a34a" label="Tasks done" value={t.tasksDone} trend={trends.done} tone="good" footer={`${p1(t.completion)} of all tasks · ${periodText}`} />
-        <StatCard icon={XCircle} accent="#ea580c" label="Tasks not done" value={t.tasksNotDone} trend={trends.notDone} inverse tone="bad" footer={`${num(t.tasksUndefined)} not yet marked`} />
-        <StatCard icon={Gauge} accent="var(--brand-700)" label="Average weekly score" value={t.avgScore} kind="percent" trend={trends.score} trendMode="points" footer={`${t.scoredWeeks} scored unit-weeks`} />
-        <StatCard icon={FileCheck2} accent="#0f766e" label="Reports submitted" value={`${num(t.submittedWeeks)} / ${num(t.reportableWeeks)}`} footer="unit-weeks that required a report" />
-        <StatCard icon={Clock} accent="#7c3aed" label="Submitted on time" value={t.onTimeRate} kind="percent" trend={trends.onTime} trendMode="points" footer="before the content lock" />
-        <StatCard icon={AlertTriangle} accent="#dc2626" label="Missing reports" value={t.missingWeeks} trend={trends.missing} inverse tone={t.missingWeeks > 0 ? "bad" : undefined} footer="recorded non-compliant" />
-        <StatCard icon={Building2} accent="#475569" label="Units shown" value={perUnit.length} footer={`${perUnit.filter((u) => u.reportsWeekly).length} Business Units · ${perUnit.filter((u) => !u.reportsWeekly).length} Departments`} />
+        <StatCard icon={ListChecks} label="Total tasks" value={t.tasksTotal} trend={trends.total} footer={`${periodText} · ${num(t.goalsTotal)} goals`} />
+        <StatCard icon={CheckCircle2} label="Tasks done" value={t.tasksDone} trend={trends.done} footer={`${p1(t.completion)} of all tasks · ${periodText}`} />
+        <StatCard icon={XCircle} label="Tasks not done" value={t.tasksNotDone} trend={trends.notDone} footer={`${num(t.tasksUndefined)} not yet marked`} />
+        <StatCard icon={Gauge} label="Average weekly score" value={t.avgScore} kind="percent" trend={trends.score} trendMode="points" footer={`${t.scoredWeeks} scored unit-weeks`} />
+        <StatCard icon={FileCheck2} label="Reports submitted" value={`${num(t.submittedWeeks)} / ${num(t.reportableWeeks)}`} footer="unit-weeks that required a report" />
+        <StatCard icon={Clock} label="Submitted on time" value={t.onTimeRate} kind="percent" trend={trends.onTime} trendMode="points" footer="before the content lock" />
+        <StatCard icon={AlertTriangle} label="Missing reports" value={t.missingWeeks} trend={trends.missing} footer="recorded non-compliant" />
+        <StatCard icon={Building2} label="Units shown" value={perUnit.length} footer={`${perUnit.filter((u) => u.reportsWeekly).length} Business Units · ${perUnit.filter((u) => !u.reportsWeekly).length} Departments`} />
       </Stagger>
 
       {/* ---------------------------------------------------------------- heat map and activity */}

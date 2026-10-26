@@ -10,10 +10,11 @@ import { usePrefersReducedMotion } from "@/components/motion/use-reduced";
 import type { LandingConfig, SiteSection } from "@/lib/site-content";
 import { DashboardArt } from "./art";
 import { ICONS } from "./icons";
+import { BrandLogo } from "@/components/brand-logo";
 
 const Hero3D = dynamic(() => import("./hero3d"), { ssr: false, loading: () => <div className="shimmer aspect-[16/11] w-full rounded-2xl" aria-hidden /> });
 
-export interface SiteBrand { name: string; shortName: string; logoUrl: string | null; primaryColor: string }
+export interface SiteBrand { name: string; shortName: string; logoUrl: string | null; primaryColor: string; logoHeight?: number }
 export const imageUrl = (slot: string | null | undefined, images: Record<string, number>) => (slot ? `/site-image/${slot}?v=${images[slot] ?? 0}` : null);
 
 /** A link that works on the live page and is inert inside the editor preview. */
@@ -54,8 +55,7 @@ export function LandingView({ config, brand, images, preview = false }: { config
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <span className="inline-flex items-center gap-3 font-semibold tracking-tight">
             {brand.logoUrl
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={brand.logoUrl} alt="" className="h-9 w-9 rounded-lg object-contain" />
+              ? <BrandLogo src={brand.logoUrl} height={brand.logoHeight} />
               : <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 font-bold text-white" aria-hidden>{brand.shortName}</span>}
             {brand.name}
           </span>

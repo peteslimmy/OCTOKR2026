@@ -14,7 +14,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: b.appName, template: `%s · ${b.appName}` },
     description: "Strategic execution, weekly accountability and governance.",
-    ...(b.faviconUrl ? { icons: { icon: b.faviconUrl } } : {}),
+    // the uploaded favicon, or the bundled default. The default lives in public/ (not as app/favicon.ico) because the framework adds that file
+    // as an extra icon link that browsers prefer over the uploaded one.
+    icons: { icon: b.faviconUrl ?? "/default-favicon.ico", shortcut: b.faviconUrl ?? "/default-favicon.ico" },
   };
 }
 

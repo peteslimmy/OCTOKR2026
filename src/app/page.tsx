@@ -11,5 +11,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const [{ config, images }, brand] = await Promise.all([getSite(), getBranding()]);
-  return <LandingView config={config.landing} images={images} brand={{ name: brand.appName, shortName: brand.shortName, logoUrl: brand.logoUrl, primaryColor: brand.primaryColor }} />;
+  return <LandingView config={config.landing} images={images} brand={{ name: brand.appName, shortName: brand.shortName, logoUrl: brand.logoUrl, primaryColor: brand.primaryColor, logoHeight: brand.logoHeight }} />;
 }

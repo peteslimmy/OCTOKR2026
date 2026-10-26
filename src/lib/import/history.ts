@@ -15,7 +15,7 @@ export interface UnitRef { id: string; code: string; name: string }
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 const YEAR = ["year"], WEEK = ["week", "weekno", "weeknumber", "wk"];
 const UNIT = ["budepart", "budepartment", "businessunit", "bu", "department", "depart", "unit", "bucode", "businessunitcode"];
-const GOAL = ["goal", "smartgoal", "goals"];
+const GOAL = ["goal", "smartgoal", "goals", "goaltitle", "goalname", "goaldescription", "smartgoaltitle", "title"];
 
 export interface HistoryLayout { year: number; week: number; unit: number; subKr: number | null; goal: number; tasks: { task: number; status: number }[] }
 
@@ -25,7 +25,7 @@ export function detectLayout(headers: string[]): { layout: HistoryLayout } | { e
   const year = find(YEAR), week = find(WEEK), unit = find(UNIT), goal = find(GOAL);
   const subKr = h.findIndex((x) => x.startsWith("subkr") || x === "kr" || x === "sk");
   const missing = [year < 0 && "Year", week < 0 && "Week", unit < 0 && "BU/Depart", goal < 0 && "Goal"].filter(Boolean);
-  if (missing.length) return { error: `The sheet needs a ${missing.join(", ")} column. The first row must hold the column names.` };
+  if (missing.length) return { error: `The sheet needs a ${missing.join(", ")} column${missing.includes("Goal") ? " (named Goal, Goal Title or Goal Name)" : ""}. The first row must hold the column names.` };
   const tasks: { task: number; status: number }[] = [];
   for (let n = 1; n <= 10; n++) {
     const t = h.findIndex((x) => x === `task${n}`), s = h.findIndex((x) => x === `status${n}`);

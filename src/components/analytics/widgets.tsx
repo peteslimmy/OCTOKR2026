@@ -66,33 +66,33 @@ export function Panel({ title, subtitle, action, menu, className, children, labe
   );
 }
 
-export function TrendPill({ trend, inverse = false, mode }: { trend: Trend | null; inverse?: boolean; mode: "relative" | "points" }) {
+export function TrendPill({ trend, mode }: { trend: Trend | null; mode: "relative" | "points" }) {
   if (!trend) return null;
-  const good = trend.direction === "flat" ? null : (trend.direction === "up") !== inverse;
   const Icon = trend.direction === "down" ? TrendingDown : TrendingUp;
   const text = `${Math.abs(trend.value).toFixed(1)}${mode === "relative" ? "%" : " pts"}`;
+  const word = trend.direction === "flat" ? "no change" : trend.direction === "up" ? "up" : "down";
+  // one calm style: the arrow shows the direction, colour is not used to judge it
   return (
-    <span className={clsx("inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold", good === null ? "bg-surface text-muted" : good ? "bg-[var(--done-bg)] text-[var(--done-fg)]" : "bg-[var(--critical-bg)] text-[var(--critical-fg)]")}
-      title={`Compared with the previous week: ${trend.direction === "flat" ? "no change" : trend.direction === "up" ? "up" : "down"} ${text}`}>
-      <Icon className="h-3.5 w-3.5" aria-hidden />{text}<span className="sr-only"> {trend.direction === "flat" ? "no change" : trend.direction === "up" ? "up" : "down"} compared with the previous week</span>
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-surface px-2 py-1 text-xs font-medium text-muted" title={`Compared with the previous week: ${word} ${text}`}>
+      <Icon className="h-3.5 w-3.5" aria-hidden />{text}<span className="sr-only"> {word} compared with the previous week</span>
     </span>
   );
 }
 
-/** A figure card: a solid-colour icon tile, a trend pill, the label, the big number and a one-line note. Flat colours only. */
-export function StatCard({ label, value, kind = "count", trend, trendMode = "relative", inverse, footer, tone, icon: Icon, accent = "var(--brand-700)" }: {
-  label: string; value: number | string | null; kind?: MetricKind; trend?: Trend | null; trendMode?: "relative" | "points"; inverse?: boolean; footer: string; tone?: "good" | "bad";
-  icon: LucideIcon; accent?: string;
+/** A figure card: one soft icon tile in the brand tint (the same on every card), a neutral trend, the label, the big number and a one-line note. */
+export function StatCard({ label, value, kind = "count", trend, trendMode = "relative", footer, icon: Icon }: {
+  label: string; value: number | string | null; kind?: MetricKind; trend?: Trend | null; trendMode?: "relative" | "points"; footer: string;
+  icon: LucideIcon;
 }) {
   return (
     <StaggerItem>
       <div className="flex h-full flex-col rounded-2xl border border-line bg-panel p-5 shadow-[0_1px_2px_rgb(16_24_40/0.04)] transition-shadow hover:shadow-lg">
         <div className="flex items-start justify-between gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl text-white" style={{ background: accent }} aria-hidden><Icon className="h-5 w-5" /></span>
-          <TrendPill trend={trend ?? null} inverse={inverse} mode={trendMode} />
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700" aria-hidden><Icon className="h-5 w-5" /></span>
+          <TrendPill trend={trend ?? null} mode={trendMode} />
         </div>
         <p className="mt-4 text-sm text-muted">{label}</p>
-        <p className={clsx("mt-0.5 text-3xl font-semibold tracking-tight tabular-nums", tone === "good" && "text-[var(--done-fg)]", tone === "bad" && "text-[var(--notdone-fg)]")}>
+        <p className="mt-0.5 text-3xl font-semibold tracking-tight tabular-nums">
           {typeof value === "number" ? <SpringNumber value={value} kind={kind} softDecimals={kind === "percent"} /> : (value ?? "—")}
         </p>
         <p className="mt-1 text-xs text-muted">{footer}</p>
