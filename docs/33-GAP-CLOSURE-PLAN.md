@@ -1,6 +1,6 @@
 # Gap closure plan: old app versus 4CORE-OKR
 
-Status: **agreed on 2026-10-17 (ADR-078). Phases A, B and C are built and tested; D to F are not started.** Owner decisions: every conflict agreed as recommended; week numbering and roles left as built; three violation types preloaded. Source: the old-app inventory the owner pasted (not verified against the old code) compared with this build's specification and tests. Each conflict has a recommended position; the owner marks Agree or Change, and only then is the work scheduled. Agreed positions become ADRs in `24-DECISIONS.md` and rows in `25-IMPLEMENTATION-NOTES.md`.
+Status: **agreed on 2026-10-17 (ADR-078). Phases A to F are built and tested (D, E and F were completed and repaired on 2026-10-25, see ADR-084).** Owner decisions: every conflict agreed as recommended; week numbering and roles left as built; three violation types preloaded. Source: the old-app inventory the owner pasted (not verified against the old code) compared with this build's specification and tests. Each conflict has a recommended position; the owner marks Agree or Change, and only then is the work scheduled. Agreed positions become ADRs in `24-DECISIONS.md` and rows in `25-IMPLEMENTATION-NOTES.md`.
 
 ## Part 1. Conflicts to agree (recommended position first)
 

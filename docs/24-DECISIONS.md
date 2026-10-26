@@ -855,3 +855,22 @@ A first-class Reports module (`/reports`) that reads the existing authoritative 
 - **Editor:** grouped, collapsible fields; a live preview of the real page, scaled, with desktop and phone widths; unsaved-changes notice; Discard and Reset to the built-in content; a link to open the live page. The preview is hidden from assistive technology and not focusable.
 - **Look:** flat colours only (the owner asked for no gradients); large type, generous spacing, motion that respects the reduced-motion setting, and a built-in illustration so no page is ever empty.
 - **Not built:** custom fonts and free colour pickers per section (tones come from the brand colour), a draft/publish workflow with scheduling, multiple languages, and arbitrary HTML.
+
+## ADR-083 — Report review comments and rejection
+
+- **Status:** built and tested locally (`20261030000002_report_review_comments.sql`, `20261030000003_report_rejection_notice.sql`, `tests/db/report_review.test.ts`). The specs did not define a rejection; this is the smallest behaviour that fits ADR-081 and ADR-038 and is flagged for the owner to confirm or change.
+- **Review comments:** a reviewer (`weekly_report.review`) may attach up to 2000 characters of comments when marking a finalised, submitted report reviewed. Comments are stored on the report and in the `REPORT_REVIEWED` audit entry.
+- **Rejection is a review event, not a status.** `reject_weekly_report` needs a mandatory reason (up to 2000 characters), records who and when, writes `REPORT_REJECTED` to the audit log and notifies the BU Leads of that unit. `review_status` stays `NOT_REVIEWED`, so the report still counts as awaiting review, the quarter stays `PROVISIONAL` (ADR-081) and the score is untouched. A report can be rejected more than once; each event is audited.
+- **Closing a rejection:** a later review clears the rejection from the report view (the audit trail keeps it). A reviewed report cannot be rejected.
+- **Immutability:** final-locked reports still reject every change except the review columns (`review_*`, `rejected_*`, `reviewed_*`).
+- **Not built:** a resubmission loop (a rejected report is not reopened; reopening is only through the late-report exception path).
+
+## ADR-084 — Weekly quote workflow, and repairs found while closing gap-plan phases D to F
+
+- **Status:** built and tested locally (`20261030000005_quote_workflow.sql`, `20261030000004_unit_hierarchy_fix.sql`, `tests/db/quote_workflow.test.ts`, `tests/db/unit_hierarchy.test.ts`). Quotes were listed as "only if the owner still uses quotes" (docs/33 phase F); the table and the recording screen already existed, so the workflow was completed rather than removed. The owner may still choose to drop it.
+- **States:** `draft` (recorded, `quote.record`) → `submitted` → `approved` → `published` → `archived`. One quote per reporting week (existing unique key), so at most one published quote per week. Each step is audited (`QUOTE_SUBMITTED/APPROVED/PUBLISHED/ARCHIVED`); submitting notifies everyone holding `quote.approve`.
+- **Segregation of duties:** approving, publishing and archiving need the new `quote.approve` permission (Admin, Director, Super Admin). The person who recorded or submitted a quote cannot approve it (`QUOTE_SELF_APPROVAL`), enforced in the database.
+- **Immutability:** the words, speaker and author never change and quotes are never deleted; the trigger allows only the four legal status steps.
+- **Banner:** every signed-in user sees the active week's *published* quote on the dashboard (`read_published_quote`); nothing else about quotes is exposed.
+- **Repairs:** (1) the earlier unit-hierarchy migration dropped the functions it had just created, so units could not be created through the API at all (the route sent fields the live function rejected); `create_business_unit` and `update_business_unit` are redefined, the hierarchy fields change only when the caller says so (`p_set_hierarchy`), and an approved `BU_REPORTING` change carries the unit type and hierarchy. (2) The quote routes called functions that did not exist. (3) The Sub-KR contribution card read the wrong response shape and could never render.
+- **Not built:** rejecting a submitted quote (it simply is not approved), editing a recorded quote, and publishing a replacement after one is archived for the same week.

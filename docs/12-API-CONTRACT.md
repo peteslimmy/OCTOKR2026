@@ -70,7 +70,7 @@ Do not expose unrestricted generic CRUD for critical operations.
 - `POST /api/v1/weekly-reports/{id}/edit-session/heartbeat`
 - `DELETE /api/v1/weekly-reports/{id}/edit-session`
 - `POST /api/v1/weekly-reports/{id}/submit`
-- `POST /api/v1/weekly-reports/{id}/review` — reviews a submitted report (ADR-081). The report keeps its computed score; the quarter stays `PROVISIONAL` until every submitted report is reviewed.
+- `POST /api/v1/weekly-reports/{id}/review` — reviews a submitted report (ADR-081). The report keeps its computed score; the quarter stays `PROVISIONAL` until every submitted report is reviewed. Body: `{comments?}` records a review with optional comments (max 2000 characters); `{rejection_reason}` (mandatory, max 2000) records a rejection instead. A rejection is a review event, not a status: the report stays `NOT_REVIEWED` (still awaiting review, quarter stays `PROVISIONAL`), the score is untouched, it is audited as `REPORT_REJECTED`, and a later review clears it from the report view. A reviewed report cannot be rejected.
 - `PUT /api/v1/weekly-reports/{id}/skipped-summary` — `{comment}`; the manually authored summary required for a BU report in a skipped week.
 - `DELETE /api/v1/weekly-reports/{id}` — deletes a draft (`NOT_SUBMITTED`, open) report; `weekly_report.create`.
 
@@ -372,3 +372,9 @@ Use idempotency keys for payment, integrity correction, and financial approval o
 - `POST /api/v1/sign-in-imports` — `users.manage`. Multipart `file` with Email and Roles. Answers `{fileName, people, problems, problemCount}`; nothing is saved.
 - `POST /api/v1/sign-in-imports/commit` — `users.manage`, step-up. `{people: [{row, email, roles}]}`. Answers `{results: [{row, email, created, message, setupLink}], created}`; a failing row is reported and the rest go ahead.
 - `PATCH /api/v1/employees/{id}/roster` — `users.manage`. `{onRoster}`; audited as `EMPLOYEE_ROSTER_CHANGED`.
+
+## Weekly quote workflow (ADR-084)
+
+- `POST /api/v1/reporting-weeks/{id}/quote` — records the week's quote as a draft (`quote.record`); one per week.
+- `POST /api/v1/quotes/{id}/submit` (`quote.record`), `/approve`, `/publish`, `/archive` (`quote.approve`). Errors: `INVALID_STATE_TRANSITION`, `QUOTE_SELF_APPROVAL`, `PERMISSION_DENIED`.
+- `GET /api/v1/quotes?weekId={uuid}` — the published quote of the week for any signed-in user, or `null`.
