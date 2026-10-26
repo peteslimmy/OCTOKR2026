@@ -8,10 +8,13 @@ import { ReviewRow, StepForm } from "@/components/ui/step-form";
 /** Roles are data (ADR-069): the screen is given the roles that exist and which of them need role-management permission to hand out. */
 export interface RoleOption { code: string; name: string; privileged: boolean }
 
-export function CreateBu() {
+export function CreateBu({ units = [] }: { units?: { id: string; code: string; name: string }[] }) {
   const [open, setOpen] = useState(useOpenOnNew("unit"));
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [parentUnitId, setParentUnitId] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [kind, setKind] = useState<"BU" | "DEPARTMENT">("BU");
   const [weekly, setWeekly] = useState(true);
   const { run, pending } = useAction();
@@ -19,11 +22,14 @@ export function CreateBu() {
     <>
       <Button size="sm" onClick={() => setOpen(true)}>Add unit</Button>
       <Modal open={open} onOpenChange={setOpen} title="Add a Business Unit or Department" description="Every staff member belongs to one unit. Choose its type and whether it files a weekly report.">
-        <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); const ok = await run(() => apiRequest("POST", "business-units", { code, name, reportsWeekly: weekly, unitType: kind === "BU" ? "BUSINESS_UNIT" : "DEPARTMENT" }), { success: kind === "BU" ? "Business Unit created." : "Department created." }); if (ok) { setOpen(false); setCode(""); setName(""); } }}>
+        <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); const ok = await run(() => apiRequest("POST", "business-units", { code, name, reportsWeekly: weekly, unitType: kind === "BU" ? "BUSINESS_UNIT" : "DEPARTMENT", parentUnitId: parentUnitId || null, description: description.trim() || null, location: location.trim() || null }), { success: kind === "BU" ? "Business Unit created." : "Department created." }); if (ok) { setOpen(false); setCode(""); setName(""); setParentUnitId(""); setDescription(""); setLocation(""); } }}>
           <Field id="bu-kind" label="Type"><Select value={kind} onChange={(e) => { const k = e.target.value as "BU" | "DEPARTMENT"; setKind(k); setWeekly(k === "BU"); }}><option value="BU">Business Unit</option><option value="DEPARTMENT">Department</option></Select></Field>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={weekly} onChange={(e) => setWeekly(e.target.checked)} /> Files a weekly report (is scored and ranked)</label>
           <Field id="bu-code" label="Code"><Input value={code} onChange={(e) => setCode(e.target.value)} maxLength={20} required /></Field>
           <Field id="bu-name" label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={200} required /></Field>
+          <Field id="bu-parent" label="Parent unit (optional)"><Select value={parentUnitId} onChange={(e) => setParentUnitId(e.target.value)}><option value="">None</option>{units.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.code})</option>)}</Select></Field>
+          <Field id="bu-description" label="Description (optional)"><Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} /></Field>
+          <Field id="bu-location" label="Location (optional)"><Input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={200} /></Field>
           <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending}>Create</Button></div>
         </form>
       </Modal>
