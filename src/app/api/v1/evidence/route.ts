@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { api } from "@/lib/api/handler";
+import { api, fail } from "@/lib/api/handler";
 import { UploadEvidenceBodySchema, ListEvidenceQuerySchema } from "@/lib/validators/evidence";
+import { contentMatchesMime } from "@/lib/validators/evidence-signature";
 import { adminClient } from "@/lib/supabase/admin";
 import { createHash, randomUUID } from "node:crypto";
 
@@ -71,6 +72,11 @@ export const POST = api(
     // Read file as ArrayBuffer for checksum and upload
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // The type came from the browser along with the file, so check the bytes really are that type (audit finding F-008)
+    if (!contentMatchesMime(buffer, body.mimeType)) {
+      throw fail("VALIDATION_ERROR", 422, "The file's content does not match its type. Upload a genuine PDF, image, Word, Excel or text file.");
+    }
 
     // Compute SHA256 checksum
     const checksum = createHash("sha256").update(buffer).digest("hex");
