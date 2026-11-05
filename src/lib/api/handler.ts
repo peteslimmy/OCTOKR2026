@@ -7,6 +7,7 @@ import type { z } from "zod";
 import { getActor, type Actor } from "@/lib/auth/actor";
 import { hasRecentSecondFactor } from "@/lib/auth/mfa";
 import { adminClient } from "@/lib/supabase/admin";
+import { auditHeaders, buildAuditContext, sessionReference } from "@/lib/audit/context";
 import { toDomainError, type DomainError } from "@/lib/domain/errors";
 import { httpRequestDuration, httpRequestsTotal } from "@/lib/observability/metrics";
 
@@ -68,6 +69,10 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
 ) {
   return async (req: Request, routeCtx: RouteCtx): Promise<Response> => {
     const correlationId = req.headers.get("x-correlation-id") ?? randomUUID();
+    const auditCtx = await buildAuditContext(req, false);
+    let sessionRef: string | null = null;     // looked up until found: a sign-in creates the session part-way through the request
+    /** The request facts the database stamps on every audit event written during this request (ADR-108). */
+    const auditAs = async () => adminClient(correlationId, auditHeaders({ ...auditCtx, sessionRef: (sessionRef ??= await sessionReference()) }));
     const t0 = performance.now();
     const marks: string[] = [];
     const mark = (name: string, since: number) => marks.push(`${name};dur=${(performance.now() - since).toFixed(1)}`);
@@ -123,7 +128,7 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
       for (const [k, v] of Object.entries(raw ?? {})) params[k] = Array.isArray(v) ? v.join("/") : v;
 
       const rpc = async <T,>(fn: string, args: Record<string, unknown>): Promise<T> => {
-        const { data, error } = await adminClient(correlationId).rpc(fn, args);
+        const { data, error } = await (await auditAs()).rpc(fn, args);
         if (error) { const e = new ApiError(toDomainError(error)); e.raw = error.message; throw e; }
         return data as T;
       };
@@ -136,13 +141,37 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
       if (e instanceof ApiError && seen && (e.err.code === "PERMISSION_DENIED" || e.err.code === "BU_SCOPE_DENIED")) {
         // a refusal of a signed-in person is kept as evidence; recording it must never change the answer they get
         const route = new URL(req.url).pathname.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id");
-        await adminClient(correlationId).rpc("record_access_denied", { p_actor: seen.id, p_method: req.method, p_route: route, p_code: e.err.code }).then(() => undefined, () => undefined);
+        await (await auditAs()).rpc("record_access_denied", { p_actor: seen.id, p_method: req.method, p_route: route, p_code: e.err.code }).then(() => undefined, () => undefined);
       }
+      if (e instanceof ApiError) await recordSecurityRefusal(e, req, seen, opts.public === true, auditAs);
       if (e instanceof ApiError) return respond(e.err.status, { error: { code: e.err.code, message: e.err.message, details: e.err.details, correlationId } });
       logger.error({ correlationId, error: e }, "Unhandled error in API handler");
       return respond(500, { error: { code: "INTERNAL_ERROR", message: "Something went wrong on our side. Nothing was changed; please try again.", correlationId } });
     }
   };
+}
+
+const REFUSALS: Record<string, string> = {
+  AUTHENTICATION_REQUIRED: "SECURITY_AUTH_REQUIRED", MFA_REQUIRED: "SECURITY_MFA_REQUIRED", MFA_ENROLMENT_REQUIRED: "SECURITY_MFA_REQUIRED",
+  STEP_UP_REQUIRED: "SECURITY_STEP_UP_REQUIRED", RATE_LIMITED: "SECURITY_RATE_LIMITED",
+};
+/**
+ * Refusals that never reach a business function (no sign-in, second factor missing, cross-site request, rate limit) are kept as evidence too.
+ * Repeats from the same address and route within five minutes collapse into one record. Recording never changes the answer the caller gets.
+ */
+async function recordSecurityRefusal(e: ApiError, req: Request, seen: Actor | null, isPublic: boolean, auditAs: () => Promise<ReturnType<typeof adminClient>>) {
+  try {
+    const crossSite = e.err.code === "PERMISSION_DENIED" && e.err.message.startsWith("Cross-site");
+    const action = crossSite ? "SECURITY_CROSS_SITE_REJECTED" : REFUSALS[e.err.code];
+    if (!action) return;
+    const path = new URL(req.url).pathname;
+    if (path === "/api/v1/auth/me" || (isPublic && e.err.code === "AUTHENTICATION_REQUIRED")) return;     // polling for "am I signed in" is not a refusal
+    const route = path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id");
+    await (await auditAs()).rpc("record_security_event", {
+      p_actor: seen?.id ?? null, p_action: action, p_outcome: "DENIED", p_entity_type: "route", p_entity_id: route,
+      p_meta: { method: req.method, code: e.err.code }, p_collapse_seconds: 300,
+    });
+  } catch { /* evidence is best-effort here; it must never break the response */ }
 }
 
 /** Permission gate for route handlers (the RPC re-checks; this gives a fast, uniform 403). */

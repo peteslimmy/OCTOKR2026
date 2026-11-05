@@ -10,7 +10,7 @@ const safeName = (name: string) => name.replace(/[^\w.\- ]+/g, "_").slice(0, 150
  * Access is decided with the caller's own session, so the row-level security policy on evidence_files (entity type and permission)
  * applies. Only after that does the service role read the bytes from the private bucket.
  */
-export const GET = api({ stepUp: true }, async ({ req }) => {
+export const GET = api({ stepUp: true }, async ({ req, actor, rpc }) => {
   const filePath = new URL(req.url).searchParams.get("filePath");
   if (!filePath) throw fail("VALIDATION_ERROR", 422, "filePath is required.");
 
@@ -35,6 +35,9 @@ export const GET = api({ stepUp: true }, async ({ req }) => {
     throw missing ? fail("NOT_FOUND", 404, "Evidence file not found.") : fail("STORAGE_ERROR", 502, "The file could not be retrieved. Please try again.");
   }
   const buffer = Buffer.from(await fileData.arrayBuffer());
+  // the download is part of the evidence trail: who took which file (the file's own record id, never its content)
+  await rpc("record_security_event", { p_actor: actor.id, p_action: "FILE_DOWNLOADED", p_outcome: "SUCCESS", p_entity_type: "evidence_file", p_entity_id: fileRecord.id,
+    p_meta: { file_name: fileRecord.file_name, size_bytes: fileRecord.size_bytes }, p_collapse_seconds: 0 });
 
   return new Response(buffer, {
     headers: {

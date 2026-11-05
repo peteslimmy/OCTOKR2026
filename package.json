@@ -35,6 +35,7 @@
     "test:e2e": "node scripts/test-stack.mjs run --reset --seed -- playwright test",
     "test:concurrency": "node scripts/test-stack.mjs run --reset -- vitest run --config vitest.concurrency.config.ts",
     "db:backup": "node scripts/db-backup.mjs",
+    "audit:verify": "node scripts/audit-chain-verify.mjs",
     "test:stack": "node scripts/test-stack.mjs",
     "ac:coverage": "node scripts/ac-coverage.mjs"
   },

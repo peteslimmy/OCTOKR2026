@@ -94,11 +94,65 @@ describe("audit log endpoints", () => {
     expect(res.headers.get("content-disposition")).toMatch(/audit-log_\d{12}\.csv/);
     const text = await res.text();
     const lines = text.trim().split(/\r?\n/);
-    expect(lines[0]).toBe("seq,occurred_at,actor_role,actor_user_id,action,entity_type,entity_id,outcome,reason,correlation_id,old_values,new_values");
+    expect(lines[0]).toMatch(/^seq,event_id,occurred_at_utc,action,event_category,severity,outcome,channel,actor_user_id,actor_name,actor_email,actor_role,/);
+    expect(lines[0]).toMatch(/,old_values,new_values,metadata,chain_seq,row_hash$/);
     expect(lines.length).toBeGreaterThan(1);
     expect(lines.slice(1).every((l) => /^\d+,/.test(l) || l.startsWith('"'))).toBe(true);
     const log = (await admin.request("GET", "/api/v1/audit?action=AUDIT_EXPORTED&limit=1")).json.data.rows[0];
     expect(log.new_values.filter.action).toBe("USER_");
+    expect(log.new_values.format).toBe("CSV");
     expect(log.new_values.rows).toBe(lines.length - 1);
+  });
+
+  it("exports a PDF, refuses other formats, and records the export with its format", async () => {
+    const admin = await as("admin@4core.local");
+    const res = await admin.raw("/api/v1/audit/export?format=pdf&action=USER_");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+    expect(Buffer.from(await res.arrayBuffer()).subarray(0, 5).toString()).toBe("%PDF-");
+    expect((await admin.request("GET", "/api/v1/audit/export?format=xls")).status).toBe(422);
+    const log = (await admin.request("GET", "/api/v1/audit?action=AUDIT_EXPORTED&limit=1")).json.data.rows[0];
+    expect(log.new_values.format).toBe("PDF");
+  });
+
+  it("filters on the richer fields and carries the event model", async () => {
+    const admin = await as("admin@4core.local");
+    const rows = (await admin.request("GET", "/api/v1/audit?category=AUTHENTICATION&limit=20")).json.data.rows as Record<string, unknown>[];
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.event_category === "AUTHENTICATION")).toBe(true);
+    for (const r of rows) expect(r).toHaveProperty("severity");
+    const bySeverity = (await admin.request("GET", "/api/v1/audit?severity=HIGH&limit=20")).json.data.rows as { severity: string }[];
+    expect(bySeverity.every((r) => r.severity === "HIGH")).toBe(true);
+    const one = rows[0] as { id: string; request_id: string | null };
+    const trace = await admin.request("GET", `/api/v1/audit/events/${one.id}`);
+    expect(trace.status).toBe(200);
+    expect(trace.json.data.event.id).toBe(one.id);
+    expect(trace.json.data.event.row_hash).toBeUndefined();
+    expect(Array.isArray(trace.json.data.same_workflow)).toBe(true);
+    expect((await admin.request("GET", "/api/v1/audit?outcome=NOT_AN_OUTCOME&limit=3")).status).toBe(200);        // an unknown value is ignored, never trusted
+  });
+
+  it("records the client address the proxy saw, not the app server's", async () => {
+    const admin = await as("admin@4core.local");
+    const s = new Session();
+    const ip = (s as unknown as { ip: string }).ip;
+    await s.request("POST", "/api/v1/auth/login", { email: `nobody-${Date.now()}@4core.local`, password: "wrong-password-xyz" });
+    const failed = (await admin.request("GET", `/api/v1/audit?action=AUTH_LOGIN_FAILED&ip=${ip}&limit=1`)).json.data.rows[0];
+    expect(failed.ip_trusted).toBe(true);
+    expect(failed.ip_address).toBe(ip);
+    expect(failed.user_agent).toBeTruthy();
+    expect(failed.request_id).toBeTruthy();
+  });
+
+  it("the indicator, rule and verification endpoints need their own permissions", async () => {
+    const admin = await as("admin@4core.local");
+    const lead = await as("lead.eng@4core.local");
+    expect((await lead.request("POST", "/api/v1/audit/verify")).status).toBe(403);
+    expect((await lead.request("POST", "/api/v1/audit/alerts/00000000-0000-0000-0000-000000000000/status", { status: "UNDER_REVIEW" })).status).toBe(403);
+    expect((await admin.request("POST", "/api/v1/audit/rules/UNUSUAL_EXPORTS", { threshold: 3, reason: "test" })).status).toBe(403);   // Admin may review indicators but not change rules
+    const v = await admin.request("POST", "/api/v1/audit/verify");
+    expect(v.status).toBe(200);
+    expect(v.json.data.ok).toBe(true);
+    expect((await admin.request("POST", "/api/v1/audit/alerts/00000000-0000-0000-0000-000000000000/status", { status: "BOGUS" })).status).toBe(422);
   });
 });
