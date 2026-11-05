@@ -23,8 +23,6 @@ export function MinutesPanel({ ws, caps, editable }: { ws: Workspace; caps: Caps
   const [text, setText] = useState(working?.content ?? "");
   const [dirty, setDirty] = useState(false);
   const [management, setManagement] = useState(working?.audience === "MANAGEMENT");
-  const [aiText, setAiText] = useState<string | null>(null);
-  const [aiModel, setAiModel] = useState<string | null>(null);
   const [aiDrafted, setAiDrafted] = useState(working?.ai_drafted ?? false);
   const [preview, setPreview] = useState(false);
   const [remarks, setRemarks] = useState("");
@@ -35,7 +33,7 @@ export function MinutesPanel({ ws, caps, editable }: { ws: Workspace; caps: Caps
     const g = await apiRequest<{ content: string }>("GET", `okr-sessions/${s.id}/minutes${management ? "?management=true" : ""}`);
     return g.content;
   };
-  const saveDraft = () => apiRequest<{ version: number }>("POST", `okr-sessions/${s.id}/minutes`, { content: text, audience: management ? "MANAGEMENT" : "PARTICIPANTS", aiDrafted, aiModel, expectedVersion: working?.version, key: newKey() });
+  const saveDraft = () => apiRequest<{ version: number }>("POST", `okr-sessions/${s.id}/minutes`, { content: text, audience: management ? "MANAGEMENT" : "PARTICIPANTS", aiDrafted, expectedVersion: working?.version, key: newKey() });
 
   if (!working && !canStart && !final) {
     return <Card><EmptyState title="No minutes yet">{s.status === "DRAFT" ? "Start the session first; minutes are prepared from what is recorded in it." : "The minutes have not been prepared."}</EmptyState></Card>;
@@ -68,23 +66,8 @@ export function MinutesPanel({ ws, caps, editable }: { ws: Workspace; caps: Caps
               <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" disabled={pending} onClick={async () => { if (dirty && !window.confirm("Replace your edits with minutes freshly built from the session records?")) return; const g = await run(generate, { refresh: false }); if (g) { setText(g.value); setDirty(true); } }}>Rebuild from session records</Button>
                 {caps.viewAll ? <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={management} onChange={(e) => { setManagement(e.target.checked); setDirty(true); }} /> Management minutes (include management-only notes)</label> : null}
-                {caps.ai ? <Button size="sm" variant="secondary" disabled={pending} onClick={async () => {
-                  const r = await run(() => apiRequest<{ ok: boolean; text?: string; model?: string; message?: string }>("POST", `okr-sessions/${s.id}/minutes/ai-summary`, { management }), { refresh: false });
-                  if (!r) return;
-                  if (r.value.ok && r.value.text) { setAiText(r.value.text); setAiModel(r.value.model ?? null); } else toast.warning(r.value.message ?? "There is no AI proposal.");
-                }}>Propose a summary with AI</Button> : null}
                 <Button size="sm" variant="ghost" onClick={() => setPreview((p) => !p)} aria-pressed={preview}>{preview ? "Edit" : "Preview"}</Button>
               </div>
-              {aiText ? (
-                <div className="space-y-2 rounded-lg border border-[#fde68a] bg-[var(--warn-bg)] p-3" role="region" aria-label="AI proposal">
-                  <p className="text-sm font-medium text-[var(--warn-fg)]">Proposed by AI — a draft only. It may be wrong. It creates no decision, action or risk and changes no record. Check every line against the notes.</p>
-                  <div className="rounded bg-panel p-3 text-ink"><RichText md={aiText} /></div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => { setText((t) => `${t.trim()}\n\n## Proposed summary (AI, to be checked)\n\n${aiText}\n`.trimStart()); setAiDrafted(true); setDirty(true); setAiText(null); toast.info("Added to the draft. Review and edit it before saving."); }}>Add to the draft</Button>
-                    <Button size="sm" variant="secondary" onClick={() => setAiText(null)}>Discard</Button>
-                  </div>
-                </div>
-              ) : null}
               {preview ? <div className="rounded-lg border border-line p-4"><RichText md={text} /></div> : (
                 <textarea aria-label="Minutes text" rows={22} value={text} maxLength={200000} onChange={(e) => { setText(e.target.value); setDirty(true); }}
                   className="w-full rounded-lg border border-line bg-panel px-3 py-2 font-mono text-[0.9rem] leading-6 text-ink" />

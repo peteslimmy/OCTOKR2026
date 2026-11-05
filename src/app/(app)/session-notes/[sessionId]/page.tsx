@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
 import { SessionWorkspace, type Caps, type Performance } from "@/components/session-notes/workspace";
 import { Card, EmptyState } from "@/components/ui/primitives";
-import { aiModuleStatus } from "@/lib/ai/status";
 import { can, requireActor } from "@/lib/auth/actor";
 import { getWeekOverview } from "@/lib/data";
 import { getOutstanding, getWorkspace } from "@/lib/data/session-notes";
@@ -34,7 +33,7 @@ export default async function SessionPage({ params, searchParams }: PageProps<"/
     create: can(actor, "session_notes.create"), update: can(actor, "session_notes.update"), finalise: can(actor, "session_notes.finalise"), archive: can(actor, "session_notes.archive"),
     export: can(actor, "session_notes.export"), viewAll: can(actor, "session_notes.view_all"), decisionsCreate: can(actor, "session_decisions.create"), decisionsApprove: can(actor, "session_decisions.approve"),
     actionsCreate: can(actor, "session_actions.create"), actionsAssign: can(actor, "session_actions.assign"), actionsUpdate: can(actor, "session_actions.update"), actionsVerify: can(actor, "session_actions.verify"),
-    risksManage: can(actor, "session_risks.manage"), ai: can(actor, "ai.assistant.use") && (await aiModuleStatus()).canUse, buId: actor.buId, viewerId: actor.id,
+    risksManage: can(actor, "session_risks.manage"), buId: actor.buId, viewerId: actor.id,
   };
   // the way back to Presentation mode keeps the unit and the week
   const presentationHref = can(actor, "presentation.view") && s.reporting_week_id ? `/presentation?week=${s.reporting_week_id}${s.business_unit_id ? `&bu=${s.business_unit_id}` : ""}` : null;

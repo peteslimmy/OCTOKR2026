@@ -3,11 +3,6 @@ export interface NotificationAction { href: string; label: string }
 
 const ROUTES: [RegExp, NotificationAction][] = [
   [/^REPORT_DUE_REMINDER$|^ORGANIZATION_HOLIDAY(_AMENDED)?$|^FINAL_LOCKED$|^INTEGRITY_CORRECTION$/, { href: "/weekly", label: "Open weekly reports" }],
-  [/^AI_REMARK_(REQUEST|REMINDER)$/, { href: "/ai/remarks", label: "Give remarks on tasks" }],
-  [/^AI_ESCALATION$/, { href: "/ai/monitoring", label: "Open 4COREPAL monitoring" }],
-  [/^AI_CASE(_ESCALATION|_RESOLVED)?$|^AI_PLAN_DECIDED$/, { href: "/ai/cases", label: "Open the case" }],
-  [/^AI_CLOSURE_REQUEST$/, { href: "/ai/closure", label: "Answer the monthly review" }],
-  [/^AI_APPROVAL_REQUEST$/, { href: "/ai/approvals", label: "Open approvals" }],
   [/^SESSION_ACTION_/, { href: "/session-notes/registers?tab=actions", label: "Open the commitment" }],
   [/^SESSION_DECISION$/, { href: "/session-notes/registers?tab=decisions", label: "Open the decisions register" }],
   [/^SESSION_MINUTES_/, { href: "/session-notes", label: "Open the session" }],

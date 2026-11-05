@@ -26,7 +26,6 @@ export const CAPABILITIES: Capability[] = [
   { id: "strategy.view", label: "See the strategy and its progress", module: "Strategy & OKRs", path: "/strategy", any: ["strategy.annual_theme.view", "strategy.objective.create", "weekly_report.view_all", "weekly_report.view_own_bu"] },
   { id: "strategy.edit", label: "Create and change objectives, key results and Sub-KRs", module: "Strategy & OKRs", path: "/strategy", any: ["strategy.objective.create", "strategy.kr.create", "strategy.subkr.create"] },
   { id: "present", label: "Present the week", module: "Reports & dashboards", path: "/presentation", all: ["presentation.view"] },
-  { id: "ai.assistant", label: "Ask 4COREPAL about performance (when the module is switched on)", module: "Reports & dashboards", path: "/ai", all: ["ai.assistant.use"] },
   { id: "dashboard.exec", label: "See the organisation-wide dashboard and the management brief", module: "Reports & dashboards", path: "/insights", all: ["dashboard.executive.view"] },
   { id: "reports.open", label: "Open the Reports module", module: "Reports & dashboards", path: "/reports", all: ["reports.view"] },
   { id: "reports.build", label: "Build and save reports", module: "Reports & dashboards", path: "/reports/builder", all: ["reports.build"] },

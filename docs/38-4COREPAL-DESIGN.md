@@ -1,3 +1,5 @@
+> **Removed (ADR-104, 2026-11-05).** The 4COREPAL AI assistant was removed from the application at the owner's direction because it needs a language model to be installed and kept running. This document is kept as history only. Nothing in it is current.
+
 # 38. 4COREPAL: Phase 1 discovery and design
 
 Status: **Phase 1 (discovery and design). No application code has been written.** Approved by the owner on 2026-11-03 with the defaults in section 9.

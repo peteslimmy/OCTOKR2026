@@ -4,7 +4,6 @@ import { ClockProvider, StepUpHost } from "@/components/ui/client";
 import { can, getActor } from "@/lib/auth/actor";
 import { activeWeeks, currentQuarter, environmentInfo, serverNow, unreadCount } from "@/lib/data";
 import { getBranding } from "@/lib/data/branding";
-import { aiModuleStatus } from "@/lib/ai/status";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const actor = await getActor();
@@ -22,7 +21,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       : [])
     .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const any = (...p: string[]) => p.some((x) => can(actor, x));
-  const aiOn = can(actor, "ai.assistant.use") && (await aiModuleStatus()).canUse;   // 4COREPAL appears only when it is switched on and the person may use it
 
   // Navigation is grouped by what the person is trying to do. Each entry still shows only when the signed-in role may open it.
   const groups: NavGroup[] = [];
@@ -50,7 +48,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   add("Insights", [
     can(actor, "reports.view") && { href: "/reports", label: "Reports", icon: "reports", hint: "Standard reports" },
     can(actor, "dashboard.executive.view") && { href: "/insights", label: "Management brief", icon: "insights", hint: "Where we stand, why, what to do, what to decide" },
-    aiOn && { href: "/ai", label: "4COREPAL", icon: "insights", hint: "Ask about performance, with sources" },
     can(actor, "reports.view") && { href: "/reports/insights", label: "Insights", icon: "insights", hint: "What the data suggests" },
     can(actor, "reports.build") && { href: "/reports/builder", label: "Report builder", icon: "builder", hint: "Build and save your own" },
     can(actor, "reports.view") && { href: "/reports/saved", label: "Saved & snapshots", icon: "saved", hint: "Saved reports and frozen snapshots" },

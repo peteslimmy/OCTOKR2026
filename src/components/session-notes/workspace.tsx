@@ -16,7 +16,7 @@ import { ActionsPanel, DecisionsPanel, RisksPanel, type Prefill } from "./regist
 export interface Caps {
   create: boolean; update: boolean; finalise: boolean; archive: boolean; export: boolean; viewAll: boolean;
   decisionsCreate: boolean; decisionsApprove: boolean; actionsCreate: boolean; actionsAssign: boolean; actionsUpdate: boolean; actionsVerify: boolean; risksManage: boolean;
-  ai: boolean; buId: string | null; viewerId: string;
+  buId: string | null; viewerId: string;
 }
 function StartButton({ sessionId, version }: { sessionId: string; version: number }) {
   const { run, pending } = useAction();

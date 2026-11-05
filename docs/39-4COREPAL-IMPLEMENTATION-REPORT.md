@@ -1,3 +1,5 @@
+> **Removed (ADR-104, 2026-11-05).** The 4COREPAL AI assistant was removed from the application at the owner's direction because it needs a language model to be installed and kept running. This document is kept as history only. Nothing in it is current.
+
 # 39. 4COREPAL: implementation report
 
 Date: 2026-11-04. Module: **4COREPAL** (the AI Performance Agent), added to the existing 4CORE-OKR application as an isolated, additive module. Design: [38-4COREPAL-DESIGN.md](38-4COREPAL-DESIGN.md). Decisions: `24-DECISIONS.md`.

@@ -7,7 +7,6 @@ import type { IntegrationKind, IntegrationView, SettingField, Slot, TestResult }
 
 const SLOTS: { slot: Slot; title: string; blurb: string }[] = [
   { slot: "EMAIL", title: "Email", blurb: "Sends reminders and security messages. One email service is used at a time." },
-  { slot: "AI", title: "AI providers", blurb: "The connection to an AI service, used by 4COREPAL when that module is switched on. One is used at a time. OpenRouter, NVIDIA, Google Gemini and most other services are added as “OpenAI-compatible”." },
   { slot: "WEBHOOK", title: "Webhooks", blurb: "Posts audit-log events, signed, to another system or to a Slack or Teams channel." },
 ];
 
