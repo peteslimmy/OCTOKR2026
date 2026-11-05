@@ -17,7 +17,7 @@ test.describe.serial("historical import", () => {
 
     const input = page.getByLabel(/Spreadsheet/);
     await input.setInputFiles({ name: "bad.csv", mimeType: "text/csv", buffer: Buffer.from(`${HEADER}2025,3,Nowhere,1.1,G,T,Done,,\n`) });
-    await expect(page.getByText("Business Units not found:")).toBeVisible();
+    await expect(page.getByText(/Business Units in the file that the application does not know/)).toBeVisible();
     await expect(page.getByRole("cell", { name: /is not a Business Unit/ })).toBeVisible();
 
     const unit = (await query<{ code: string }>("select code from business_units where code <> 'HQ' order by code limit 1"))[0].code;

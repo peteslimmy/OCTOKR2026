@@ -48,25 +48,39 @@ type ProfileRow = {
  * Resolves the verified caller. Identity comes from auth.getUser() (JWT verified by the auth server),
  * never from a cookie claim or a request field (ADR-035). Reads run under the caller's own RLS.
  */
+/** The "sub" (user id) of a JWT, read without verifying it: used only to start queries early, never to decide who someone is. */
+function subjectOf(token: string | undefined): string | null {
+  try {
+    const payload = JSON.parse(Buffer.from((token ?? "").split(".")[1] ?? "", "base64url").toString("utf8")) as { sub?: unknown };
+    return typeof payload.sub === "string" && /^[0-9a-f-]{36}$/i.test(payload.sub) ? payload.sub : null;
+  } catch { return null; }
+}
+
 export const getActor = cache(async (): Promise<Actor | null> => {
   const sb = await userClient();
-  const { data: auth } = await sb.auth.getUser();
-  if (!auth.user) return null;
+  // The identity is verified by the auth server (getUser), as before. The person's id is read from the session cookie only to start the profile queries at the same time as that
+  // verification (one round trip fewer on every request); the answer is discarded unless the verified identity is that same person. The queries run under the person's own JWT,
+  // so row-level security applies exactly as before.
+  const { data: sess } = await sb.auth.getSession();
+  const claimed = subjectOf(sess.session?.access_token);
+  if (!claimed) return null;
   // The profile and the second-factor status do not depend on each other: ask for both at once (one round trip fewer on every request).
-  const [{ data, error }, { data: m }, { data: grants }, { data: domainOk }] = await Promise.all([
+  const [{ data: auth }, { data, error }, { data: m }, { data: grants }, { data: domainOk }] = await Promise.all([
+    sb.auth.getUser(),
     sb
       .from("users")
       .select(
         "id, email, status, must_change_password, employees(first_name, last_name, business_unit_id, business_units(name)), user_roles!user_roles_user_id_fkey(roles(code, role_permissions(permissions(code))))",
       )
-      .eq("id", auth.user.id)
+      .eq("id", claimed)
       .maybeSingle<ProfileRow>(),
     sb.rpc("read_my_mfa_status"),
     // permissions granted to this person directly (not through a role), unless they have expired
-    sb.from("user_permission_grants").select("expires_at, permissions(code)").eq("user_id", auth.user.id),
+    sb.from("user_permission_grants").select("expires_at, permissions(code)").eq("user_id", claimed),
     // only an approved email domain may use the app; the Super Admin is the one exception
     sb.rpc("my_domain_allowed"),
   ]);
+  if (!auth.user || auth.user.id !== claimed) return null;     // the verified identity must be the one the queries were made for
   if (error) console.error("getActor profile query failed:", error.message);
   if (error || !data || data.status !== "ACTIVE" || domainOk !== true) return null;
   const roles = data.user_roles.map((ur) => ur.roles?.code).filter((c): c is string => !!c);

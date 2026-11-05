@@ -21,7 +21,7 @@ test.describe.serial("gap closure", () => {
     await expect(page.getByRole("heading", { name: "Import strategy", level: 1 })).toBeVisible();
     await expectNoA11yViolations(page, "strategy import");
     await page.getByLabel(/Spreadsheet/).setInputFiles({ name: "s.csv", mimeType: "text/csv", buffer: Buffer.from("Year,Quarter\n2019,1\n") });
-    await expect(page.getByText(/needs these columns/)).toBeVisible();
+    await expect(page.getByText(/needs these columns/).first()).toBeVisible();
     await page.getByLabel(/Spreadsheet/).setInputFiles({ name: "s.csv", mimeType: "text/csv", buffer: Buffer.from("Year,Quarter,Objective,KR,KR title,Sub-KR,Sub-KR title\n2019,1,Obj,1,K1,1,S1\n") });
     await expect(page.getByText("The file cannot be imported yet")).toBeVisible();
     await expect(page.getByRole("cell", { name: /3 or 4|has 1 key results/ }).first()).toBeVisible();

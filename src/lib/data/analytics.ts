@@ -1,17 +1,21 @@
 import "server-only";
+import { cache } from "react";
 import { normaliseCells, type Cell, type TrendCell } from "@/lib/analytics";
 import { listQuarters } from "@/lib/data";
 import { dbError } from "@/lib/data/errors";
 import { userClient } from "@/lib/supabase/server";
 
-/** One row per unit per reporting week of the quarter, limited by row-level security to the units the caller may see. */
-export async function getDashboardCells(quarterId: string): Promise<Cell[]> {
+/**
+ * One row per unit per reporting week of the quarter, limited by row-level security to the units the caller may see.
+ * Several parts of one page ask for the same quarter (the totals, the trend, the unit's own weeks): within one request the database is asked once.
+ */
+export const getDashboardCells = cache(async (quarterId: string): Promise<Cell[]> => {
   const sb = await userClient();
   const { data, error } = await sb.rpc("read_dashboard_cells", { p_quarter_id: quarterId });
   if (error) throw dbError(error, "dashboard analytics");
   // only units that file a weekly report are scored or ranked; Departments that do not report never appear in these figures
   return normaliseCells(data).filter((c) => c.reportsWeekly);
-}
+});
 
 export interface BuTrendPoint {
   week: string; label: string; reportId: string | null; goals: number | null; tasks: number | null; score: number | null;
