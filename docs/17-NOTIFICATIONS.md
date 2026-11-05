@@ -109,3 +109,25 @@ Read notifications older than the retention period (default 12 months) and finis
 - The payload carries the audit action, entity type and id, outcome, actor role, time and correlation id. It never carries old or new values or a reason. Requests are signed `x-okr-signature: sha256=HMAC(secret, "<timestamp>.<body>")`; `TEXT` format posts `{"text": "..."}` for Slack and Teams.
 - An enqueue failure is a warning and never prevents the audit row being written; a delivery failure is recorded in the outbox and never rolls back the business operation. The outbox is closed to browser sessions.
 - Historical import sets the `app.historical_import` session flag, which suppresses notifications for the imported activity so old data does not produce new alerts. Strategy import records issues in its batch table and does not broadcast them.
+
+## OKR Session Notes events
+
+All go through `notify_users` (idempotent by dedupe key, never fails the business act) and, like every other event, are emailed only when the person's preference allows (`email_event_types`, none mandatory). Dedupe keys: one notice per action and assignee for an assignment, per action and due date for "due soon" and "overdue", per action and version for blocked/completed/verified/deadline-extended, per decision and status, per minutes revision for submitted/returned/final.
+
+| Event | Who is told |
+|---|---|
+| `SESSION_ACTION_ASSIGNED` | the new owner (on creation and on reassignment) |
+| `SESSION_ACTION_REASSIGNED` | the previous owner |
+| `SESSION_ACTION_BLOCKED` | whoever set the action and the facilitator |
+| `SESSION_ACTION_COMPLETED` | whoever set the action and the facilitator |
+| `SESSION_ACTION_VERIFIED` | owner, completer and creator |
+| `SESSION_ACTION_DUE` / `SESSION_ACTION_OVERDUE` | owner (and, for overdue, creator and facilitator); scheduler; skipped when reminders are switched off |
+| `SESSION_ACTION_FOLLOW_UP` | owner when an update is requested in a later session, when the deadline moves, or when escalated (executives and facilitator also on escalation) |
+| `SESSION_DECISION` | facilitator and participants when a decision is proposed, approved, rejected, withdrawn or superseded |
+| `SESSION_MINUTES_REVIEW` | people who can finalise (and may see the session) on submission; the author on return |
+| `SESSION_MINUTES_FINAL` | facilitator, participants and the author |
+
+| `SESSION_MENTION` | each person mentioned in a note (`@[Name](user:uuid)`) who is allowed to read that note, once per note; never the author; by a database trigger |
+
+## Executive Oversight events (ADR-102)
+Optional email event types (a person can switch each off): `EO_COMMENT_NEW`, `EO_COMMENT_REPLY`, `EO_REC_NEW`, `EO_REC_RESPONSE`, `EO_REC_CLARIFICATION`, `EO_REC_DECISION`, `EO_REC_UPDATE`, `EO_REC_DEADLINE`, `EO_REC_OVERDUE`, `EO_REC_CLOSED`. Recipients: a new shared comment → the target unit's readers; a reply or amendment → the author and earlier repliers who can still read it; a new recommendation → the unit's leads and named contact (title prefixed [HIGH]/[CRITICAL]); acknowledgement, response, decision, clarification, progress → the author; closure or withdrawal → the unit's leads and contact; deadline and overdue stages → per the configured rules. Never the actor; at most one notification per event (dedupe keys); a delivery failure never fails the act. Each opens the oversight page (`notification-actions.ts`).

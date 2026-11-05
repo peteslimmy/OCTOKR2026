@@ -1,12 +1,12 @@
 "use client";
 
 import clsx from "clsx";
-import { MoreVertical, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
+import { AlertCircle, Building2, Clock, MoreVertical, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { StaggerItem } from "@/components/motion/reveal";
 import { SpringNumber } from "@/components/motion/spring-number";
-import { heatState, type Cell, type Trend } from "@/lib/analytics";
-import { formatPercent, type MetricKind } from "@/lib/format";
+import type { Trend } from "@/lib/analytics";
+import { type MetricKind } from "@/lib/format";
 
 // ---------------------------------------------------------------- popover and kebab menu
 function useOutside(onOutside: () => void) {
@@ -57,9 +57,9 @@ export function Panel({ title, subtitle, action, menu, className, children, labe
 }) {
   return (
     <section aria-labelledby={labelledBy} className={clsx("rounded-2xl border border-line bg-panel p-5 shadow-[0_1px_2px_rgb(16_24_40/0.04)]", className)}>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div><h3 id={labelledBy} className="text-base font-semibold text-ink">{title}</h3>{subtitle ? <p className="text-xs text-muted">{subtitle}</p> : null}</div>
-        <div className="flex items-center gap-2">{action}{menu ? <KebabMenu label={`${title} options`} items={menu} /> : null}</div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0"><h3 id={labelledBy} className="text-base font-semibold text-ink">{title}</h3>{subtitle ? <p className="text-xs text-muted">{subtitle}</p> : null}</div>
+        <div className="flex flex-wrap items-center gap-2">{action}{menu ? <KebabMenu label={`${title} options`} items={menu} /> : null}</div>
       </div>
       {children}
     </section>
@@ -101,6 +101,79 @@ export function StatCard({ label, value, kind = "count", trend, trendMode = "rel
   );
 }
 
+/** The dot beside a tile's label. */
+/** Progress is green everywhere on these cards, the same green as a Done task. */
+const GREEN = "var(--done-fg, #166534)";
+const DOT: Record<string, string> = { good: "var(--done-fg, #166534)", warn: "#f59e0b", muted: "#c4c9d4", bad: "var(--critical-fg, #9f1239)" };
+export interface CardTile { label: string; value: number; note: string; dot: "good" | "warn" | "muted" | "bad"; emphasis?: "bad" | "muted" }
+
+/** A summary card: tile and label on the left, a trend pill on the right, the big figure, the period, and two tiles underneath. */
+export function SummaryCard({ icon: Icon, kicker, subtitle, value, unit, trend, periodIcon: PeriodIcon, period, periodStrong, tiles }: {
+  icon: LucideIcon; kicker: string; subtitle: string; value: number; unit: string; trend?: Trend | null; periodIcon: LucideIcon; period: string; periodStrong: string; tiles: [CardTile, CardTile];
+}) {
+  return (
+    <StaggerItem>
+      <div className="flex h-full flex-col gap-5 rounded-2xl border border-line bg-panel p-5 shadow-[0_1px_2px_rgb(16_24_40/0.04)] transition-shadow hover:shadow-lg">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--brand-700,#7a1420)_25%,white)] bg-brand-50 text-brand-700" aria-hidden><Icon className="h-5 w-5" /></span>
+            <div><p className="text-xs font-semibold uppercase tracking-wide text-muted">{kicker}</p><p className="text-xs text-muted">{subtitle}</p></div>
+          </div>
+          <TrendPill trend={trend ?? null} mode="relative" />
+        </div>
+        <div>
+          <p className="flex items-baseline gap-2"><span className="text-4xl font-bold tracking-tight tabular-nums"><SpringNumber value={value} kind="count" softDecimals={false} /></span><span className="text-sm text-muted">{unit}</span></p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted"><PeriodIcon className="h-3.5 w-3.5" aria-hidden />{period} · <strong className="font-semibold text-ink">{periodStrong}</strong></p>
+        </div>
+        <div className="mt-auto grid grid-cols-2 gap-3">
+          {tiles.map((x) => (
+            <div key={x.label} className="rounded-xl border border-line bg-surface p-3.5">
+              <p className="flex items-center justify-between gap-2 text-xs text-muted"><span>{x.label}</span><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: DOT[x.dot] }} aria-hidden /></p>
+              <p className={clsx("mt-2 text-2xl font-semibold tabular-nums", x.emphasis === "bad" && "text-[var(--critical-fg)]", x.emphasis === "muted" && "text-muted")}><SpringNumber value={x.value} kind="count" softDecimals={false} /></p>
+              <p className="mt-0.5 text-[11px] text-muted">{x.note}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </StaggerItem>
+  );
+}
+
+/** Task performance against goal performance, with the number of units and the target it is measured against. */
+export function PerformanceCard({ tasks, goals, units, target, subtitle, tasksOf, goalsOf }: { tasks: number | null; goals: number | null; units: number; target: number; subtitle: string; tasksOf: [number, number]; goalsOf: [number, number] }) {
+  const row = (label: string, v: number | null, colour: string, dot: string, of: [number, number]) => (
+    <div>
+      <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ background: dot }} aria-hidden />{label}</span><span className="font-semibold tabular-nums">{v === null ? "—" : `${v.toFixed(1)}%`} <span className="text-xs font-normal text-muted">({of[0]} of {of[1]})</span></span></div>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line" role="img" aria-label={`${label}: ${v === null ? "no figure" : `${v.toFixed(1)}%`}`}><div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, v ?? 0))}%`, background: colour }} /></div>
+    </div>
+  );
+  const behind = tasks !== null && tasks < target;
+  return (
+    <StaggerItem>
+      <div className="flex h-full flex-col gap-5 rounded-2xl border border-line bg-panel p-5 shadow-[0_1px_2px_rgb(16_24_40/0.04)] transition-shadow hover:shadow-lg">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--brand-700,#7a1420)_25%,white)] bg-brand-50 text-brand-700" aria-hidden><Clock className="h-5 w-5" /></span>
+            <div><p className="text-sm font-semibold leading-snug">Performance: tasks against goals</p><p className="text-xs text-muted">{subtitle}</p></div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--brand-700,#7a1420)_25%,white)] bg-brand-50 px-3 py-1.5">
+            <div className="text-right"><p className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-brand-700">Units shown</p><p className="text-lg font-semibold leading-tight tabular-nums">{units}</p></div>
+            <Building2 className="h-4 w-4 text-brand-700" aria-hidden />
+          </div>
+        </div>
+        <div className="space-y-5">
+          {row("Tasks done", tasks, GREEN, GREEN, tasksOf)}
+          {row("Goals done", goals, GREEN, "#c4c9d4", goalsOf)}
+        </div>
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-xs">
+          <span className="flex items-center gap-1.5 font-medium text-[var(--critical-fg)]"><AlertCircle className="h-3.5 w-3.5" aria-hidden />Target: {target}%</span>
+          <span className="text-muted">{tasks === null ? "No figures yet" : behind ? "Behind the target" : "At or above the target"}</span>
+        </div>
+      </div>
+    </StaggerItem>
+  );
+}
+
 // ---------------------------------------------------------------- chart tooltip (shared by every line chart)
 interface TooltipEntry { name?: string | number; value?: number | string | null; color?: string }
 export function ChartTooltip({ active, payload, label, format, title }: { active?: boolean; payload?: TooltipEntry[]; label?: string | number; format?: (v: number) => string; title?: (label: string) => string }) {
@@ -117,94 +190,5 @@ export function ChartTooltip({ active, payload, label, format, title }: { active
         ))}
       </ul>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------- intensity heat map
-export type HeatMetric = "score" | "completion" | "done";
-export const HEAT_METRICS: { value: HeatMetric; label: string }[] = [{ value: "score", label: "Score" }, { value: "completion", label: "Completion" }, { value: "done", label: "Tasks done" }];
-
-function metricOf(c: Cell, m: HeatMetric): number | null {
-  if (m === "score") return c.score;
-  if (m === "completion") return c.tasksTotal > 0 ? (c.tasksDone / c.tasksTotal) * 100 : null;
-  return c.reportsWeekly || c.tasksTotal > 0 ? c.tasksDone : null;
-}
-const shade = (t: number) => `color-mix(in srgb, var(--brand-700) ${Math.round(8 + 92 * Math.max(0, Math.min(1, t)))}%, white)`;
-
-/** Units down the side, weeks across the top, colour by the chosen measure. Every square is a button; the value is printed in it. */
-export function IntensityHeatmap({ cells, weeks, units, metric, onUnit }: {
-  cells: Cell[]; weeks: { weekId: string; label: string }[]; units: { id: string; name: string }[]; metric: HeatMetric; onUnit: (id: string) => void;
-}) {
-  const index = new Map(cells.map((c) => [`${c.businessUnitId}|${c.weekId}`, c]));
-  const max = metric === "done" ? Math.max(1, ...cells.map((c) => c.tasksDone)) : 100;
-  const [hover, setHover] = useState<string | null>(null);
-  const tip = hover ? index.get(hover) : null;
-  const unitName = new Map(units.map((u) => [u.id, u.name]));
-  return (
-    <div>
-      <div className="overflow-x-auto pb-1">
-        <table className="border-separate border-spacing-1 text-xs">
-          <caption className="sr-only">{HEAT_METRICS.find((m) => m.value === metric)?.label} for each unit in each week</caption>
-          <thead><tr><td />{weeks.map((w) => <th key={w.weekId} scope="col" className="px-0.5 pb-1 text-center font-medium text-muted">{w.label}</th>)}</tr></thead>
-          <tbody>
-            {units.map((u) => (
-              <tr key={u.id}>
-                <th scope="row" className="max-w-32 truncate pr-2 text-left font-medium text-ink"><button type="button" onClick={() => onUnit(u.id)} className="max-w-32 truncate hover:underline">{u.name}</button></th>
-                {weeks.map((w) => {
-                  const c = index.get(`${u.id}|${w.weekId}`);
-                  if (!c) return <td key={w.weekId} />;
-                  const state = heatState(c);
-                  const v = metricOf(c, metric);
-                  const label = state === "HOLIDAY" ? "Organisation holiday" : state === "NOT_REQUIRED" && c.tasksTotal === 0 ? "No report required" : v === null ? "Not scored yet" : metric === "done" ? `${v} tasks done` : `${v.toFixed(1)}%`;
-                  const t = v === null ? 0 : v / max;
-                  const text = state === "HOLIDAY" ? "H" : v === null ? "·" : metric === "done" ? String(v) : String(Math.round(v));
-                  return (
-                    <td key={w.weekId}>
-                      <button type="button" onMouseEnter={() => setHover(`${u.id}|${w.weekId}`)} onFocus={() => setHover(`${u.id}|${w.weekId}`)} onMouseLeave={() => setHover(null)} onBlur={() => setHover(null)}
-                        onClick={() => onUnit(u.id)} aria-label={`${u.name}, week ${c.weekNumber}: ${label}${state === "MISSING" ? ", no report filed" : ""}`}
-                        className={clsx("relative h-9 w-9 rounded-lg font-medium tabular-nums hover:z-10 hover:shadow-md hover:ring-2 hover:ring-brand-700", state === "HOLIDAY" && "bg-[var(--info-bg)] text-[var(--info-fg)]", v === null && state !== "HOLIDAY" && "bg-surface text-muted", t > 0.5 && state !== "HOLIDAY" && "text-white")}
-                        style={state !== "HOLIDAY" && v !== null ? { background: shade(t) } : undefined}>
-                        {text}
-                        {state === "MISSING" ? <span aria-hidden className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-[#dc2626] ring-1 ring-white" /> : null}
-                      </button>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-2 min-h-4 text-xs text-muted" aria-live="polite">
-        {tip ? `${unitName.get(tip.businessUnitId)} · week ${tip.weekNumber}: ${metric === "done" ? `${tip.tasksDone} done of ${tip.tasksTotal} tasks` : metric === "completion" ? `${tip.tasksDone} of ${tip.tasksTotal} tasks done` : tip.score === null ? "not scored yet" : `score ${tip.score.toFixed(1)}%`}${heatState(tip) === "MISSING" ? " · no report filed" : ""}` : "Hover or focus a square for detail."}
-      </p>
-      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted" aria-label="Legend">
-        <span className="flex items-center gap-1.5">0<span className="flex gap-0.5" aria-hidden>{[0.08, 0.3, 0.5, 0.75, 1].map((t) => <span key={t} className="h-3 w-3 rounded" style={{ background: shade(t) }} />)}</span>{metric === "done" ? max : 100}{metric === "done" ? "" : "%"}</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#dc2626]" aria-hidden />No report filed</span>
-        <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-[var(--info-bg)]" aria-hidden />Holiday</span>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- ranked list with bars (the "active users by country" card)
-export function ProgressList({ rows, onPick }: { rows: { id: string; code: string; name: string; sub: string; value: number | null }[]; onPick: (id: string) => void }) {
-  return (
-    <ul className="space-y-4" aria-label="Completion by unit">
-      {rows.map((r) => (
-        <li key={r.id}>
-          <button type="button" onClick={() => onPick(r.id)} className="block w-full text-left">
-            <span className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[11px] font-semibold text-brand-800" aria-hidden>{r.code.slice(0, 3)}</span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline justify-between gap-2"><span className="truncate text-sm font-medium text-ink">{r.name}</span><span className="text-sm font-semibold tabular-nums">{r.value === null ? "—" : formatPercent(r.value)}</span></span>
-                <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-surface" aria-hidden><span className="block h-full rounded-full transition-[width] duration-700" style={{ width: `${Math.min(100, r.value ?? 0)}%`, background: "var(--brand-600)" }} /></span>
-                <span className="mt-1 block text-[11px] text-muted">{r.sub}</span>
-              </span>
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
   );
 }

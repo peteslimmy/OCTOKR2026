@@ -23,7 +23,7 @@ async function credit(c: Ctx, w: W, amount: number) {
   return (await c.rpc<{ ledger_entry_id: string }>("record_violation_payment", w.hr, v.violation_id, "PAYMENT", `REF-${key()}`, "2031-01-14", key())).ledger_entry_id;
 }
 async function disburse(c: Ctx, w: W, amount: number, release = true) {
-  const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, amount, "Team lunch", "Quarterly celebration", key());
+  const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, amount, "OKR Refreshment", "Quarterly celebration", key());
   await c.rpc("start_disbursement_review", w.finance, r.request_id);
   await c.rpc("decide_disbursement_request", w.finance, r.request_id, true, null, key());
   if (!release) return r.request_id;

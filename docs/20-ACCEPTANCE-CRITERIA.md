@@ -290,3 +290,38 @@ The strategy import refuses an active quarter, a quarter that already has an obj
 
 ### AC-GAP-003
 The sign-in import creates accounts only for active employees without one, only with roles the actor may hand out, with a one-time set-password link and no chosen password.
+
+## OKR Session Notes acceptance criteria (AC-SN)
+
+Covered by `tests/db/session_notes.test.ts`, `src/lib/session-notes/__tests__`, `tests/api/session-notes.test.ts` and `tests/e2e/25-session-notes.spec.ts`.
+
+- **AC-SN-01** Several sessions may exist for one unit and week; a session may have no reporting week; a repeated create request returns the first session.
+- **AC-SN-02** The lifecycle is DRAFT → IN_PROGRESS → COMPLETED → ARCHIVED with a reasoned reopen and restore; any other move is refused; archiving reports (and does not cancel) open actions.
+- **AC-SN-03** A note saves with its version; a stale save is refused with nothing overwritten; identical text changes nothing; settled earlier versions are kept and immutable; a change after completion needs a reason and is kept as an amendment.
+- **AC-SN-04** Linking to a theme, quarter, objective, KR, Sub-KR, weekly goal, task or weekly report changes none of them (rows compared before and after); a link to another unit's goal, task or report, or to something that does not exist, is refused.
+- **AC-SN-05** A decision is proposed until a holder of the approval authority approves it; BU Leads and Executives cannot; an approved decision is superseded, not edited, and both are kept.
+- **AC-SN-06** An action is assigned with a notice; it can be blocked (reason), completed (remarks, evidence where required), verified by someone else, reassigned (reason), extended (justification), escalated; none of this changes an OKR task, goal, report or score.
+- **AC-SN-07** An open action carried into a later session is the same row, reviewed once per session, with the history showing the session each step happened in.
+- **AC-SN-08** Minutes are proposed from the records, reviewed and finalised with a snapshot and hash; confidential notes never appear; a finalised revision cannot change; an amendment is a new revision.
+- **AC-SN-09** HR, Finance, Admin and Super Admin cannot read or write session content; a BU Lead sees only their unit's sessions and shared notes; an Executive can read and cannot write; direct table writes are refused.
+- **AC-SN-10** A history search by unit, quarter, week, dates, type, facilitator, participant, status, note category, decision status, action status, linked component and keyword works after the week or quarter has locked, and returns only what the caller may read.
+- **AC-SN-11** Dashboard figures equal the counts of the records the caller can read (no hard-coded figure; no completion rate when there are no actions).
+- **AC-SN-12** Rich text cannot execute: script, event handlers, `javascript:` and `data:` links, entities and markup in tables/headings/code are shown as text; only http, https and mailto links are produced.
+- **AC-SN-13** Autosave shows saved / unsaved / saving / retrying / failed, never discards text, survives refresh and lost connection, and reports a second editor's change.
+- **AC-SN-14** Exports (minutes PDF; history, quarterly, decisions, outstanding, overdue, risks, completion as CSV, Excel, PDF) respect the exporter's access, are capped, defend against formula injection and are audited.
+- **AC-SN-15** An AI summary is a draft in the editor only, never a record; invented references or figures discard it; the module works with the AI module off.
+- **AC-SN-16** The library, the workspace tabs and the registers have no WCAG 2.2 A/AA violations.
+
+## Executive Oversight acceptance criteria (AC-EO)
+- AC-EO-1 An Executive or Director can comment on a record they may read, with unit, quarter, week and record inherited; no category is required; no response workflow starts.
+- AC-EO-2 An Executive can issue a recommendation to one or more units with priority, deadline and links; each unit has its own record.
+- AC-EO-3 The unit can acknowledge, accept, partly accept, decline (reason required), propose an alternative, ask for clarification, report progress and implementation; nobody else can answer for it, including an Executive.
+- AC-EO-4 Publishing, answering or closing a recommendation changes no weekly report, goal, task, score, attendance, violation, finance or strategy record (tested by comparison).
+- AC-EO-5 The original comment cannot be edited by anyone but its author; an amendment needs a reason and keeps the earlier wording; replies are chronological and distinct.
+- AC-EO-6 A published recommendation cannot be edited; history, events and versions cannot be updated or deleted, even by SQL.
+- AC-EO-7 Another unit, HR, Finance, Admin, Super Admin and a Presenter of another unit read nothing; an id from another unit is refused; management-only comments are hidden from the unit.
+- AC-EO-8 Overdue responses are shown and escalated per configuration with no automatic compliance consequence; a response waiting for an Executive is not overdue.
+- AC-EO-9 Duplicate requests and double clicks create one record; concurrent replies are both kept; stale versions are refused.
+- AC-EO-10 Script in a comment is displayed as text; malicious uploads are refused; exports are permission-checked, formula-safe and audited.
+- AC-EO-11 Suspended contact, suspended author, archived unit and archived linked record leave the history intact and the process continuable.
+- AC-EO-12 The page, register and panel have no accessibility violations; every action offered is one the person may take.

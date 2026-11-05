@@ -2,11 +2,12 @@
 
 import { CheckCircle2, Upload, FileSpreadsheet, Download } from "lucide-react";
 import { useState } from "react";
-import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
+import { apiRequest, apiUpload } from "@/components/ui/client";
+import { describeFailure, FailurePanel, type Failure } from "@/components/import-feedback";
 import { Button, Card, CardHeader, DataTable, Field, Input } from "@/components/ui/primitives";
 
 interface Row { row_no: number; year: number; quarter: number; objective: string; kr_no: number; kr_title: string; sub_no: number; sub_title: string }
-interface Checked { fileName: string; sha256: string; rows: Row[]; quarters: string[]; issues: { row: number; message: string }[]; issueCount: number }
+interface Checked { fileName: string; sha256: string; rows: Row[]; quarters: string[]; issues: { row: number; message: string; fix?: string }[]; issueCount: number }
 interface Done { objectives: number; key_results: number; sub_key_results: number; already_imported?: boolean; quarters: { year: number; quarter: number; status: string }[] }
 
 // Strategy import template CSV
@@ -25,11 +26,11 @@ function download(name: string, text: string, type = "text/csv;charset=utf-8") {
 
 export function StrategyWizard() {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [checked, setChecked] = useState<Checked | null>(null);
   const [confirm, setConfirm] = useState("");
   const [done, setDone] = useState<Done | null>(null);
-  const fail = (e: unknown) => setError(e instanceof ApiFailure ? e.message : "Something went wrong. Nothing was changed.");
+  const fail = (e: unknown) => setError(describeFailure(e, "The strategy import"));
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -56,14 +57,14 @@ export function StrategyWizard() {
           </Button>
         </div>
         {busy && !checked ? <p role="status" className="mt-3 text-sm">Reading and checking the file…</p> : null}
-        {error ? <p role="alert" className="mt-3 rounded-lg bg-[var(--critical-bg)] px-3 py-2 text-sm font-medium text-[var(--critical-fg)]">{error}</p> : null}
+        {error ? <FailurePanel f={error} /> : null}
       </Card>
 
       {checked && !clean ? (
         <Card>
           <CardHeader title="The file cannot be imported yet" description={`${checked.issueCount} problem${checked.issueCount === 1 ? "" : "s"}. Nothing was saved. Fix the file and choose it again.`} />
-          <DataTable caption="Problems" columns={[{ label: "Spreadsheet row" }, { label: "Problem" }]}>
-            {checked.issues.map((p, i) => <tr key={i}><td className="tabular-nums">{p.row || "—"}</td><td>{p.message}</td></tr>)}
+          <DataTable caption="Problems" columns={[{ label: "Spreadsheet row" }, { label: "Problem" }, { label: "What to do" }]}>
+            {checked.issues.map((p, i) => <tr key={i}><td className="tabular-nums">{p.row || "—"}</td><td>{p.message}</td><td className="text-sm">{p.fix}</td></tr>)}
           </DataTable>
         </Card>
       ) : null}

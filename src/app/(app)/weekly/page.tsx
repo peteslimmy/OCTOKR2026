@@ -1,37 +1,74 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ComplianceBadge, PhaseBadge, ScoreText, SubmissionBadge, wat } from "@/components/status";
-import { Badge, buttonClass, Card, CardHeader, EmptyState, PageHeader, DataTable } from "@/components/ui/primitives";
+import { PhaseBadge, SubmissionBadge, wat } from "@/components/status";
+import { Badge, buttonClass, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { requireActor, can } from "@/lib/auth/actor";
-import { activeWeeks, getReportView, recentFinalWeeks, reportIdFor } from "@/lib/data";
+import { activeWeeks, getReportView, latestQuarterSnapshot, listQuarters, reportIdFor, serverNow } from "@/lib/data";
 import { listLateExceptions } from "@/lib/data/governance";
-import { StartReportButton } from "./start-report-button";
+import { NavSelect } from "@/components/ui/nav-select";
+import { BuIntelligenceSection } from "@/components/insights/intelligence";
+import { WeeklyTrend } from "@/components/weekly/weekly-trend";
+import { getBuWeekTrend, getDashboardCells } from "@/lib/data/analytics";
+import { WeeklyTimeline } from "./weekly-timeline";
+import { defaultQuarter } from "@/lib/data";
+import { listBusinessUnits } from "@/lib/data";
+import { AddWeeklyReportButton, StartReportButton } from "./start-report-button";
 import { formatWeekLabel } from "@/lib/domain/week-label";
 import { getLockSchedule } from "@/lib/data/config";
 import { contentLockPhrase, finalLockPhrase } from "@/lib/domain/schedule";
 
 export const metadata: Metadata = { title: "Weekly Execution" };
 
-export default async function WeeklyPage() {
+export default async function WeeklyPage({ searchParams }: PageProps<"/weekly">) {
+  const sp = await searchParams;
   const actor = await requireActor();
   const schedule = await getLockSchedule();
-  if (!actor.buId || !can(actor, "weekly_report.view_own_bu")) {
-    return <Card><EmptyState title="No Business Unit report">Weekly reports belong to a Business Unit. Presenters and executives can review every BU under Presentation and Performance.</EmptyState></Card>;
+  // a Super Admin works on behalf of a unit they choose; everyone else works their own unit
+  const filesForAny = can(actor, "weekly_report.file_for_any_bu");
+  const reporting = filesForAny ? (await listBusinessUnits()).filter((b) => b.reports_weekly && b.status === "ACTIVE").sort((x, y) => x.name.localeCompare(y.name)) : [];
+  const chosen = filesForAny ? (reporting.find((b) => b.id === sp.bu) ?? reporting[0] ?? null) : null;
+  const buId = filesForAny ? chosen?.id ?? null : actor.buId;
+  const buName = filesForAny ? chosen?.name ?? null : actor.buName;
+  if (!buId || !(can(actor, "weekly_report.view_own_bu") || filesForAny)) {
+    return <Card><EmptyState title="Your account has no weekly report to fill">Weekly reports belong to a Business Unit that files them, and the person who adds the goals and tasks is that unit&apos;s Business Unit Lead. {actor.buName ? `Your unit (${actor.buName}) does not file weekly reports. ` : ""}Presenters and executives can review every unit under Presentation and Performance.</EmptyState></Card>;
   }
-  const [live, past] = await Promise.all([activeWeeks(), recentFinalWeeks(8)]);
+  const [live, nowIso] = await Promise.all([activeWeeks(), serverNow()]);
   const build = async (weeks: typeof live) =>
     Promise.all(weeks.map(async (w) => {
-      const id = await reportIdFor(actor.buId!, w.id);
+      const id = await reportIdFor(buId, w.id);
       return { week: w, id, view: id ? await getReportView(id) : null };
     }));
-  const [liveRows, pastRows] = await Promise.all([build(live), build(past)]);
+  const liveRows = await build(live);
+  const trendQuarter = live[0]?.quarter_id ?? (await defaultQuarter())?.id;
+  const trend = trendQuarter ? await getBuWeekTrend(buId, trendQuarter).catch(() => []) : [];
+  const quarterCells = trendQuarter ? (await getDashboardCells(trendQuarter).catch(() => [])).filter((c) => c.businessUnitId === buId) : [];
+  const quarterRow = trendQuarter ? (await listQuarters()).find((q) => q.id === trendQuarter) : undefined;
+  const quarterSnap = trendQuarter ? await latestQuarterSnapshot(trendQuarter, buId).catch(() => null) : null;
   const canCreate = can(actor, "weekly_report.create");
-  const lateOpen = (await listLateExceptions()).filter((e) => e.business_unit_id === actor.buId && e.status === "AUTHORISED");
+  // weeks this unit can begin right now, and, when there are none, the plain reason why
+  const startable = liveRows.filter(({ week, id }) => week.reporting_state === "NORMAL" && week.phase === "OPEN" && !id).map(({ week }) => ({ id: week.id, label: formatWeekLabel(week) }));
+  const why = liveRows.length === 0 ? "No reporting week is open yet. The next one opens on its opening time; an Admin can change that under Calendar & holidays."
+    : liveRows.every(({ week }) => week.reporting_state === "ORGANIZATION_HOLIDAY") ? "This week is an organisation holiday, so no report is due."
+    : liveRows.some(({ id, week }) => id && week.reporting_state === "NORMAL") ? "This week's report is already started. Open it below to add goals and tasks."
+    : "The open week is locked. An Admin can suspend the locks under Calendar & holidays.";
+  const lateOpen = (await listLateExceptions()).filter((e) => e.business_unit_id === buId && e.status === "AUTHORISED");
 
   return (
     <>
-      <PageHeader title="Weekly Execution" description={`${actor.buName}: one shared report per reporting week. Goals and tasks are editable until ${contentLockPhrase(schedule.active)} WAT; tasks are executed until ${finalLockPhrase(schedule.active)} WAT.`} />
+      <PageHeader title="Weekly Execution" actions={canCreate ? <AddWeeklyReportButton weeks={startable} whyNot={why} businessUnitId={filesForAny ? buId : undefined} /> : undefined} description={`${buName}: one shared report per reporting week. Goals and tasks are editable until ${contentLockPhrase(schedule.active)} WAT; tasks are executed until ${finalLockPhrase(schedule.active)} WAT.`} />
       <div className="space-y-6">
+        {filesForAny ? (
+          <Card className="p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <NavSelect id="weekly-unit" label="Working on behalf of" value={buId} hrefBase="/weekly?bu=" options={reporting.map((b) => ({ value: b.id, label: b.name }))} />
+              <p className="text-sm text-muted">Goals, tasks and submission you make here are filed for {buName} and recorded in the audit trail under your name.</p>
+            </div>
+          </Card>
+        ) : null}
+        <Card>
+          <CardHeader title={`${buName} — week by week`} description="The share of goals done compared with the share of tasks done, week after week this quarter." />
+          <WeeklyTrend data={trend} />
+        </Card>
         <Card>
           <CardHeader title="Live reporting weeks" />
           {liveRows.length === 0 ? <EmptyState title="No reporting week is open">The next week opens on Monday at 00:00 WAT.</EmptyState> : (
@@ -47,7 +84,7 @@ export default async function WeeklyPage() {
                     </div>
                   </div>
                   {week.reporting_state === "NORMAL" ? (id ? <Link className={buttonClass("primary", "sm")} href={`/weekly/${id}`}>Open report</Link>
-                    : week.phase === "OPEN" && canCreate ? <StartReportButton weekId={week.id} /> : <Badge tone="critical">No report filed</Badge>) : null}
+                    : week.phase === "OPEN" && canCreate ? <StartReportButton weekId={week.id} businessUnitId={filesForAny ? buId : undefined} /> : <Badge tone="critical">No report filed</Badge>) : null}
                 </li>
               ))}
             </ul>
@@ -65,29 +102,15 @@ export default async function WeeklyPage() {
                     <p className="text-sm text-muted">Reason: {e.reason}</p>
                   </div>
                   {e.weekly_report_id ? <Link className={buttonClass("primary", "sm")} href={`/weekly/${e.weekly_report_id}`}>Open late report</Link>
-                    : canCreate ? <StartReportButton weekId={e.reporting_week_id} /> : null}
+                    : canCreate ? <StartReportButton weekId={e.reporting_week_id} businessUnitId={filesForAny ? buId : undefined} /> : null}
                 </li>
               ))}
             </ul>
           </Card>
         ) : null}
 
-        <Card>
-          <CardHeader title="Finalised weeks" description="Immutable historical records." />
-          {pastRows.length === 0 ? <EmptyState title="Nothing finalised yet">Finalised weeks appear here after their final lock.</EmptyState> : (
-            <DataTable caption="Finalised weekly reports" columns={[{ label: "Week" }, { label: "Submission" }, { label: "Compliance" }, { label: "Score", align: "right" }, { label: "Open", srOnly: true }]}>
-                  {pastRows.map(({ week, id, view }) => (
-                    <tr key={week.id} className="border-b border-line last:border-0">
-                      <td>{formatWeekLabel(week)}{week.reporting_state === "ORGANIZATION_HOLIDAY" ? " · holiday" : ""}</td>
-                      <td>{week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Badge tone="info">Not required</Badge> : <SubmissionBadge status={view?.report.submission_status ?? "NOT_SUBMITTED"} />}</td>
-                      <td><ComplianceBadge status={view?.compliance?.status ?? (week.reporting_state === "NORMAL" ? "NON_COMPLIANT" : null)} /></td>
-                      <td className="text-right"><ScoreText value={view?.snapshot?.final_score ?? (week.reporting_state === "NORMAL" ? 0 : null)} /></td>
-                      <td className="text-right">{id ? <Link className="text-brand-700 underline" href={`/weekly/${id}`}>View</Link> : null}</td>
-                    </tr>
-                  ))}
-                </DataTable>
-          )}
-        </Card>
+        <WeeklyTimeline cells={quarterCells} nowIso={nowIso} quarterLabel={quarterRow ? `Q${quarterRow.quarter_number} ${quarterRow.year}` : "This quarter"} quarterScore={quarterSnap?.score === null || quarterSnap?.score === undefined ? null : Number(quarterSnap.score)} quarterFinal={quarterSnap?.calculation_status === "FINAL"} />
+        <BuIntelligenceSection buId={buId} buName={buName ?? "Your unit"} quarterId={trendQuarter} />
       </div>
     </>
   );

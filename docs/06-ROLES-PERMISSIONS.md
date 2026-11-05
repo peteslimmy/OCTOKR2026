@@ -107,6 +107,11 @@ The database holds the same grants for these codes as the route guard expects
 of migration 057 - cannot disagree about who is allowed.
 `scripts/verify-044-permission-matrix.js` asserts that agreement.
 
+## 4COREPAL permissions (module `AI Performance Agent`, off by default)
+
+`ai.assistant.use`, `ai.insights.own`, `ai.insights.bu`, `ai.insights.org`, `ai.remark.submit`, `ai.case.view`, `ai.case.manage`, `ai.action.assign`, `ai.approval.decide` (reserved, critical), `ai.escalation.manage` (protected, critical), `ai.communication.view`, `ai.communication.manage`, `ai.knowledge.manage`, `ai.config.manage` (reserved, critical), `ai.schedule.manage`, `ai.audit.view`, `ai.report.export`.
+Defaults: BU Lead (assistant, own BU insights, remarks, cases); Executive and Director (organisation insights, cases, communications, export); Admin (the same plus case management and audit); Super Admin (all). Scope: a BU Lead reads only their own unit's AI records; organisation-wide reading needs `ai.insights.org`. See docs/38-4COREPAL-DESIGN.md.
+
 ## Scope rules
 
 ### BU Lead
@@ -229,3 +234,40 @@ The approved permission matrix of the shipped roles is `tests/db/fixtures/role-m
 ## Reserved permissions (ADR-077)
 
 A permission marked **reserved** (`permissions.reserved`) can only be held by a role that also holds `roles.manage`, the Super Admin tier. The role engine refuses any create or update that would put one elsewhere (`ROLE_RESERVED`), whoever asks and whoever approves. Reserved: `history.import`, `roles.manage`, `config.protected.approve`, `config.emergency`, `ledger.reversal.emergency`, `attendance.session.outcome.emergency`, `strategy.annual_theme.change_exception`.
+
+## OKR Session Notes permissions (module `Session notes & meetings`; ADR-089 to ADR-093)
+
+Mapped to roles by migration `20261105000001` and changeable only through the ordinary role-management process. **HR, Finance, Admin and Super Admin hold none of the content permissions**; Admin and Super Admin hold only `session_notes.configure` (the list of session types).
+
+| Permission | Risk | BU Lead | Presenter | Executive | Director | Admin | Super Admin | HR | Finance |
+|---|---|---|---|---|---|---|---|---|---|
+| `session_notes.view` | low | ✔ (own unit and invited sessions) | ✔ | ✔ | ✔ | – | – | – | – |
+| `session_notes.view_all` (protected) | critical | – | ✔ | ✔ | ✔ | – | – | – | – |
+| `session_notes.create` | medium | ✔ (own unit) | ✔ | – | – | – | – | – | – |
+| `session_notes.update` | medium | ✔ (own notes) | ✔ | – | – | – | – | – | – |
+| `session_notes.finalise` | high | – | ✔ | – | – | – | – | – | – |
+| `session_notes.archive` | high | – | ✔ | – | – | – | – | – | – |
+| `session_notes.export` | medium | ✔ (what they can read) | ✔ | ✔ | ✔ | – | – | – | – |
+| `session_notes.configure` | high | – | – | – | – | ✔ | ✔ | – | – |
+| `session_decisions.create` | medium | – | ✔ | – | – | – | – | – | – |
+| `session_decisions.approve` (protected) | critical | – | ✔ | – | – | – | – | – | – |
+| `session_actions.create` | medium | – | ✔ | – | – | – | – | – | – |
+| `session_actions.assign` | medium | – | ✔ | – | – | – | – | – | – |
+| `session_actions.update` | medium | ✔ (own unit's actions) | ✔ | – | – | – | – | – | – |
+| `session_actions.verify` | medium | – | ✔ | – | – | – | – | – | – |
+| `session_risks.manage` | medium | – | ✔ | – | – | – | – | – | – |
+
+Beyond the codes (enforced in the database): a session is visible to a holder of `session_notes.view` who also has `view_all`, belongs to the session's unit, or is its facilitator, creator or an invited participant; a note is `SHARED`, `MANAGEMENT` (holders of `view_all`, author, facilitator) or `CONFIDENTIAL` (author and facilitator); the assignee of an action can always read and report on that action; the person who completes an action cannot verify it. The Executive is read-only because it holds no create or update permission.
+
+## Executive Oversight permissions (module `Executive oversight`; ADR-096 to ADR-103)
+Fourteen permissions, all data, mapped by migration 20261106000001. Full matrix and rules in `41-EXECUTIVE-OVERSIGHT.md` section 4.
+
+| Role | Gets |
+|---|---|
+| Executive, Director | view, create, reply, amend (own) comments; view, create, withdraw, close recommendations; dashboard; `view_all` (protected); export |
+| BU Lead | view and reply to comments of their unit; view recommendations of their unit; `respond` and `update_progress` for their own unit; the dashboard (their unit's figures); export of what they can read |
+| Presenter | view and reply, for their own unit |
+| Admin, Super Admin | `executive_oversight.configure` only (categories and escalation timelines); no content |
+| HR, Finance | nothing |
+
+An Executive's `view_all` is the right to read, never to answer for a unit or to change any operational record. The Super Admin tier does **not** inherit these codes (ADR-097).

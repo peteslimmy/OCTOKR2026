@@ -10,8 +10,8 @@ export const POST = api(
       subKeyResultId: z.string().uuid().nullish(),
       title: z.string().trim().max(500),
       description: z.string().trim().max(4000).nullish(),
-      tasks: z.array(z.string().trim().max(1000)).max(50),
+      tasks: z.array(z.string().trim().max(1000)).max(50).optional(),   // sent by older screens and ignored: only the goal is checked
     }),
   },
-  async ({ body }) => evaluateForGoal({ ...body, taskDescriptions: body.tasks }),
+  async ({ body }) => evaluateForGoal(body),
 );

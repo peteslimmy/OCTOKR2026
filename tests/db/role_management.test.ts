@@ -73,9 +73,23 @@ describe("roles are data and are changed through approval (ADR-069)", () => {
       await c.expectError("PERMISSION_DENIED", () => ask(c, w.admin, "ESC1", create("ESC1", ["ledger.reversal.emergency"])));       // Super Admin only
       await c.expectError("PERMISSION_DENIED", () => ask(c, w.admin, "ESC2", create("ESC2", ["disbursement.approve"])));             // Finance only
       await c.expectError("ROLE_RESERVED", () => ask(c, w.sa, "ESC3", create("ESC3", ["ledger.reversal.emergency"])));                // reserved: only on a role that can manage roles
-      expect((await ask(c, w.sa, "ESC4", create("ESC4", ["ledger.reversal.emergency", "roles.manage"]))).status).toBe("PENDING");   // Super Admin holds both
+      expect((await ask(c, w.sa, "ESC4", create("ESC4", ["ledger.reversal.emergency", "roles.manage"]))).status).toBe("APPLIED");   // Super Admin holds both, and applies a change at once
       const finance = await roleId(c, "FINANCE");
       await c.expectError("PERMISSION_DENIED", async () => ask(c, w.admin, finance, update("Finance", [...(await permsOf(c, "FINANCE")), "audit.read", "ledger.reversal.emergency"])));
+    });
+  });
+
+  it("a Super Admin's change applies at once and is marked as such; an Admin's still waits for a different person", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const direct = await ask(c, w.sa, "DIRECT1", create("DIRECT1", ["reports.view"]));
+      expect(direct.status).toBe("APPLIED");
+      expect(await roleId(c, "DIRECT1")).toBeTruthy();
+      const row = (await c.q<{ status: string; emergency: boolean; decided_by: string }>("select status, emergency, decided_by from config_change_requests where id = $1", [direct.request_id]))[0];
+      expect(row).toMatchObject({ status: "APPLIED", emergency: true, decided_by: w.sa });
+      const waiting = await ask(c, w.admin, "WAITS1", create("WAITS1", ["reports.view"]));
+      expect(waiting.status).toBe("PENDING");
+      expect(await roleId(c, "WAITS1")).toBeUndefined();
     });
   });
 
@@ -125,7 +139,7 @@ describe("roles are data and are changed through approval (ADR-069)", () => {
       await c.expectError("ROLE_CONFLICT", async () => ask(c, w.admin, hrRole, update("Human Resources", [...(await permsOf(c, "HR")), "attendance.amendment.approve"])));   // an Admin holds it too
       const fin = await roleId(c, "FINANCE");                                                                                     // FINANCE already requests and approves ledger reversals
       const ok = await ask(c, w.sa, fin, { action: "UPDATE", name: "Finance and Treasury", description: null, permissions: await permsOf(c, "FINANCE"), requiresMfa: true });
-      expect(await decide(c, w.sa2, ok.request_id)).toMatchObject({ status: "APPLIED" });
+      expect(ok.status).toBe("APPLIED");                                                                                          // a Super Admin applies a change at once
     });
   });
 
@@ -149,11 +163,11 @@ describe("roles are data and are changed through approval (ADR-069)", () => {
       await c.expectError("ROLE_LOCKOUT", () => ask(c, w.sa, sarole, { action: "DELETE", moveTo: "ADMIN" }));
       await c.expectError("ROLE_RESERVED", async () => ask(c, w.sa, sarole, { action: "UPDATE", name: "Super Admin", description: null, permissions: (await permsOf(c, "SUPER_ADMIN")).filter((p) => p !== "roles.manage"), requiresMfa: true }));
       const keep = await ask(c, w.sa, "ROLE_KEEPER", create("ROLE_KEEPER", ["roles.manage", "config.protected.approve", "users.manage"]));
-      await decide(c, w.sa2, keep.request_id);
+      expect(keep.status).toBe("APPLIED");
       await c.rpc("set_user_roles", w.sa, w.admin2, ["ROLE_KEEPER"]);
       const gone = await ask(c, w.sa, sarole, { action: "DELETE", moveTo: "ROLE_KEEPER" });                                       // someone else still holds the critical permissions
       expect(gone.protected).toBe(true);
-      await decide(c, w.sa2, gone.request_id);
+      expect(gone.status).toBe("APPLIED");
       expect(await roleId(c, "SUPER_ADMIN")).toBeUndefined();
       expect(await has(c, w.sa, "roles.manage")).toBe(true);                                                                      // moved, not lost
     });

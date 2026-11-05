@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
+import { RollbackCard } from "../rollback-card";
 import { SignInWizard } from "./sign-in-wizard";
 
 export const metadata: Metadata = { title: "Import sign-ins" };
@@ -13,7 +14,10 @@ export default async function Page() {
     <>
       <PageHeader title="Import sign-ins and roles" description="Give people who are already employees a sign-in and roles from a spreadsheet. Nobody chooses a password: each person receives a one-time link to set their own."
         actions={<Link href="/admin/import" className="text-sm text-brand-700 underline">Back to Import</Link>} />
-      <SignInWizard />
+      <div className="space-y-6">
+        <SignInWizard />
+        <RollbackCard kind="signIns" />
+      </div>
     </>
   );
 }

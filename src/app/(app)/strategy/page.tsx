@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ScoreText, watDate } from "@/components/status";
 import { Badge, Banner, Card, CardHeader, EmptyState, PageHeader, ScoreBar } from "@/components/ui/primitives";
+import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
 import { can, requireActor } from "@/lib/auth/actor";
-import { currentQuarter, getAnnualTheme, getStrategyHistory, getStrategyTree, getThemeChanges, listQuarters, listStrategyChanges } from "@/lib/data";
+import { defaultQuarter, getAnnualTheme, getStrategyHistory, getStrategyTree, getThemeChanges, listQuarters, listStrategyChanges } from "@/lib/data";
 import { ChangeQueue, RequestChange } from "./strategy-change-actions";
 import { NavSelect } from "@/components/ui/nav-select";
 import { ActivateButton, AddKeyResult, AddSubKr, CreateQuarters, CreateTheme, ChangeTheme, EditText, ObjectiveForm } from "./strategy-actions";
@@ -15,7 +16,7 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
   const actor = await requireActor();
   const quarters = await listQuarters();
   const wantedId = typeof sp.quarter === "string" ? sp.quarter : undefined;
-  const quarter = quarters.find((q) => q.id === wantedId) ?? (await currentQuarter());
+  const quarter = quarters.find((q) => q.id === wantedId) ?? (await defaultQuarter());
   const year = quarter?.year ?? new Date().getUTCFullYear();
   const theme = await getAnnualTheme(year);
   const changes = theme ? await getThemeChanges(theme.id) : [];
@@ -71,6 +72,7 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
               {tree.objective ? (
                 <div className="flex items-start justify-between gap-4">
                   <div><p className="text-lg font-semibold">{tree.objective.title}</p>{tree.objective.description ? <p className="mt-1 text-sm text-muted">{tree.objective.description}</p> : null}</div>
+                  <ExecutiveCommentary module="OBJECTIVE" subjectType="OBJECTIVE" subjectId={tree.objective.id} subjectLabel={`Objective: ${tree.objective.title}`} quarterId={quarter.id} label="Executive Commentary" />
                   {editable && can(actor, "strategy.objective.edit") ? <EditText kind="objectives" id={tree.objective.id} title={tree.objective.title} description={tree.objective.description} label="objective" /> : null}
                   {canRequest ? <RequestChange mode="EDIT" itemType="OBJECTIVE" itemId={tree.objective.id} current={{ title: tree.objective.title, description: tree.objective.description }} label="objective" /> : null}
                 </div>
@@ -81,7 +83,9 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
                   {tree.key_results.map((kr) => (
                     <li key={kr.id} className="rounded-lg border border-line">
                       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-line bg-surface px-4 py-3">
-                        <div><p className={kr.status === "RETIRED" ? "font-semibold text-muted line-through" : "font-semibold"}>{kr.code} · {kr.title}{kr.status === "RETIRED" ? <> <Badge tone="locked">Retired</Badge></> : null}</p>{kr.description ? <p className="text-sm text-muted">{kr.description}</p> : null}</div>
+                        <div><p className={kr.status === "RETIRED" ? "font-semibold text-muted line-through" : "font-semibold"}>{kr.code} · {kr.title}{kr.status === "RETIRED" ? <> <Badge tone="locked">Retired</Badge></> : null}</p>
+                          {kr.execution !== null && kr.execution !== undefined ? <div className="mt-2 w-56 max-w-full"><ScoreBar value={Number(kr.execution)} label={`${kr.code} cumulative goal execution`} /><p className="mt-1 text-xs text-muted tabular-nums">{kr.done_goals}/{kr.mapped_goals} goals done (cumulative)</p></div> : <p className="mt-1 text-xs text-muted">No goals filed yet</p>}{kr.description ? <p className="text-sm text-muted">{kr.description}</p> : null}</div>
+                        <ExecutiveCommentary module="KEY_RESULT" subjectType="KEY_RESULT" subjectId={kr.id} subjectLabel={`Key result ${kr.code}: ${kr.title}`} quarterId={quarter.id} label="Commentary" />
                         {editable && can(actor, "strategy.kr.edit") ? <EditText kind="key-results" id={kr.id} title={kr.title} description={kr.description} label="key result" /> : null}
                         {canRequest && kr.status !== "RETIRED" ? <span className="flex gap-2"><RequestChange mode="EDIT" itemType="KR" itemId={kr.id} current={{ title: kr.title, description: kr.description }} label={`key result ${kr.code}`} /><RequestChange mode="RETIRE" itemType="KR" itemId={kr.id} label={`key result ${kr.code}`} /></span> : null}
                       </div>
@@ -89,7 +93,7 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
                         {kr.sub_key_results.map((s) => (
                           <li key={s.id} className="grid items-center gap-2 px-4 py-3 text-sm sm:grid-cols-[1fr_180px_auto]">
                             <span className={s.status === "RETIRED" ? "text-muted line-through" : undefined}><strong className="font-medium">{s.code}</strong> {s.title}{s.status === "RETIRED" ? <> <Badge tone="locked">Retired</Badge></> : null}</span>
-                            {s.execution === null ? <span className="text-muted">No finalised goals yet</span> : <ScoreBar value={Number(s.execution)} label={`${s.code} goal execution`} />}
+                            {s.execution === null ? <span className="text-muted">No goals filed yet</span> : <ScoreBar value={Number(s.execution)} label={`${s.code} goal execution`} />}
                             <span className="flex items-center justify-end gap-2 text-muted"><span className="tabular-nums">{s.done_goals}/{s.mapped_goals} goals</span>
                               {editable && can(actor, "strategy.subkr.edit") ? <EditText kind="sub-key-results" id={s.id} title={s.title} description={s.description} label="Sub-KR" /> : null}
                               {canRequest && s.status !== "RETIRED" ? <><RequestChange mode="EDIT" itemType="SUBKR" itemId={s.id} current={{ title: s.title, description: s.description }} label={`Sub-KR ${s.code}`} /><RequestChange mode="RETIRE" itemType="SUBKR" itemId={s.id} label={`Sub-KR ${s.code}`} /></> : null}</span>
@@ -130,7 +134,7 @@ export default async function StrategyPage({ searchParams }: PageProps<"/strateg
             ) : null}
           </Card>
         ) : null}
-        {quarter && quarter.status !== "PLANNED" && tree?.key_results.length ? <p className="text-xs text-muted">Sub-KR execution = done mapped goals ÷ total mapped goals in finalised, submitted reports (<ScoreText value={null} /> until data exists). It measures goal execution, not KR outcome attainment.</p> : null}
+        {quarter && quarter.status !== "PLANNED" && tree?.key_results.length ? <p className="text-xs text-muted">Sub-KR execution = done mapped goals ÷ total mapped goals in submitted reports (updated as tasks are marked) (<ScoreText value={null} /> until data exists). It measures goal execution, not KR outcome attainment.</p> : null}
       </div>
     </>
   );

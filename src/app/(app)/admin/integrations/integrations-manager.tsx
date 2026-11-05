@@ -7,8 +7,16 @@ import type { IntegrationKind, IntegrationView, SettingField, Slot, TestResult }
 
 const SLOTS: { slot: Slot; title: string; blurb: string }[] = [
   { slot: "EMAIL", title: "Email", blurb: "Sends reminders and security messages. One email service is used at a time." },
-  { slot: "AI", title: "AI providers", blurb: "Stores and tests the connection to an AI service. No feature sends data to an AI provider yet. One is used at a time." },
+  { slot: "AI", title: "AI providers", blurb: "The connection to an AI service, used by 4COREPAL when that module is switched on. One is used at a time. OpenRouter, NVIDIA, Google Gemini and most other services are added as “OpenAI-compatible”." },
   { slot: "WEBHOOK", title: "Webhooks", blurb: "Posts audit-log events, signed, to another system or to a Slack or Teams channel." },
+];
+
+/** Well-known OpenAI-compatible services: they only fill in the address. The model and the key are always the administrator's. */
+const AI_PRESETS = [
+  { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
+  { label: "NVIDIA", baseUrl: "https://integrate.api.nvidia.com/v1" },
+  { label: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
+  { label: "OpenAI", baseUrl: "https://api.openai.com/v1" },
 ];
 
 const when = (iso: string | null) => (iso ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(iso)) : "never");
@@ -23,8 +31,8 @@ function summary(i: IntegrationView): string {
 
 type Mode = { kind: "add"; slot: Slot } | { kind: "edit"; item: IntegrationView } | { kind: "delete"; item: IntegrationView };
 
-export function IntegrationsManager({ kinds, items, canConfigure, canTest, encryptionConfigured }: {
-  kinds: IntegrationKind[]; items: IntegrationView[]; canConfigure: boolean; canTest: boolean; encryptionConfigured: boolean;
+export function IntegrationsManager({ kinds, items, canConfigure, canTest, canApplyNow, encryptionConfigured }: {
+  kinds: IntegrationKind[]; items: IntegrationView[]; canConfigure: boolean; canTest: boolean; canApplyNow: boolean; encryptionConfigured: boolean;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [kindCode, setKindCode] = useState("");
@@ -35,6 +43,8 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
   const [removed, setRemoved] = useState<Record<string, boolean>>({});
   const [reason, setReason] = useState("");
   const [sendMail, setSendMail] = useState(true);
+  const [sendTo, setSendTo] = useState("");
+  const [applyNow, setApplyNow] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
   const [testing, setTesting] = useState(false);
   const [rowResult, setRowResult] = useState<Record<string, TestResult>>({});
@@ -45,7 +55,7 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
 
   const asText = (f: SettingField, v: unknown) => (Array.isArray(v) ? v.join(", ") : v === undefined || v === null ? "" : String(v));
   const open = (m: Mode) => {
-    setMode(m); setResult(null); setReason(""); setSecrets({}); setRemoved({}); setSendMail(true);
+    setMode(m); setResult(null); setReason(""); setSecrets({}); setRemoved({}); setSendMail(true); setApplyNow(false);
     if (m.kind === "add") {
       const k = kinds.find((x) => x.slot === m.slot) ?? null;
       pick(k?.code ?? "", kinds);
@@ -85,7 +95,7 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
     setTesting(true); setResult(null);
     try {
       const typed = Object.fromEntries(Object.entries(secrets).filter(([, v]) => v.trim() !== ""));
-      setResult(await apiRequest<TestResult>("POST", "integrations/test", { id: existing?.id, kind: kindCode, settings: payloadSettings(), secrets: typed, sendMail }));
+      setResult(await apiRequest<TestResult>("POST", "integrations/test", { id: existing?.id, kind: kindCode, settings: payloadSettings(), secrets: typed, sendMail, sendTo: sendTo.trim() || undefined }));
     } catch (e) { setResult({ ok: false, message: (e as Error).message }); }
     finally { setTesting(false); }
   };
@@ -94,7 +104,7 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
     if (!mode) return;
     const body = mode.kind === "delete" ? { action: "DELETE", id: mode.item.id, reason }
       : { action: mode.kind === "add" ? "CREATE" : "UPDATE", id: existing?.id, kind: kindCode, name, enabled, settings: payloadSettings(), secrets: payloadSecrets(), reason };
-    const ok = await run(() => apiRequest("POST", "integrations/request", body), { success: "Sent for approval. A Super Admin must approve changes to integrations." });
+    const ok = await run(() => apiRequest("POST", "integrations/request", { ...body, applyNow: applyNow || undefined }), { success: applyNow ? "Saved and applied. Use Test to confirm it works." : "Sent for approval. A Super Admin must approve changes to integrations." });
     if (ok) setMode(null);
   };
 
@@ -103,7 +113,7 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
     await run(() => apiRequest("POST", "integrations/request", { action: "UPDATE", id: i.id, name: i.name, enabled: !i.enabled, settings: i.settings, reason: `${i.enabled ? "Switch off" : "Switch on"} ${i.name}` }),
       { success: "Sent for approval. A Super Admin must approve changes to integrations." });
   };
-  const testSaved = async (i: IntegrationView) => {
+  const testSaved = async (i: IntegrationView) => {  // sends a real test message to the signed-in person
     setRowResult((r) => ({ ...r, [i.id]: { ok: true, message: "Testing…" } }));
     try { const out = await apiRequest<TestResult>("POST", "integrations/test", { id: i.id, sendMail: true }); setRowResult((r) => ({ ...r, [i.id]: out })); }
     catch (e) { setRowResult((r) => ({ ...r, [i.id]: { ok: false, message: (e as Error).message } })); }
@@ -181,6 +191,17 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
                 <Field id="int-kind" label="Kind"><Select value={kindCode} onChange={(e) => pick(e.target.value, kinds)}>{addKinds.map((k) => <option key={k.code} value={k.code}>{k.label}</option>)}</Select></Field>
               ) : null}
               {kind ? <p className="text-xs text-muted">{kind.description}</p> : null}
+              {kind?.code === "OPENAI_COMPATIBLE" && mode?.kind === "add" ? (
+                <Field id="int-preset" label="Service" hint="Fills in the API address. You still choose the model and paste your own key.">
+                  <Select defaultValue="" onChange={(e) => {
+                    const p = AI_PRESETS.find((x) => x.label === e.target.value);
+                    if (p) { setSettings((s) => ({ ...s, baseUrl: p.baseUrl })); setName((n) => n || p.label); }
+                  }}>
+                    <option value="">Other (type the address)</option>
+                    {AI_PRESETS.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
+                  </Select>
+                </Field>
+              ) : null}
               <Field id="int-name" label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} /></Field>
               {kind?.setting_fields.map((f) => (
                 <Field key={f.key} id={`int-${f.key}`} label={f.label} required={f.required} hint={f.help}>
@@ -201,7 +222,13 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
                 );
               })}
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />Switch it on once approved{kind && kind.slot !== "WEBHOOK" ? " (replaces the one now in use)" : ""}</label>
-              {kind?.code === "SMTP" ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sendMail} onChange={(e) => setSendMail(e.target.checked)} />When testing, send a test message to my own address</label> : null}
+              {kind?.code === "SMTP" ? (
+                <>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sendMail} onChange={(e) => setSendMail(e.target.checked)} />When testing, send a real test message</label>
+                  {sendMail ? <Field id="int-sendto" label="Send the test message to" hint="Leave empty to send it to your own address."><Input type="email" value={sendTo} onChange={(e) => setSendTo(e.target.value)} placeholder="name@example.com" /></Field> : null}
+                </>
+              ) : null}
+              {canApplyNow ? <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={applyNow} onChange={(e) => setApplyNow(e.target.checked)} /><span>Apply now, without a second approver. You will be asked for your authenticator code, the reason must be at least 10 characters, and the change is audited as an emergency change.</span></label> : null}
               {canTest ? (
                 <div className="space-y-2">
                   <Button variant="secondary" onClick={test} disabled={testing || !kind}>{testing ? "Testing…" : "Test these values"}</Button>
@@ -213,7 +240,7 @@ export function IntegrationsManager({ kinds, items, canConfigure, canTest, encry
           <Field id="int-reason" label="Reason for the approver"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} /></Field>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setMode(null)}>Cancel</Button>
-            <Button variant={mode?.kind === "delete" ? "danger" : "primary"} disabled={pending || !valid} onClick={submit}>Send for approval</Button>
+            <Button variant={mode?.kind === "delete" ? "danger" : "primary"} disabled={pending || !valid || (applyNow && reason.trim().length < 10)} onClick={submit}>{applyNow ? "Save and apply now" : "Send for approval"}</Button>
           </div>
         </div>
       </Modal>

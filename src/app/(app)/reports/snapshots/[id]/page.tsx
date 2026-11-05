@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ResultBody } from "@/components/reports/report-view";
 import { wat } from "@/components/status";
 import { Badge, Banner, buttonClass, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
 import { requireActor } from "@/lib/auth/actor";
 import { dbError } from "@/lib/data/errors";
 import type { ReportResult } from "@/lib/reports/types";
@@ -26,7 +27,7 @@ export default async function SnapshotPage({ params }: PageProps<"/reports/snaps
   return (
     <>
       <PageHeader title={data.title} description={`Official snapshot of “${result.title}”, generated ${wat(data.generated_at)} (server time). Frozen: it will not change if the live data does.`}
-        actions={<Link href="/reports/saved" className={buttonClass("secondary", "sm")}>Saved and snapshots</Link>} />
+        actions={<><ExecutiveCommentary module="HISTORICAL_REPORT" subjectLabel={data.title} /><Link href="/reports/saved" className={buttonClass("secondary", "sm")}>Saved and snapshots</Link></>} />
       <div className="space-y-6">
         <Banner tone={ok ? "done" : "critical"} title={ok ? "Checksum verified" : "Checksum mismatch: do not rely on this snapshot"}>
           <span className="font-mono text-xs break-all">{data.checksum}</span> · definition {data.definition_version} · {data.row_count} rows · scope {String(data.scope).toLowerCase()} · filters {JSON.stringify(data.params)}

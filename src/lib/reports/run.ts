@@ -1,5 +1,5 @@
 import "server-only";
-import { currentQuarter, listQuarters, serverNow, type Quarter } from "@/lib/data";
+import { defaultQuarter, listQuarters, serverNow, type Quarter } from "@/lib/data";
 import { dbError } from "@/lib/data/errors";
 import type { Actor } from "@/lib/auth/actor";
 import { userClient } from "@/lib/supabase/server";
@@ -44,7 +44,7 @@ export async function rpcRows<T>(fn: string, args: Record<string, unknown>): Pro
 }
 
 export async function resolveQuarter(id?: string): Promise<Quarter | null> {
-  if (!id) return currentQuarter();
+  if (!id) return defaultQuarter();
   return (await listQuarters()).find((q) => q.id === id) ?? null;
 }
 

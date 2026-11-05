@@ -49,6 +49,7 @@ export function RosterWorkspace({ roster, caps }: { roster: RosterView; caps: { 
         {skipped ? (
           <Banner tone="warn" title="SKIPPED WEEK · VIRTUAL PRESENT">
             The physical OKR session was skipped{session.outcome_by_name ? ` by ${session.outcome_by_name}` : ""}{session.outcome_at ? ` on ${wat(session.outcome_at)}` : ""}.
+            {session.skip_reason ? <> Reason: <strong>{session.skip_reason}</strong>.</> : null}
             {" "}{session.staff_count} staff were tagged VIRTUAL PRESENT. No one needs marking individually and no absence violation is generated.
             Every BU must still submit its weekly report with a manually written performance summary, and the report is reviewed as usual.
           </Banner>
@@ -130,16 +131,18 @@ export function RosterWorkspace({ roster, caps }: { roster: RosterView; caps: { 
 
 function SkipDialog({ open, onOpenChange, sessionId, count }: { open: boolean; onOpenChange: (o: boolean) => void; sessionId: string; count: number }) {
   const { run, pending } = useAction();
+  const [reason, setReason] = useState("");
   const [key] = useState(() => crypto.randomUUID()); // one key per dialog instance => a double click cannot skip twice
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Skip OKR for this week?"
       description="This will mark the physical session as SKIPPED and tag every staff member VIRTUAL PRESENT. No one needs to be marked individually. Every BU must still submit its weekly report, manually enter a performance summary for this week, and complete normal review.">
-      <p className="mb-4 text-sm text-muted">{count > 0 ? `${count} staff are currently on the roster.` : "Every active staff member will be tagged."} All BU Leads will be notified immediately. This cannot be quietly undone.</p>
+      <p className="mb-4 text-sm text-muted">{count > 0 ? `${count} staff are currently on the roster.` : "Every active staff member will be tagged."} All BU Leads will be notified immediately, with your reason. This cannot be quietly undone.</p>
+      <Field id="skip-reason" label="Why is the session being skipped?" hint="Required. Every BU Lead will read this."><Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button variant="danger" disabled={pending} onClick={async () => {
+        <Button variant="danger" disabled={pending || reason.trim().length < 5} onClick={async () => {
           const ok = await run(async () => {
-            const r = await apiRequest<{ staff_tagged: number; notified_bu_leads: number }>("POST", `governance-sessions/${sessionId}/skip-okr`, { confirm: true, idempotencyKey: key });
+            const r = await apiRequest<{ staff_tagged: number; notified_bu_leads: number }>("POST", `governance-sessions/${sessionId}/skip-okr`, { confirm: true, idempotencyKey: key, reason: reason.trim() });
             return r;
           }, { success: "OKR session skipped. All BU Leads were notified." });
           if (ok) onOpenChange(false);

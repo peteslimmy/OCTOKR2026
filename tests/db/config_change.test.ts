@@ -53,7 +53,7 @@ describe("configuration changes need a second person (ADR-068)", () => {
     await withTx(async (c) => {
       const w = await world(c);
       const r = await ask(c, w.sa, "VIOLATION_TYPE", "SAT1", newType("SAT1", 1200));
-      await decide(c, w.admin, r.request_id, "APPROVE");
+      expect(r.status).toBe("APPLIED");                                                          // a Super Admin's own change applies at once
       const t = await typeRow(c, "SAT1");
       const upd = await ask(c, w.hr, "VIOLATION_TYPE", t.id, { action: "UPDATE", name: "Type SAT1", criticality: "HIGH", defaultFine: 9000, active: true });
       expect((await c.q<{ current_value: { default_fine: number } }>("select current_value from config_change_requests where id = $1", [upd.request_id]))[0].current_value.default_fine).toBe(1200);   // the approver sees what would change

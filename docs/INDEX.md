@@ -57,3 +57,12 @@ Attendance workflow: PRESENT-by-default weekly roster, exception toggles, atomic
 Organisation Holiday: reporting-period state separate from SKIPPED session; no weekly report required, normal report reminders/missing-report penalties suppressed, and affected week(s) excluded from quarterly scoring. SKIPPED sessions still require a weekly BU report plus manual summary comment; all BU Leads are notified.
 
 Organization Holiday is a distinct reporting-period state; no BU report is due during the designated reporting week(s), and those weeks are excluded from quarterly score denominator.
+
+## OKR session notes work
+
+Also read:
+
+- `40-SESSION-NOTES.md` — architecture assessment, data model, permission matrix, journeys, exceptions, security assessment
+- `41-EXECUTIVE-OVERSIGHT.md` — executive comments and recommendations: architecture assessment, lifecycle, permission matrix, data model, API, journeys, exceptions, security assessment
+- `24-DECISIONS.md` — ADR-089 to ADR-093
+- `06-ROLES-PERMISSIONS.md` (Session Notes permissions), `11-RLS-SECURITY.md`, `12-API-CONTRACT.md` (OKR Session Notes), `17-NOTIFICATIONS.md`, `20-ACCEPTANCE-CRITERIA.md` (AC-SN)

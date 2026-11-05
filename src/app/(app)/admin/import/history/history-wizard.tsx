@@ -2,13 +2,13 @@
 
 import { CheckCircle2, FlaskConical, Upload, FileSpreadsheet, Download } from "lucide-react";
 import { useState } from "react";
-import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
+import { apiRequest, apiUpload } from "@/components/ui/client";
 import { Badge, Button, Card, CardHeader, DataTable, Field, Input } from "@/components/ui/primitives";
+import { describeFailure, FailurePanel, ProblemsView, type Failure, type Group, type Problem } from "./feedback";
 
-interface Problem { row: number; message: string }
 interface Uploaded {
   staged: boolean; batchId?: string; rows: number; issueCount?: number; issues?: Problem[]; fileName?: string;
-  fileProblems?: Problem[]; fileProblemCount?: number; unknownUnits?: string[];
+  fileProblems?: Problem[]; fileProblemCount?: number; unknownUnits?: string[]; groups?: Group[]; goodRows?: number;
 }
 interface Score { year: number; quarter: number; unit: string; unit_name: string; score: number | null; status: string; weeks_counted: number; weeks_without_report: number }
 interface Outcome {
@@ -33,28 +33,28 @@ function download(name: string, text: string, type = "text/csv;charset=utf-8") {
 
 export function HistoryWizard() {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [up, setUp] = useState<Uploaded | null>(null);
-  const [fillGaps, setFillGaps] = useState(false);
+  const [fillGaps, setFillGaps] = useState(true);   // owner decision 2026-11-04: scoring is weekly, so a week with no rows is scored as a missed report
   const [rehearsal, setRehearsal] = useState<Outcome | null>(null);
   const [result, setResult] = useState<Outcome | null>(null);
   const [confirm, setConfirm] = useState("");
-  const fail = (e: unknown) => setError(e instanceof ApiFailure ? e.message : "Something went wrong. Nothing was changed.");
+  const fail = (e: unknown, step: string) => setError(describeFailure(e, step));
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     setBusy(true); setError(null); setUp(null); setRehearsal(null); setResult(null);
-    try { setUp(await apiUpload<Uploaded>("history-imports", file)); } catch (e) { fail(e); } finally { setBusy(false); }
+    try { setUp(await apiUpload<Uploaded>("history-imports", file)); } catch (e) { fail(e, "Reading the file"); } finally { setBusy(false); }
   }
   async function rehearse() {
     if (!up?.batchId) return;
     setBusy(true); setError(null);
-    try { setRehearsal(await apiRequest<Outcome>("POST", `history-imports/${up.batchId}/rehearse`, { fillGaps })); } catch (e) { fail(e); } finally { setBusy(false); }
+    try { setRehearsal(await apiRequest<Outcome>("POST", `history-imports/${up.batchId}/rehearse`, { fillGaps })); } catch (e) { fail(e, "The rehearsal"); } finally { setBusy(false); }
   }
   async function commit() {
     if (!up?.batchId) return;
     setBusy(true); setError(null);
-    try { setResult(await apiRequest<Outcome>("POST", `history-imports/${up.batchId}/commit`, { fillGaps, confirm })); } catch (e) { fail(e); } finally { setBusy(false); }
+    try { setResult(await apiRequest<Outcome>("POST", `history-imports/${up.batchId}/commit`, { fillGaps, confirm })); } catch (e) { fail(e, "The import"); } finally { setBusy(false); }
   }
 
   const clean = up?.staged && up.issueCount === 0;
@@ -73,22 +73,20 @@ export function HistoryWizard() {
           </Button>
         </div>
         {busy && !up ? <p role="status" className="mt-3 text-sm text-ink-600">Reading and checking the file…</p> : null}
-        {error ? <p role="alert" className="mt-3 rounded-lg bg-[var(--critical-bg)] px-3 py-2 text-sm font-medium text-[var(--critical-fg)]">{error}</p> : null}
+        {error ? <FailurePanel f={error} /> : null}
       </Card>
 
       {up && !up.staged ? (
-        <Card>
-          <CardHeader title="The file cannot be read yet" description={`${up.fileProblemCount} row${up.fileProblemCount === 1 ? "" : "s"} need fixing in the spreadsheet. Nothing was saved. Fix the file and choose it again.`} />
-          {up.unknownUnits?.length ? <p className="mb-3 flex flex-wrap items-center gap-2 text-sm">Business Units not found: {up.unknownUnits.map((u) => <Badge key={u} tone="warn">{u}</Badge>)} Add them under Business Units first, or correct the spelling.</p> : null}
-          <ProblemTable problems={up.fileProblems ?? []} total={up.fileProblemCount ?? 0} />
-        </Card>
+        <>
+          {up.unknownUnits?.length ? <p className="flex flex-wrap items-center gap-2 text-sm">Business Units in the file that the application does not know: {up.unknownUnits.map((u) => <Badge key={u} tone="warn">{u}</Badge>)}</p> : null}
+          <ProblemsView title="The file cannot be loaded yet" intro={`${up.fileProblemCount} problem${up.fileProblemCount === 1 ? "" : "s"} in the spreadsheet${up.goodRows ? `; ${up.goodRows} other row${up.goodRows === 1 ? " is" : "s are"} fine` : ""}. Nothing was saved. Fix the file and choose it again.`}
+            problems={up.fileProblems ?? []} total={up.fileProblemCount ?? 0} groups={up.groups ?? []} fileName={up.fileName ?? "history"} />
+        </>
       ) : null}
 
       {up?.staged && !clean ? (
-        <Card>
-          <CardHeader title="Some rows cannot be loaded" description={`${up.issueCount} problem${up.issueCount === 1 ? "" : "s"} found by the application's rules. Fix the file and choose it again; nothing was changed.`} />
-          <ProblemTable problems={up.issues ?? []} total={up.issueCount ?? 0} />
-        </Card>
+        <ProblemsView title="Some rows break the application's rules" intro={`${up.issueCount} problem${up.issueCount === 1 ? "" : "s"} found when the rows were checked against weeks, reports and units already in the application. Nothing was changed. Fix the file and choose it again.`}
+          problems={up.issues ?? []} total={up.issueCount ?? 0} groups={up.groups ?? []} fileName={up.fileName ?? "history"} />
       ) : null}
 
       {clean ? (
@@ -113,17 +111,6 @@ export function HistoryWizard() {
       ) : null}
       {result ? <p role="status" className="flex items-center gap-2 text-sm"><CheckCircle2 className="h-4 w-4" aria-hidden /> Imported. These reports and scores are now part of the record.</p> : null}
     </div>
-  );
-}
-
-function ProblemTable({ problems, total }: { problems: Problem[]; total: number }) {
-  return (
-    <>
-      <DataTable caption="Rows to fix" columns={[{ label: "Spreadsheet row" }, { label: "Problem" }]}>
-        {problems.map((p, i) => <tr key={`${p.row}-${i}`}><td className="tabular-nums">{p.row}</td><td>{p.message}</td></tr>)}
-      </DataTable>
-      {total > problems.length ? <p className="mt-2 text-sm">Showing the first {problems.length} of {total}.</p> : null}
-    </>
   );
 }
 

@@ -3,6 +3,8 @@ export interface LockSchedule {
   version: number;
   content_lock_dow: number; content_lock_time: string; content_lock_week_offset: number;
   final_lock_dow: number; final_lock_time: string; final_lock_week_offset: number;
+  /** When reporting opens (absent on rows written before the opening became part of the policy: Monday 00:00). */
+  open_dow?: number; open_time?: string; open_week_offset?: number;
 }
 
 export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
@@ -18,3 +20,11 @@ export function lockPhrase(dow: number, time: string, weekOffset: number): strin
 
 export const contentLockPhrase = (s: LockSchedule) => lockPhrase(s.content_lock_dow, s.content_lock_time, s.content_lock_week_offset);
 export const finalLockPhrase = (s: LockSchedule) => lockPhrase(s.final_lock_dow, s.final_lock_time, s.final_lock_week_offset);
+
+/** "Monday 00:00", or "Sunday 18:00 in the week before" when reporting opens ahead of the week. */
+export function openPhrase(s: LockSchedule): string {
+  const day = WEEKDAYS[(s.open_dow ?? 1) - 1] ?? "?";
+  const time = hhmm(s.open_time ?? "00:00");
+  const off = s.open_week_offset ?? 0;
+  return off < 0 ? `${day} ${time} in the week before` : off === 0 ? `${day} ${time}` : lockPhrase(s.open_dow ?? 1, time, off);
+}

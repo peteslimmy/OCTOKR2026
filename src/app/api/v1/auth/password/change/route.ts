@@ -8,8 +8,13 @@ import { userClient } from "@/lib/supabase/server";
 
 /** Changes the caller's password after re-checking the current one; other sessions are signed out. */
 export const POST = api(
-  { body: z.object({ currentPassword: z.string().min(1).max(200), newPassword: z.string().min(1).max(200) }) },
+  { partial: true, body: z.object({ currentPassword: z.string().min(1).max(200), newPassword: z.string().min(1).max(200) }) },
   async ({ actor, body, rpc }) => {
+    // partial: a person told to replace a first-login password may do so before setting up a second factor; everyone else needs it complete
+    if (!actor.mustChangePassword) {
+      if (actor.mfa.required && !actor.mfa.enrolled) throw fail("MFA_ENROLMENT_REQUIRED", 403, "Your role requires a second factor. Set one up under Account security.");
+      if (actor.mfa.enrolled && actor.mfa.aal !== "aal2") throw fail("MFA_REQUIRED", 401, "Enter your authenticator or email code to continue.");
+    }
     if (await rateLimited(`pwd:change:${actor.id}`, 5, 15 * 60_000)) throw fail("RATE_LIMITED", 429, "Too many attempts. Please wait and try again.");
     if (await rpc<boolean>("user_is_locked", { p_user: actor.id })) throw fail("AUTHENTICATION_FAILED", 401, "Your current password is not correct.");
     // verify the current password on a throwaway client so the caller's own session is untouched

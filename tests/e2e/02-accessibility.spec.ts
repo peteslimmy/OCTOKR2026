@@ -8,9 +8,9 @@ import { activeWeek, at, expectNoA11yViolations, loginAs, setClock } from "./hel
 const ROUTES: Record<string, string[]> = {
   "lead.eng@4core.local": ["/dashboard", "/strategy", "/weekly", "/performance", "/notifications", "/account/security", "/reports", "/reports/bu-scorecard", "/reports/weekly-compliance"],
   "presenter@4core.local": ["/dashboard", "/presentation", "/performance"],
-  "hr@4core.local": ["/governance", "/governance/amendments", "/governance/violations", "/notifications"],
-  "finance@4core.local": ["/finance", "/finance/ledger", "/dashboard", "/reports/fund-actuals"],
-  "exec@4core.local": ["/dashboard", "/performance", "/reports", "/reports/org-performance-summary", "/reports/bu-scorecard", "/reports/performance-trends", "/reports/quarter-forecast",
+  "hr@4core.local": ["/governance", "/governance/amendments", "/violations?tab=violations", "/violations?tab=settings", "/violations", "/notifications"],
+  "finance@4core.local": ["/violations?tab=fund", "/violations?tab=fund&view=ledger", "/dashboard", "/reports/fund-actuals"],
+  "exec@4core.local": ["/dashboard", "/insights", "/insights/detail", "/performance", "/reports", "/reports/org-performance-summary", "/reports/bu-scorecard", "/reports/performance-trends", "/reports/quarter-forecast",
     "/reports/weekly-compliance", "/reports/reporting-register", "/reports/late-report-register", "/reports/okr-health", "/reports/governance-outstanding", "/reports/integrity-corrections",
     "/reports/holiday-impact", "/reports/data-quality", "/reports/insights", "/reports/metrics", "/reports/saved", "/reports/builder"],
   "admin@4core.local": ["/dashboard", "/admin", "/admin/units", "/admin/people", "/admin/calendar", "/admin/settings", "/admin/branding", "/audit", "/governance", "/governance/late-reports", "/account/security", "/strategy"],

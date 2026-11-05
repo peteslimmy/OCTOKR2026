@@ -17,7 +17,7 @@ async function world(c: Ctx) {
 type W = Awaited<ReturnType<typeof world>>;
 const rowsOf = async (c: Ctx, s: string) => (await c.q<{ n: number }>("select count(*)::int n from attendance_records where governance_session_id = $1", [s]))[0].n;
 const hold = async (c: Ctx, w: W) => { await c.rpc("create_attendance_roster", w.hr, w.session); await c.rpc("finalize_attendance_roster", w.hr, w.session, true); };
-const skip = async (c: Ctx, w: W) => c.rpc("skip_okr_session", w.hr, w.session, true, "skip-key-0001");
+const skip = async (c: Ctx, w: W) => c.rpc("skip_okr_session", w.hr, w.session, true, "skip-key-0001", "The session was not held this week");
 const sess = async (c: Ctx, s: string) => (await c.q<{ outcome: string; roster_status: string; correction_count: number; staff_tagged_count: number | null; skip_idempotency_key: string | null }>("select outcome, roster_status, correction_count, staff_tagged_count, skip_idempotency_key from governance_sessions where id = $1", [s]))[0];
 interface Req { request_id: string; status: string; replayed: boolean }
 const request = (c: Ctx, actor: string, s: string, reason = "Recorded against the wrong week", k = "sreq-key-0001") => c.rpc<Req>("request_session_correction", actor, s, reason, k);
@@ -110,21 +110,24 @@ describe("session-outcome correction", () => {
     });
   });
 
-  it("will not reopen a roster whose attendance amendments would be orphaned, and leaves everything as it was", async () => {
+  it("cancels the attendance amendments that refer to the roster, keeps their history, and reopens the session (ADR-086)", async () => {
     await withTx(async (c) => {
       const w = await world(c);
       await hold(c, w);
       const rec = (await c.q<{ id: string }>("select id from attendance_records where governance_session_id = $1 limit 1", [w.session]))[0].id;
-      await c.rpc("submit_attendance_amendment", w.hr, rec, "ABSENT", "Was actually absent", [{ ref: "doc-1" }], "amend-key-0001");
+      const sub = await c.rpc<{ request_id: string }>("submit_attendance_amendment", w.hr, rec, "ABSENT", "Was actually absent", [{ ref: "doc-1" }], "amend-key-0001");
       const staff = await rowsOf(c, w.session);
       const req = await request(c, w.hr, w.session);
       await decide(c, w.admin, req.request_id, "APPROVE");
-      await c.expectError("SESSION_CORRECTION_BLOCKED", () => execute(c, w.admin2, req.request_id));
-      expect(await sess(c, w.session)).toMatchObject({ outcome: "HELD", roster_status: "FINALIZED", correction_count: 0 });
-      expect(await rowsOf(c, w.session)).toBe(staff);
-      expect((await c.q<{ n: number }>("select count(*)::int n from attendance_record_archive"))[0].n).toBe(0);                // nothing half-archived
-      expect((await c.q<{ status: string }>("select status from session_outcome_corrections where id = $1", [req.request_id]))[0].status).toBe("APPROVED");
-      await c.expectError("SESSION_CORRECTION_PENDING", () => c.rpc("emergency_session_correction", w.sa, w.session, "Trying the emergency route anyway", "em-blocked-0001"));   // an approved request is still open
+      await execute(c, w.admin2, req.request_id);
+      expect(await sess(c, w.session)).toMatchObject({ outcome: "SCHEDULED", roster_status: "NONE", correction_count: 1 });
+      expect(await rowsOf(c, w.session)).toBe(0);
+      expect((await c.q<{ n: number }>("select count(*)::int n from attendance_record_archive where governance_session_id = $1", [w.session]))[0].n).toBe(staff);
+      const cancelled = await c.q<{ status: string; prior_status: string }>(
+        "select r.status, x.prior_status from attendance_amendment_requests r join attendance_amendment_cancellations x on x.request_id = r.id where r.attendance_record_id = $1", [rec]);
+      expect(cancelled).toEqual([{ status: "CANCELLED", prior_status: "PENDING" }]);                                  // never deleted, no longer pending
+      expect((await c.q<{ n: number }>("select count(*)::int n from attendance_amendment_events where request_id = $1 and event_type = 'CANCELLED'", [sub.request_id]))[0].n).toBe(1);
+      expect((await c.q<{ n: number }>("select count(*)::int n from audit_logs where action = 'ATTENDANCE_AMENDMENTS_CANCELLED_BY_CORRECTION' and entity_id = $1", [w.session]))[0].n).toBe(1);
     });
   });
 

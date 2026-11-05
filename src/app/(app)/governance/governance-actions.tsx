@@ -35,20 +35,21 @@ export function QuoteStepButton({ quoteId, step }: { quoteId: string; step: keyo
   );
 }
 
-export function QuoteForm({ weekId, bus }: { weekId: string; bus: { id: string; name: string }[] }) {
+export function QuoteForm({ weekId, people }: { weekId: string; people: { id: string; name: string; unit: string }[] }) {
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ businessUnitId: "", speaker: "", quote: "" });
+  const [f, setF] = useState({ speakerEmployeeId: "", quote: "" });
   const { run, pending } = useAction();
+  const who = people.find((p) => p.id === f.speakerEmployeeId);
   return (
     <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>Record quote</Button>
       <Modal open={open} onOpenChange={setOpen} title="Quote of the week" description="Recorded with the speaker and their BU.">
-        <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); const ok = await run(() => apiRequest("POST", `reporting-weeks/${weekId}/quote`, f), { success: "Quote recorded." }); if (ok) setOpen(false); }}>
+        <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); const ok = await run(() => apiRequest("POST", `reporting-weeks/${weekId}/quote`, f), { success: "Quote recorded." }); if (ok) { setOpen(false); setF({ speakerEmployeeId: "", quote: "" }); } }}>
           <Field id="q-quote" label="Quote"><Textarea value={f.quote} onChange={(e) => setF({ ...f, quote: e.target.value })} maxLength={1000} required /></Field>
-          <Field id="q-speaker" label="Speaker"><Input value={f.speaker} onChange={(e) => setF({ ...f, speaker: e.target.value })} required /></Field>
-          <div><Label htmlFor="q-bu">Speaker&apos;s BU</Label>
-            <Select id="q-bu" value={f.businessUnitId} onChange={(e) => setF({ ...f, businessUnitId: e.target.value })} required><option value="">Select…</option>{bus.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select></div>
-          <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending}>Save quote</Button></div>
+          <div><Label htmlFor="q-speaker">Speaker</Label>
+            <Select id="q-speaker" value={f.speakerEmployeeId} onChange={(e) => setF({ ...f, speakerEmployeeId: e.target.value })} required><option value="">Select a person…</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>)}</Select></div>
+          <Field id="q-bu" label="Speaker's BU"><Input value={who?.unit ?? ""} placeholder="Filled in from the speaker" readOnly disabled /></Field>
+          <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending || !f.speakerEmployeeId}>Save quote</Button></div>
         </form>
       </Modal>
     </>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { wat } from "@/components/status";
 import { Badge, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
-import { listAmendments } from "@/lib/data/governance";
+import { listAmendments, listSessions } from "@/lib/data/governance";
 import { listEvidenceFiles } from "@/lib/data/governance";
 import { StatusPill } from "../sessions/[sessionId]/roster-workspace";
 import { DecisionButtons } from "./decision-buttons";
@@ -16,7 +16,8 @@ export default async function AmendmentsPage() {
   if (!["attendance.amendment.view", "attendance.amendment.approve", "attendance.amendment.request"].some((p) => can(actor, p))) {
     return <Card><EmptyState title="Attendance amendments are not available for your role" /></Card>;
   }
-  const all = await listAmendments();
+  const [all, sessions] = await Promise.all([listAmendments(), listSessions(6)]);
+  const finalised = sessions.filter((x) => x.outcome === "HELD" && x.roster_status === "FINALIZED");
   const pending = all.filter((a) => a.status === "PENDING");
   const history = all.filter((a) => a.status !== "PENDING");
   const approver = can(actor, "attendance.amendment.approve");
@@ -38,7 +39,12 @@ export default async function AmendmentsPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader title={`Pending (${pendingWithEvidence.length})`} />
-          {pendingWithEvidence.length === 0 ? <EmptyState title="No pending requests">Requests are raised from a finalised roster using “Request correction”.</EmptyState> : (
+          {pendingWithEvidence.length === 0 ? <EmptyState title="No pending requests">
+            Requests are raised from a finalised roster using “Request correction”.
+            {finalised.length ? <span className="mt-3 flex flex-wrap justify-center gap-2">{finalised.map((x) => (
+              <Link key={x.id} href={`/governance/sessions/${x.id}`} className="rounded-lg border border-line bg-panel px-3 py-1.5 text-sm hover:border-brand-700">Open session {x.session_date}</Link>))}</span>
+              : <span className="mt-2 block text-muted">No finalised sessions yet: hold a session and finalise its roster first.</span>}
+          </EmptyState> : (
             <ul className="divide-y divide-line">
               {pendingWithEvidence.map((a) => {
                 const mine = a.requested_by === actor.id;

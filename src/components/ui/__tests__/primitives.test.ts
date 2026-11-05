@@ -28,7 +28,8 @@ describe("DataTable", () => {
   it("has a caption, real column headers and a scrolling wrapper", () => {
     expect(html).toContain('<caption class="sr-only">Things</caption>');
     expect((html.match(/<th scope="col"/g) ?? []).length).toBe(3);
-    expect(html).toMatch(/^<div class="[^"]*overflow-x-auto[^"]*"/);
+    expect(html).toMatch(/^<div class="[^"]*overflow-auto[^"]*"/);
+    expect(html).toContain("max-height:32rem");             // a long table scrolls inside its own box, not the page
     expect(html).toMatch(/class="relative /);               // positioned, so visually-hidden text inside cannot escape the scrolling box and widen the page
     expect(html).toContain('tabindex="0"');                 // a scrolling area must be reachable from the keyboard
     expect(html).toContain('role="region" aria-label="Things"');

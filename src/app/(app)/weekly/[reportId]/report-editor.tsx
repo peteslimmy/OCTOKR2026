@@ -1,8 +1,13 @@
 "use client";
 
 import { Lock, Plus, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { IntegrityDialog } from "@/components/integrity-dialog";
+import { SmartStrip } from "@/components/smart-strip";
+import { RichText, RichTextEditor } from "@/components/ui/rich-text";
+import { WeeklyTrend, type TrendPoint } from "@/components/weekly/weekly-trend";
+import { BulkGoalsButton } from "./bulk-goals";
 import { SmartPanel, type SmartData } from "@/components/smart-panel";
 import { ComplianceBadge, GoalStatusBadge, PhaseBadge, ScoreText, SubmissionBadge, TaskStatusBadge, wat } from "@/components/status";
 import { ApiFailure, apiRequest, ConfirmButton, Countdown, Modal, useAction } from "@/components/ui/client";
@@ -18,7 +23,7 @@ let pendingRelease: Promise<void> = Promise.resolve();
 type Caps = { edit: boolean; submit: boolean; execute: boolean; review: boolean; integrity: boolean };
 type SubKr = { id: string; label: string; kr: string };
 
-export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs: SubKr[]; caps: Caps }) {
+export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intelligence, caps }: { view: ReportView; subKrs: SubKr[]; buGoals: { id: string; title: string }[]; trend: TrendPoint[]; currentWeek: string; intelligence?: ReactNode; caps: Caps }) {
   const { report, week, phase } = view;
   const holiday = week.reporting_state === "ORGANIZATION_HOLIDAY";
   const late = phase === "LATE_OPEN";
@@ -29,6 +34,7 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
   const [goalModal, setGoalModal] = useState<{ goal?: GoalView } | null>(null);
   const [blockers, setBlockers] = useState<string[]>([]);
   const [summary, setSummary] = useState(report.skipped_session_summary_comment ?? "");
+  const [comment, setComment] = useState(report.comment ?? "");
   const [reviewText, setReviewText] = useState("");
 
   // Edit lease: one BU Lead edits at a time. Acquire on open, heartbeat every 2 min, release on leave.
@@ -57,7 +63,7 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
   }, [editable, report.id]);
 
   const canMutate = editable && lease === "held";
-  const exec = (phase === "CONTENT_LOCKED" || late) && caps.execute && !holiday;
+  const exec = (phase === "CONTENT_LOCKED" || late || !!view.status_changes_open) && caps.execute && !holiday;
   const submitted = report.submission_status === "SUBMITTED";
 
   return (
@@ -97,6 +103,7 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
             <Countdown to={week.content_lock_at} label="Content lock" /><Countdown to={week.final_lock_at} label="Final lock" />
           </span>
         </div>
+        {view.session_outcome === "SKIPPED" ? <Banner tone="warn" title="The OKR session was not held this week">{view.skip_reason ? `Reason: ${view.skip_reason}. ` : ""}Everyone is recorded as virtually present. Submit your weekly report and enter your performance comment for the week.</Banner> : null}
         <p className="text-xs text-muted">Content locks {wat(week.content_lock_at)} · Final lock {wat(week.final_lock_at)}</p>
 
         {holiday ? <Banner tone="info" title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No report is due for this week.</Banner> : null}
@@ -117,7 +124,7 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
               description="The physical session was skipped. Summarise your BU's actual performance and results this week in your own words. This supplements, and never replaces, the weekly report and its review." />
             <div className="space-y-3 px-6 py-4">
               <Label htmlFor="summary">Summary (required to submit)</Label>
-              <Textarea id="summary" rows={5} value={summary} onChange={(e) => setSummary(e.target.value)} disabled={phase === "FINAL_LOCKED" || !caps.submit} maxLength={4000} />
+              <RichTextEditor id="summary" label="Summary" value={summary} onChange={setSummary} disabled={phase === "FINAL_LOCKED" || !caps.submit} />
               {caps.submit && phase !== "FINAL_LOCKED" ? (
                 <Button size="sm" variant="secondary" disabled={pending}
                   onClick={() => run(() => apiRequest("PUT", `weekly-reports/${report.id}/skipped-summary`, { comment: summary }), { success: "Summary saved." })}>Save summary</Button>
@@ -126,16 +133,17 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
           </Card>
         ) : null}
 
+
         <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
           <section aria-labelledby="goals-h" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 id="goals-h" className="text-lg font-semibold">SMART goals ({view.goals.length})</h2>
-              {canMutate ? <Button size="sm" onClick={() => setGoalModal({})}><Plus className="h-4 w-4" aria-hidden />Add goal</Button> : null}
+              {canMutate ? <span className="flex gap-2"><BulkGoalsButton reportId={report.id} /><Button size="sm" onClick={() => setGoalModal({})}><Plus className="h-4 w-4" aria-hidden />Add goal</Button></span> : null}
             </div>
             {view.goals.length === 0 ? (
               <Card><EmptyState title="No weekly goals yet">Add at least one SMART Goal before submitting your report.</EmptyState></Card>
-            ) : view.goals.map((g) => (
-              <GoalCard key={g.id} goal={g} phase={phase} canMutate={canMutate} exec={exec} integrity={caps.integrity && phase !== "OPEN" && phase !== "NOT_OPEN" && phase !== "LATE_OPEN"}
+            ) : view.goals.map((g, gi) => (
+              <GoalCard key={g.id} goal={g} number={gi + 1} phase={phase} canMutate={canMutate} exec={exec} integrity={caps.integrity && !view.quarter_locked && ((phase !== "OPEN" && phase !== "NOT_OPEN" && phase !== "LATE_OPEN") || !!view.status_changes_open)}
                 version={report.version} onEdit={() => setGoalModal({ goal: g })} />
             ))}
           </section>
@@ -187,10 +195,32 @@ export function ReportEditor({ view, subKrs, caps }: { view: ReportView; subKrs:
             ) : null}
           </aside>
         </div>
+
+        <Card>
+          <CardHeader title={`${view.business_unit.name} — week by week`} description="The share of goals done compared with the share of tasks done, week after week this quarter." />
+          <WeeklyTrend data={trend} currentWeek={currentWeek} />
+        </Card>
+
+        {!holiday && phase !== "NOT_OPEN" && (caps.edit || report.comment) ? (
+          <Card>
+            <CardHeader title="Comments for this week" description="Your unit's own words on the week: what went well, what blocked you, what you need. You can format the text, and it can be changed until the week is scored." />
+            <div className="space-y-3 px-6 py-4">
+              {caps.edit && phase !== "FINAL_LOCKED" ? (
+                <>
+                  <RichTextEditor id="report-comment" label="Comments for this week" value={comment} onChange={setComment} />
+                  <Button size="sm" variant="secondary" disabled={pending || comment === (report.comment ?? "")}
+                    onClick={() => run(() => apiRequest("PUT", `weekly-reports/${report.id}/comment`, { comment }), { success: "Comment saved." })}>Save comment</Button>
+                </>
+              ) : <RichText value={report.comment} />}
+            </div>
+          </Card>
+        ) : null}
+
+        {intelligence}
       </div>
 
       {goalModal ? (
-        <GoalForm key={goalModal.goal?.id ?? "new"} reportId={report.id} version={report.version} subKrs={subKrs} goal={goalModal.goal}
+        <GoalForm key={goalModal.goal?.id ?? "new"} reportId={report.id} version={report.version} subKrs={subKrs} buGoals={buGoals} goal={goalModal.goal}
           onClose={() => setGoalModal(null)} />
       ) : null}
     </>
@@ -205,8 +235,27 @@ function blockerText(b: string): string {
   return b;
 }
 
-function GoalCard({ goal, phase, canMutate, exec, integrity, version, onEdit }: {
-  goal: GoalView; phase: string; canMutate: boolean; exec: boolean; integrity: boolean; version: number; onEdit: () => void;
+/** The Undefined badge of a task is a button: click it to settle the task as Done or Not done. */
+function UndefinedPicker({ taskId, number }: { taskId: string; number: string }) {
+  const { run, pending } = useAction();
+  const [open, setOpen] = useState(false);
+  const set = (status: "DONE" | "NOT_DONE") => run(() => apiRequest("POST", `tasks/${taskId}/execution-status`, { status }), { success: status === "DONE" ? "Marked done." : "Marked not done." });
+  return (
+    <span className="flex items-center gap-1">
+      <button type="button" aria-expanded={open} aria-label={`Task ${number} is Undefined: click to mark it Done or Not done`} title="Click to mark this task Done or Not done" onClick={() => setOpen((v) => !v)}
+        className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"><TaskStatusBadge status="UNDEFINED" /></button>
+      {open ? (
+        <span className="flex gap-1">
+          <Button size="sm" disabled={pending} onClick={() => set("DONE")}>Done</Button>
+          <Button size="sm" variant="secondary" disabled={pending} onClick={() => set("NOT_DONE")}>Not done</Button>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function GoalCard({ goal, number, phase, canMutate, exec, integrity, version, onEdit }: {
+  goal: GoalView; number: number; phase: string; canMutate: boolean; exec: boolean; integrity: boolean; version: number; onEdit: () => void;
 }) {
   const { run, pending } = useAction();
   const [open, setOpen] = useState(false);
@@ -221,33 +270,28 @@ function GoalCard({ goal, phase, canMutate, exec, integrity, version, onEdit }: 
     <Card>
       <div className="space-y-3 px-6 py-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h3 className="text-base font-semibold">{goal.title}</h3>
+          <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold"><span>{`Goal ${number}: ${goal.title}`}</span><SmartStrip evaluation={goal.evaluation} /></h3>
           <div className="flex flex-wrap items-center gap-2">
             <GoalStatusBadge status={goal.status} pending={goal.has_undefined_tasks && phase !== "FINAL_LOCKED"} />
             {goal.goal_type === "STRETCH" ? <Badge tone="stretch">Stretch</Badge> : <Badge tone="brand">KR-aligned</Badge>}
             {smart ? <Badge tone={smart.overall >= 70 ? "done" : smart.overall >= 45 ? "warn" : "notdone"} title="SMART quality score">SMART {smart.overall.toFixed(0)}%</Badge> : null}
           </div>
         </div>
+        {goal.bu_goal ? <p className="text-sm text-muted">Supports BU goal: <strong className="font-medium text-ink">{goal.bu_goal.title}</strong></p> : null}
         {goal.sub_key_result ? <p className="text-sm text-muted">{goal.sub_key_result.kr_code} · {goal.sub_key_result.kr_title} → <strong className="font-medium text-ink">{goal.sub_key_result.code} {goal.sub_key_result.title}</strong></p>
           : <p className="text-sm text-muted">Stretch goal — no Sub-KR applies.</p>}
         {goal.description ? <p className="text-sm">{goal.description}</p> : null}
 
         <ul className="divide-y divide-line rounded-lg border border-line">
-          {goal.tasks.map((t) => (
+          {goal.tasks.map((t, ti) => (
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-              <span className="min-w-0 flex-1">{t.description}</span>
-              <TaskStatusBadge status={t.status} />
+              <span className="min-w-0 flex-1"><span className="mr-2 font-medium text-muted">{number}.{ti + 1}</span>{t.description}</span>
+              {exec && t.status === "UNDEFINED" ? <UndefinedPicker taskId={t.id} number={`${number}.${ti + 1}`} /> : <TaskStatusBadge status={t.status} />}
               {canMutate ? (
                 <span className="flex gap-1">
                   <EditTaskButton taskId={t.id} text={t.description} version={version} />
                   <ConfirmButton label="Delete" variant="secondary" title="Delete task" description="The task will be removed from this goal. This is recorded in the audit trail."
                     onConfirm={() => run(() => apiRequest("POST", `tasks/${t.id}/delete`, { expectedVersion: version }), { success: "Task deleted." })} />
-                </span>
-              ) : null}
-              {exec && t.status === "UNDEFINED" ? (
-                <span className="flex gap-1">
-                  <Button size="sm" disabled={pending} onClick={() => run(() => apiRequest("POST", `tasks/${t.id}/execution-status`, { status: "DONE" }), { success: "Marked done." })}>Done</Button>
-                  <Button size="sm" variant="secondary" disabled={pending} onClick={() => run(() => apiRequest("POST", `tasks/${t.id}/execution-status`, { status: "NOT_DONE" }), { success: "Marked not done." })}>Not done</Button>
                 </span>
               ) : null}
               {integrity && t.status !== "UNDEFINED" ? <Button size="sm" variant="ghost" onClick={() => setIc(t)}>Correct…</Button> : null}
@@ -298,12 +342,12 @@ function EditTaskButton({ taskId, text, version }: { taskId: string; text: strin
   );
 }
 
-function GoalForm({ reportId, version, subKrs, goal, onClose }: { reportId: string; version: number; subKrs: SubKr[]; goal?: GoalView; onClose: () => void }) {
+function GoalForm({ reportId, version, subKrs, buGoals, goal, onClose }: { reportId: string; version: number; subKrs: SubKr[]; buGoals: { id: string; title: string }[]; goal?: GoalView; onClose: () => void }) {
   const { run, pending } = useAction();
   const [type, setType] = useState<"KR_ALIGNED" | "STRETCH">(goal?.goal_type ?? "KR_ALIGNED");
   const [subKr, setSubKr] = useState(goal?.sub_key_result?.id ?? "");
+  const [buGoal, setBuGoal] = useState(goal?.bu_goal?.id ?? "");
   const [title, setTitle] = useState(goal?.title ?? "");
-  const [description, setDescription] = useState(goal?.description ?? "");
   const [tasks, setTasks] = useState<string[]>(goal ? goal.tasks.map((t) => t.description) : [""]);
   const [preview, setPreview] = useState<SmartData | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -312,21 +356,22 @@ function GoalForm({ reportId, version, subKrs, goal, onClose }: { reportId: stri
   useEffect(() => {
     if (!title.trim()) return;
     const t = setTimeout(() => {
-      apiRequest<SmartData>("POST", "smart-evaluations", { goalType: type, subKeyResultId: type === "KR_ALIGNED" && subKr ? subKr : null, title, description: description || null, tasks: (goal ? goal.tasks.map((x) => x.description) : tasks).filter(Boolean) })
+      apiRequest<SmartData>("POST", "smart-evaluations", { goalType: type, subKeyResultId: type === "KR_ALIGNED" && subKr ? subKr : null, title, description: null })
         .then(setPreview).catch(() => setPreview(null))
     }, 500);
     return () => clearTimeout(t);
-  }, [title, description, type, subKr, tasks, goal]);
+  }, [title, type, subKr]);
 
   const shownPreview = title.trim() ? preview : null;
   const taskList = tasks.map((t) => t.trim()).filter(Boolean);
-  const valid = title.trim().length > 0 && (type === "STRETCH" || subKr) && (goal ? true : taskList.length > 0);
+  const buGoalNeeded = buGoals.length > 0 && type === "KR_ALIGNED";
+  const valid = title.trim().length > 0 && (type === "STRETCH" || subKr) && (!buGoalNeeded || !!buGoal) && (goal ? true : taskList.length > 0);
 
   return (
     <Modal open onOpenChange={(o) => !o && onClose()} title={goal ? "Edit goal" : "Add a SMART goal"} description="Describe the outcome, link it to a Sub-KR (or mark it Stretch), then add its tasks.">
       <form className="space-y-4" onSubmit={async (e) => {
         e.preventDefault(); setErr(null);
-        const body = { goalType: type, subKeyResultId: type === "KR_ALIGNED" ? subKr : null, title, description: description || null, expectedVersion: version };
+        const body = { goalType: type, subKeyResultId: type === "KR_ALIGNED" ? subKr : null, buGoalId: buGoal || null, title, description: goal?.description ?? null, expectedVersion: version };
         const out = goal
           ? await run(() => apiRequest("PATCH", `goals/${goal.id}`, body), { success: "Goal updated." })
           : await run(() => apiRequest("POST", `weekly-reports/${reportId}/goals`, { ...body, tasks: taskList.map((d) => ({ description: d })) }), { success: "Goal added." });
@@ -346,8 +391,18 @@ function GoalForm({ reportId, version, subKrs, goal, onClose }: { reportId: stri
             </Select>
           </div>
         ) : null}
+        {buGoals.length > 0 ? (
+          <div>
+            <Label htmlFor="bu-goal">Business Unit goal this supports{type === "STRETCH" ? " (optional)" : ""}</Label>
+            <Select id="bu-goal" value={buGoal} onChange={(e) => setBuGoal(e.target.value)} required={buGoalNeeded}>
+              <option value="">Select one of your unit&apos;s goals…</option>
+              {buGoals.map((b, i) => <option key={b.id} value={b.id}>BU Goal {i + 1} · {b.title}</option>)}
+            </Select>
+          </div>
+        ) : (
+          <p className="rounded-lg bg-surface px-3 py-2 text-xs text-muted">Your unit has no goals for this quarter yet. Add them under <a href="/bu-goals" className="text-brand-700 underline">Business Unit goals</a>, and every weekly goal can then be aligned to one.</p>
+        )}
         <div><Label htmlFor="g-title">Goal</Label><Input id="g-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} required placeholder="e.g. Publish 3 pricing sheets to all sales leads by Friday 17:00" /></div>
-        <div><Label htmlFor="g-desc">Description (optional)</Label><Textarea id="g-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={4000} /></div>
         {!goal ? (
           <div className="space-y-2">
             <Label htmlFor="task-0">Tasks (at least one)</Label>

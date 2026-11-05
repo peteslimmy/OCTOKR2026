@@ -13,7 +13,7 @@ export interface RosterView {
   session: {
     id: string; reporting_week_id: string; session_date: string; outcome: "SCHEDULED" | "HELD" | "SKIPPED";
     roster_status: "NONE" | "DRAFT" | "FINALIZED"; outcome_at: string | null; staff_count: number | null;
-    skip_operation_ref: string | null; outcome_by_name: string | null;
+    skip_operation_ref: string | null; skip_reason?: string | null; outcome_by_name: string | null;
   };
   week: { week_number: number; week_year: number; week_start_at: string; reporting_state: string };
   rows: {
@@ -66,7 +66,7 @@ export async function listAmendments(status?: string): Promise<AmendmentRow[]> {
 export interface ViolationRow {
   id: string; employee_name: string; business_unit: string; type: string; type_code: string; criticality: string; fine_amount: number;
   status: "OPEN" | "PAID" | "DEDUCTION_RECORDED" | "VOID"; created_at: string; session_date: string | null; notes: string | null;
-  override_reason: string | null; employee_email?: string | null; void_reason?: string | null; voided_at?: string | null; payment: { method: string; reference: string; paid_at: string } | null; reversed_payments?: number;
+  override_reason: string | null; employee_email?: string | null; void_reason?: string | null; voided_at?: string | null; payment: { method: string; reference: string; paid_at: string; reversed?: boolean } | null; reversed_payments?: number;
   evidence_files?: EvidenceFileRow[];
 }
 
@@ -83,12 +83,27 @@ export async function listViolationTypes() {
     { id: string; code: string; name: string; criticality: string; default_fine: number; active: boolean }[];
 }
 
+export async function listPaymentMethods() {
+  const sb = await userClient();
+  return unwrap(await sb.from("payment_methods").select("id, code, name, is_deduction, active").order("code"), "payment methods") as
+    { id: string; code: string; name: string; is_deduction: boolean; active: boolean }[];
+}
+
+export async function listAllowedDomains() {
+  const sb = await userClient();
+  return unwrap(await sb.from("allowed_email_domains").select("domain, created_at").order("domain"), "email domains") as { domain: string; created_at: string }[];
+}
+
 export async function listActiveEmployees() {
   const sb = await userClient();
-  return unwrap(
+  // the reserve Super Admin account is not offered to anyone else
+  const { data: hidden } = await sb.rpc("read_hidden_employee_ids");
+  const skip = new Set((hidden as string[] | null) ?? []);
+  const rows = unwrap(
     await sb.from("employees").select("id, first_name, last_name, email, business_unit_id, business_units(name)").eq("employment_status", "ACTIVE").order("last_name"),
     "employees",
   ) as unknown as { id: string; first_name: string; last_name: string; email: string; business_unit_id: string; business_units: { name: string } | null }[];
+  return rows.filter((e) => !skip.has(e.id));
 }
 
 /** Individually designated permissions (e.g. a "designated HR approver"), keyed by user id. Visible to role managers only (RLS). */
@@ -156,9 +171,10 @@ export async function getLedger(limit = 100): Promise<LedgerRow[]> {
 }
 
 export interface DisbursementRow {
-  id: string; amount: number; purpose: string; justification: string; status: "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "DISBURSED";
-  created_at: string; requested_by: string; requester_name: string | null;
-  decision: { decision: string; reason: string | null; at: string; by: string | null } | null; disbursement: { reference: string; at: string } | null;
+  id: string; amount: number; purpose: string; justification: string; status: "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "DISBURSED" | "WITHDRAWN";
+  created_at: string; updated_at: string; requested_by: string; requester_name: string | null; requester_unit: string | null;
+  resubmits: string | null; resubmit_note: string | null; resubmitted_as: string | null;
+  decision: { decision: string; reason: string | null; at: string; by: string | null } | null; disbursement: { reference: string; at: string; amount: number; by: string | null } | null;
 }
 
 export async function listDisbursements(): Promise<DisbursementRow[]> {
@@ -166,6 +182,12 @@ export async function listDisbursements(): Promise<DisbursementRow[]> {
   const { data, error } = await sb.rpc("read_disbursement_requests");
   if (error) throw dbError(error, "disbursements");
   return (data as DisbursementRow[]) ?? [];
+}
+
+export interface PurposeRow { id: string; name: string; active: boolean }
+export async function listPurposes(): Promise<PurposeRow[]> {
+  const sb = await userClient();
+  return unwrap(await sb.from("disbursement_purposes").select("id, name, active").order("name"), "purposes") as PurposeRow[];
 }
 
 // ---------------------------------------------------------------- late-report score amendment (milestone 3)

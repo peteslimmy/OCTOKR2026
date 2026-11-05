@@ -176,10 +176,12 @@ Do not expose unrestricted generic CRUD for critical operations.
 
 - `POST /api/v1/governance-sessions/{id}/outcome-corrections` — `{reason, idempotencyKey}` (`attendance.session.outcome.request`); step-up. Asks to reopen a SKIPPED session; changes nothing yet.
 - `GET /api/v1/session-corrections` — the queue (requests with status and who asked).
+- `POST /api/v1/imports/batches/{id}/void` — `{reason (≥10 chars), confirm: "VOID IMPORT", idempotencyKey}`; Super Admin only; step-up; within 72 hours of the commit; employee and Business Unit imports. Errors: `IMPORT_VOID_BLOCKED` (409, lists why), `IMPORT_VOID_WINDOW_CLOSED`, `IMPORT_VOID_NOT_AVAILABLE`, `REASON_REQUIRED`.
+- `POST /api/v1/strategy-imports/{id}/void`, `POST /api/v1/history-imports/{id}/void`, `POST /api/v1/sign-in-imports/{id}/void` — `{reason (≥10 chars), confirm: "VOID IMPORT"}`; Super Admin only; step-up; within 72 hours (ADR-088). Same errors as above. A sign-in commit now also returns `batchId`.
 - `POST /api/v1/session-corrections/{id}/decision` — `{decision: APPROVE|REJECT, comment, idempotencyKey} (a rejection needs a comment)` (`attendance.session.outcome.approve`); step-up; never the requester.
 - `POST /api/v1/session-corrections/{id}/execute` — (`attendance.session.outcome.correct`); `{idempotencyKey}`; step-up; never the requester. Archives the roster and returns the session to SCHEDULED.
 - `POST /api/v1/governance-sessions/{id}/emergency-outcome-correction` — `{reason, idempotencyKey, confirm: true}`, reason ≥ 10 characters (`attendance.session.outcome.emergency`, Super Admin); step-up; audited and alerted.
-- 409 `SESSION_CORRECTION_BLOCKED` when amendments to the roster exist; 409 when a request is already open.
+- Attendance amendments that refer to the roster being replaced are CANCELLED by the correction (status `CANCELLED`, event `CANCELLED`, audited; history kept) instead of blocking it (ADR-086). 409 when a request is already open.
 
 ## Strategy change control (ADR-064)
 
@@ -378,3 +380,56 @@ Use idempotency keys for payment, integrity correction, and financial approval o
 - `POST /api/v1/reporting-weeks/{id}/quote` — records the week's quote as a draft (`quote.record`); one per week.
 - `POST /api/v1/quotes/{id}/submit` (`quote.record`), `/approve`, `/publish`, `/archive` (`quote.approve`). Errors: `INVALID_STATE_TRANSITION`, `QUOTE_SELF_APPROVAL`, `PERMISSION_DENIED`.
 - `GET /api/v1/quotes?weekId={uuid}` — the published quote of the week for any signed-in user, or `null`.
+
+
+## 4COREPAL (module off by default)
+
+- `POST /api/v1/ai/assistant` `{ question (1..2000), conversationId? }` — one question. `403 AI_DISABLED` while the module is off, `403 PERMISSION_DENIED` without `ai.assistant.use`, `404 NOT_FOUND` for a conversation that is not the caller's. A provider failure, a missing provider or a reached spending limit is a normal `200` with `result: { ok: false, reason, message }`. Success returns `result: { ok: true, answer, statements[{kind, text, sources}], sources[{id, label, href, period, kind}], limitations[], retrievedAt, grounded }`.
+- `GET /api/v1/ai/conversations` — the caller's own conversations. `GET /api/v1/ai/conversations/{id}` — their messages. Nobody else's, including a Super Admin's.
+
+## OKR Session Notes & Meeting Intelligence (ADR-089 to ADR-093; `40-SESSION-NOTES.md`)
+
+All routes need a signed-in session. Reads run under the caller's row-level security (an invisible record is `404 NOT_FOUND`). Writes are one database function each: permission, unit scope, state, version, audit and notification in one transaction. Mutations that carry `expectedVersion` answer `409 VERSION_CONFLICT` (details = the version now on record) when stale. `key` and `clientKey` (8 to 100 characters) make a repeated request return the first answer (`replayed:true`); the same key for another act is `409 IDEMPOTENCY_KEY_REUSED`. Common errors: `403 PERMISSION_DENIED`, `403 BU_SCOPE_DENIED`, `404 NOT_FOUND`, `409 INVALID_STATE_TRANSITION`, `409 SESSION_READ_ONLY`, `422 VALIDATION_ERROR`, `422 REASON_REQUIRED`, `422 LINK_TARGET_INVALID`, `409 ASSIGNEE_UNAVAILABLE`, `409 EVIDENCE_REQUIRED`, `403 SESSION_ACTION_SELF_VERIFICATION`.
+
+| Method and path (under `/api/v1`) | Needs | Body / query → result |
+|---|---|---|
+| `GET /okr-sessions` | `session_notes.view` | Filters `q, bu, quarter, week, from, to, type, facilitator, participant, status, noteCategory, decisionStatus, actionStatus, linkType, linkId, limit, offset` → `{total, rows[]}` with counts, minutes status and keyword snippets |
+| `POST /okr-sessions` | `session_notes.create` | `{title, typeId, date, weekId?, buId?, attendanceSessionId?, startsAt?, endsAt?, facilitatorId?, description?, agenda?, participants[{userId, role}], key}` → `{id, reference}`. An organisation-wide session (no `buId`) needs `view_all` |
+| `GET /okr-sessions/{id}` | visible | Whole workspace (session, participants, notes, decisions, actions, risks, reviews, minutes, attachments, timeline) |
+| `PATCH /okr-sessions/{id}` | `session_notes.update` and facilitator, creator or finaliser | `{expectedVersion, title?, typeId?, date?, startsAt?, endsAt?, facilitatorId?, description?, agenda?, attendanceSessionId?, reason?}`; a completed session needs `reason` |
+| `POST /okr-sessions/{id}/transition` | update (archive and restore: `session_notes.archive`) | `{to: IN_PROGRESS \| COMPLETED \| ARCHIVED \| RESTORED, reason?, expectedVersion?, key}` → `{status, version, open_actions}` |
+| `POST /okr-sessions/{id}/participants` | update and runs the session | `{userId, role?, remove?}` |
+| `GET /okr-sessions/{id}/outstanding` | visible | `{actions[], risks[]}` still open from earlier sessions of the unit |
+| `POST /okr-sessions/{id}/carry-forward` | update and runs the session | `{items:[{type: ACTION \| RISK, id, outcome, remarks?}], key}` → `{reviewed}` (the same item is reviewed, never copied) |
+| `POST /okr-sessions/{id}/notes` | `session_notes.create` | `{category, title?, content, visibility, links[{target_type, target_id}], clientKey, reason?}` → `{id, version}` |
+| `PATCH /okr-notes/{id}` | update and author, facilitator, creator or finaliser | `{expectedVersion, category?, title?, content?, visibility?, reason?}` → `{version}` (the autosave call; identical text → `unchanged:true`) |
+| `POST /okr-notes/{id}/archive` | update | `{restore?, reason}` |
+| `POST /okr-notes/{id}/links` | update | `{targetType, targetId, remove?}`; the target must exist and belong to the session's unit or be organisation-wide |
+| `GET /okr-notes/{id}/versions` | can read the note | earlier saved states |
+| `POST /okr-sessions/{id}/decisions` | `session_decisions.create` | `{title, description, background?, justification?, decisionDate?, affectedBuId?, involvedUserIds[], expectedOutcome?, followUp?, sourceNoteId?, authorityNote?, links[], clientKey}` → PROPOSED |
+| `PATCH /okr-decisions/{id}` | `session_decisions.create` | amend a PROPOSED decision `{expectedVersion, …, reason}` |
+| `POST /okr-decisions/{id}/decide` | approve or reject: `session_decisions.approve`; withdraw: its author or an approver (step-up) | `{outcome: APPROVE \| REJECT \| WITHDRAW, reason?, authorityNote?, expectedVersion?, key}` |
+| `POST /okr-decisions/{id}/supersede` | `session_decisions.approve` (step-up) | `{title?, description?, …, reason, key}` → `{id, superseded_id}` |
+| `GET /okr-decisions` | visible | `bu, quarter, status, from, to` |
+| `POST /okr-sessions/{id}/actions` | `session_actions.create` | `{description, assigneeId, buId?, priority, dueDate, sourceNoteId?, sourceDecisionId?, requiresVerification, evidenceRequired, links[], clientKey}`; the assignee must be active; the due date not in the past |
+| `PATCH /okr-actions/{id}` | the assignee, whoever set it, `session_actions.assign`, or a BU Lead of the unit with `session_actions.update` | `{expectedVersion, status?, progress?, blockedReason?, completionRemarks?, contextSessionId?, reason?, key?}`; blocking needs the reason, completing the remarks (and evidence if required), reopening or cancelling a reason |
+| `POST /okr-actions/{id}/reassign`, `/extend`, `/escalate` | `session_actions.assign` | `{assigneeId, reason}`, `{dueDate, reason}`, `{reason}` |
+| `POST /okr-actions/{id}/verify` | `session_actions.verify`, not the person who completed it | `{outcome: VERIFIED \| REJECTED, remarks?}` |
+| `GET /okr-actions` | visible (or assigned to you) | `bu, quarter, status, assignee, overdue, from, to` |
+| `POST /okr-sessions/{id}/risks`, `PATCH /okr-risks/{id}`, `GET /okr-risks` | `session_risks.manage` (reads: visible) | create `{kind, title, description, buId?, category, severity, businessImpact?, rootCause?, mitigation?, ownerId?, targetDate?, links[], clientKey}`; update `{expectedVersion, status?, severity?, …, resolutionNote?}` |
+| `POST /okr-links` | the owner type's permission | `{ownerType: DECISION \| ACTION \| RISK, ownerId, targetType, targetId, remove?}` |
+| `GET` and `POST /okr-sessions/{id}/minutes` | update and runs the session | GET `?management=true` → proposed text; POST `{content, audience, aiDrafted?, aiModel?, expectedVersion?, key}` saves the working draft (a new revision after a finalised one) |
+| `POST /okr-sessions/{id}/minutes/ai-summary` | update, `ai.assistant.use`, module on | `{management?}` → `{ok:true, text, model}` or `{ok:false, reason, message}`; nothing is saved |
+| `GET /okr-minutes/{id}`, `POST …/submit`, `…/review`, `…/finalise` | read: visible; review and finalise: `session_notes.finalise` | submit, review and finalise carry `expectedVersion`; finalise also `key`, step-up, and needs a completed session |
+| `GET` and `POST /okr-sessions/{id}/attachments`; `GET /okr-attachments/{id}`; `POST /okr-attachments/{id}/remove` | create (upload); visible (download) | multipart `file` + `metadata {recordType, recordId, purpose}`; type, size and content checks as for evidence; removal needs a reason |
+| (uploads) | | `POST …/attachments` also answers `422 MALWARE_DETECTED` (the file was refused and not stored) and `503 SCAN_UNAVAILABLE` (a configured ClamAV scanner could not be reached); notes may contain `@[Name](user:uuid)` mentions |
+| `GET /okr-sessions/{id}/export?format=pdf&revision=` | `session_notes.export` | minutes PDF; recorded in the audit log |
+| `GET /okr-exports?kind=&format=&bu=&quarter=&from=&to=` | `session_notes.export` | kinds `bu-history, quarterly, decisions, outstanding-actions, overdue-actions, risks, action-completion`; formats `csv, xlsx, pdf`; capped; audited |
+| `GET /okr-session-dashboard` | visible | counts from the records the caller may read |
+| `GET /okr-link-options?bu=&week=`, `GET /okr-people`, `GET` and `POST /okr-session-types` | `session_notes.view`; a session permission; view, and `session_notes.configure` to change | pickers and configuration |
+
+## Executive Oversight, Commentary & Recommendations (ADR-096 to ADR-103; `41-EXECUTIVE-OVERSIGHT.md`)
+Comments: `GET/POST executive-comments`, `GET executive-comments/{id}` and `/history`, `POST …/replies|amend|withdraw|links|attachments`. Recommendations: `GET/POST executive-recommendations`, `GET/PATCH executive-recommendations/{id}`, `GET …/history`, `POST …/publish|withdraw|close|replies|links|attachments`. The addressed unit's record: `POST executive-recommendation-targets/{id}/acknowledge|respond|progress|follow-up|reassign`. Files: `GET executive-attachments/{id}`, `POST …/remove`. Oversight: `GET executive-oversight/dashboard|context|link-options|people|export`, `GET/POST executive-oversight/categories|escalation-rules`.
+
+Conventions: unknown body keys → `422 VALIDATION_ERROR`; the author, role, status, reference and time are never accepted from the body; write routes accept `requestKey` (replay returns the first result with `replayed: true`); stale versions → `409 VERSION_CONFLICT`. Not found and not permitted both return 404 for single records and an empty list for registers. New codes: `DUPLICATE_RECOMMENDATION` (409), `COMMENT_WITHDRAWN` (409), `RECOMMENDATION_CLOSED` (409), `BU_INACTIVE` (409), `RECIPIENT_UNAVAILABLE` (409).
+`respond` bodies: `{ decision: ACCEPT|PARTIAL|DECLINE|ALTERNATIVE|CONSIDERING|CLARIFICATION, body? }` — DECLINE without a body is `REASON_REQUIRED`; PARTIAL, ALTERNATIVE and CLARIFICATION without a body are `VALIDATION_ERROR`. `progress` bodies: `{ kind: PROGRESS|IMPLEMENTED, body }`. Exports: `executive-oversight/export?kind=recommendations|comments&format=csv|xlsx|pdf` (+ filters).

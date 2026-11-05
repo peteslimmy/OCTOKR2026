@@ -292,3 +292,45 @@ describe("quarterly score (fixed denominator, versions)", () => {
     });
   });
 });
+
+describe("a week held open by an administrator (locks suspended)", () => {
+  it("lets the BU Lead set undefined tasks and the Presenter toggle Done <-> Not done once the report is submitted, and not before", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const first = await draftGoal(c, w.leadA, w.wk, w.strat.subKrIds[0], ["a-1", "a-2"], "Goal one by Friday");
+      const [t1, t2] = (await c.q<{ id: string }>("select id from tasks where smart_goal_id = $1 order by position", [first.goalId])).map((r) => r.id);
+      await c.q("update reporting_weeks set locks_suspended_at = app_now(), locks_suspended_by = $2, locks_suspended_reason = 'test' where id = $1", [w.wk, w.sa]);
+      // not submitted yet: statuses stay closed
+      await c.expectError("EXECUTION_NOT_OPEN", () => c.rpc("execute_task", w.leadA, t1, "DONE"));
+      await c.rpc("submit_weekly_report", w.leadA, first.reportId, null, null);
+      expect((await c.asUser(w.leadA, () => c.rpc<{ phase: string; status_changes_open: boolean }>("read_report_view", first.reportId))).status_changes_open).toBe(true);
+      // BU Lead: undefined -> done / not done
+      await c.rpc("execute_task", w.leadA, t1, "DONE");
+      await c.rpc("execute_task", w.leadA, t2, "NOT_DONE");
+      // Presenter: both directions, as governed corrections
+      await c.rpc("create_integrity_correction", w.presenter, t2, "DONE", "it was done", null, null, `k-${Date.now()}-a`);
+      await c.rpc("create_integrity_correction", w.presenter, t1, "NOT_DONE", "it was not done", "WAIVE", "agreed with the lead", `k-${Date.now()}-b`);
+      const now = (await c.q<{ id: string; status: string }>("select id, status from tasks where id in ($1, $2)", [t1, t2]));
+      expect(now.find((r) => r.id === t2)?.status).toBe("DONE");
+      expect(now.find((r) => r.id === t1)?.status).toBe("NOT_DONE");
+    });
+  });
+});
+
+describe("a week whose final lock has passed is final, even if its locks were suspended", () => {
+  it("is final-locked and immutable after the final lock time, and the job finalises it", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const first = await draftGoal(c, w.leadA, w.wk, w.strat.subKrIds[0], ["a-1", "a-2"], "Goal one by Friday");
+      await c.rpc("submit_weekly_report", w.leadA, first.reportId, null, null);
+      await c.q("update reporting_weeks set locks_suspended_at = app_now(), locks_suspended_by = $2, locks_suspended_reason = 'test' where id = $1", [w.wk, w.sa]);
+      expect((await c.q<{ p: string }>("select report_phase($1) p", [w.wk]))[0].p).toBe("OPEN");             // held open before the final lock time
+      await c.setNow(W1.finalLock);
+      expect((await c.q<{ p: string }>("select report_phase($1) p", [w.wk]))[0].p).toBe("FINAL_LOCKED");     // not after it
+      await c.expectError("REPORT_FINAL_LOCKED", () => c.rpc("create_goal", w.leadA, first.reportId, "STRETCH", null, "Another goal by Friday", null, [{ description: "x" }], evalJson, first.version));
+      const res = await c.rpc<{ reports: number }>("finalize_reporting_week", w.wk);                           // the job no longer skips it
+      expect(res.reports).toBe(1);
+      expect((await c.q<{ status: string }>("select status from reporting_weeks where id = $1", [w.wk]))[0].status).toBe("FINAL_LOCKED");
+    });
+  });
+});

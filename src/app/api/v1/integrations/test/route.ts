@@ -18,6 +18,7 @@ const body = z.object({
   settings: z.record(z.string(), z.unknown()).optional(),
   secrets: z.record(z.string().max(40), z.string().max(2000)).optional(),
   sendMail: z.boolean().optional(),
+  sendTo: z.string().trim().email().max(254).optional(),
 });
 
 export const POST = api({ stepUp: true, body }, async ({ actor, body: b, rpc }): Promise<TestResult> => {
@@ -52,7 +53,7 @@ export const POST = api({ stepUp: true, body }, async ({ actor, body: b, rpc }):
 
   let result: TestResult;
   switch (kind.code) {
-    case "SMTP": result = await testSmtp(settings as unknown as SmtpSettings, await secret("password"), b.sendMail === false ? null : actor.email); break;
+    case "SMTP": result = await testSmtp(settings as unknown as SmtpSettings, await secret("password"), b.sendMail === false ? null : (b.sendTo ?? actor.email)); break;
     case "ANTHROPIC": result = await testAnthropic(settings as { model: string; baseUrl?: string }, (await secret("apiKey")) ?? ""); break;
     case "OPENAI_COMPATIBLE": result = await testOpenAiCompatible(settings as { model: string; baseUrl: string }, await secret("apiKey")); break;
     case "WEBHOOK": result = await testWebhook(settings as { url: string; format?: "JSON" | "TEXT" }, await secret("signingSecret")); break;

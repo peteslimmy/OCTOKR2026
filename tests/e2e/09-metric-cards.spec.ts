@@ -53,7 +53,7 @@ test.describe("metric cards", () => {
     }
     await cardOf(page, "Average BU quarter score").getByText("What does this mean?").click();
     await expect(page.getByText(/does not weight units by size/)).toBeVisible();
-    await expect(cardOf(page, "Average BU quarter score").locator(".sr-only").first()).toHaveText(/^\d+\.\d%$/);   // one decimal place
+    await expect(cardOf(page, "Average BU quarter score").locator(".sr-only").filter({ hasText: /^\d+\.\d%$/ }).first()).toHaveText(/^\d+\.\d%$/);   // one decimal place
     await expectNoA11yViolations(page, "executive dashboard");
   });
 

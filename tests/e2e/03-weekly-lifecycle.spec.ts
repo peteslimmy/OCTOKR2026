@@ -16,8 +16,9 @@ test.describe.serial("weekly reporting lifecycle (Engineering)", () => {
 
   const markTask = async (page: Page, task: string, status: "Done" | "Not done") => {
     const row = page.locator("li").filter({ hasText: task });
+    await row.getByRole("button", { name: /is Undefined/ }).click();                 // the Undefined badge opens the choice
     await row.getByRole("button", { name: status, exact: true }).click();
-    await expect(row.getByRole("button", { name: status, exact: true })).toHaveCount(0);
+    await expect(row.getByRole("button", { name: /is Undefined/ })).toHaveCount(0);
   };
 
   const addGoal = async (page: Page, opts: { stretch?: boolean; title: string; tasks: string[] }) => {

@@ -273,10 +273,7 @@ Following Tuesday 11:00 → Final Lock (immutable, UNDEFINED→NOT_DONE)
 - All tests passing
 
 ### ⏳ Pending Owner Decisions
-1. **C4**: Does historical sheet use ISO week numbers in Lagos?
-2. **C8**: Who holds Manager / Member / Viewer roles?
-3. **C12**: Preload old violation fine amounts?
-4. Which gap closure phases to start and in what order (A-F)?
+C4, C8, C12 and the phase order were settled on 2026-10-17 (ADR-078); phases A-F are built. Decisions of 2026-11-04 are in ADR-086. Still open: import rollback design, email provider, hosting, production performance budgets, break-glass operator.
 
 ### 🚫 Not Started (Unless Asked)
 - Offline queue, feature flags, consent banner

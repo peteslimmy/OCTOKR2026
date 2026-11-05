@@ -105,6 +105,6 @@ Automated reconciliation must be available.
 
 ## Additions after the closing pass (ADR-065, ADR-068)
 
-- **Reversing a violation payment reopens the violation.** The payment row stays immutable and a later payment is a new row; the fund still reconciles because the reversal is a compensating ledger entry.
+- **Reversing a violation payment does not reopen the violation** (owner decision, ADR-086, supersedes ADR-065). The violation stays settled, the payment row stays immutable and is shown as reversed, and the fund still reconciles because the reversal is a compensating ledger entry. A violation is never paid twice.
 - **Violation types and fines are changed by request.** HR, Admin and Super Admin may ask; a different Admin or Super Admin approves (or a Super Admin applies it in an emergency). A violation keeps the fine it was recorded with (`violations.fine_amount`), so a changed default never alters earlier violations.
 - **Disbursement controls are unchanged.** A role may not be given both `disbursement.create` and `disbursement.approve` or `disbursement.disburse` by a role change (rule 3 of ADR-069).

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { api, fail, requirePerm } from "@/lib/api/handler";
+import { fixFor } from "@/lib/import/explain-generic";
+import { explaining } from "@/lib/import/history-route";
 import { entityFor, policySchema, readBody, rowsSchemaFor } from "@/lib/import/reference";
 
 /**
@@ -16,10 +18,10 @@ export const POST = api({ stepUp: true }, async ({ actor, req, params, rpc }) =>
   }).strict());
   const { results, summary } = await entity.validate(body.rows, body.policy);
   if (!summary.canCommit) {
-    const problems = results.flatMap((r) => r.issues.filter((i) => i.severity === "ERROR").map((i) => ({ row: r.row, field: i.field, code: i.code, message: i.message }))).slice(0, 50);
+    const problems = results.flatMap((r) => r.issues.filter((i) => i.severity === "ERROR").map((i) => ({ row: r.row, field: i.field, code: i.code, message: i.message, fix: fixFor(i.message) }))).slice(0, 50);
     throw fail("IMPORT_INVALID", 422, "The import contains rows that are not valid. Nothing was changed.", problems);
   }
-  return rpc(entity.rpc, {
+  return explaining("The import", () => rpc(entity.rpc, {
     p_actor: actor.id, p_rows: body.rows, p_policy: body.policy, p_idempotency_key: body.idempotencyKey, p_file_name: body.fileName, p_file_sha256: body.fileSha256,
-  });
+  }));
 });

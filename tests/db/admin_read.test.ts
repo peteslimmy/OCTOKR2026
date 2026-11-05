@@ -20,6 +20,7 @@ describe("privilege escalation guards (THREAT-007)", () => {
     await withTx(async (c) => {
       const w = await base(c);
       const id = await authId(c);
+      await c.q("insert into allowed_email_domains (domain) values ('t.local') on conflict do nothing");
       await c.expectError("PERMISSION_DENIED", () => c.rpc("provision_user", w.admin, id, "x1@t.local", "X", "One", w.bu, ["ADMIN"]));
       await c.rpc("provision_user", w.admin, id, "x1@t.local", "X", "One", w.bu, ["BU_LEAD", "HR"]);
       await c.expectError("PERMISSION_DENIED", () => c.rpc("set_user_roles", w.admin, id, ["SUPER_ADMIN"]));

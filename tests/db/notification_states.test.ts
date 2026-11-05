@@ -37,7 +37,7 @@ describe("notification states", () => {
     await withTx(async (c) => {
       const w = await world(c);
       await c.setNow(new Date(new Date(W1.contentLock).getTime() - 5 * 3_600_000).toISOString());
-      expect(await c.rpc<number>("send_report_reminders")).toBe(2);
+      expect(await c.rpc<number>("send_report_reminders")).toBe(3);                   // both leads, and the Super Admin of that unit, who holds the same submit permission
       const n = await mine(c, w.lead, "REPORT_DUE_REMINDER");
       expect((await states(c, w.lead, [n]))[n]).toBe("WAITING");
       await c.setNow(W1.open);

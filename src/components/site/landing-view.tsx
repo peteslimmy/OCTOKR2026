@@ -53,7 +53,7 @@ export function LandingView({ config, brand, images, preview = false }: { config
       {/* ---------------------------------------------------------------- header */}
       <header className={clsx("z-30 border-b border-line bg-white", header.sticky && !preview && "sticky top-0")}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <span className="inline-flex items-center gap-3 font-semibold tracking-tight">
+          <span className="inline-flex flex-col items-start gap-1 font-semibold leading-tight tracking-tight">
             {brand.logoUrl
               ? <BrandLogo src={brand.logoUrl} height={brand.logoHeight} />
               : <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 font-bold text-white" aria-hidden>{brand.shortName}</span>}

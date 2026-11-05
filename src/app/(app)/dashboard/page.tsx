@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { ComplianceBadge, PhaseBadge, ScoreText, SubmissionBadge, wat } from "@/components/status";
 import { Countdown } from "@/components/ui/client";
 import { RankingExplorer } from "./ranking-explorer";
 import { Hero } from "@/components/ui/hero";
 import { AnalyticsDashboard } from "@/components/analytics/dashboard";
-import { getDashboardCells } from "@/lib/data/analytics";
+import { getBuAttendance, getBuWeekTrend, getDashboardCells, getTrendHistory } from "@/lib/data/analytics";
+import { WeekCard } from "./week-card";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Badge, Banner, buttonClass, Card, CardHeader, EmptyState, PageHeader, ScoreBar } from "@/components/ui/primitives";
+import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
 import { can, requireActor } from "@/lib/auth/actor";
 import {
-  activeWeeks, currentQuarter, getExecutiveDashboard, getReportView, latestQuarterSnapshot, recentSnapshots, reportIdFor, serverNow,
+  activeWeeks, currentQuarter, defaultQuarter, getExecutiveDashboard, listQuarters, getReportView, latestQuarterSnapshot, recentSnapshots, reportIdFor, serverNow,
 } from "@/lib/data";
 import { QuoteBanner } from "@/components/dashboard/quote-banner";
 import { fundSummaryOrNull, getPublishedQuote, listAmendments, listDisbursements, listSessions, listViolations } from "@/lib/data/governance";
@@ -18,40 +21,51 @@ import { formatWeekLabel } from "@/lib/domain/week-label";
 import { getLockSchedule } from "@/lib/data/config";
 import { contentLockPhrase } from "@/lib/domain/schedule";
 import { formatPercent } from "@/lib/format";
+import { NavSelect } from "@/components/ui/nav-select";
+import { BuIntelligenceSection, OrgIntelligenceSection } from "@/components/insights/intelligence";
 import { SubKrContributionCard } from "@/components/dashboard/sub-kr-contribution-card";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ quarter?: string }> }) {
+  const { quarter: wantedQuarter } = await searchParams;
   const actor = await requireActor();
   const isExec = can(actor, "dashboard.executive.view");
   const isBu = can(actor, "weekly_report.view_own_bu") && !!actor.buId;
   const isHr = can(actor, "attendance.session.manage") || can(actor, "violation.create");
   const isFin = can(actor, "disbursement.approve");
-  const [weeks, quarter, schedule] = await Promise.all([activeWeeks(), currentQuarter(), getLockSchedule()]);
-  const buId = actor.buId!;
-  const [qs, recent] = await Promise.all([quarter ? latestQuarterSnapshot(quarter.id, buId) : null, recentSnapshots(buId, 6)]);
-  const latestPerWeek = new Map<string, (typeof recent)[number]>();
-  for (const s of recent) if (!latestPerWeek.has(s.reporting_week_id)) latestPerWeek.set(s.reporting_week_id, s);
+  const weeks = await activeWeeks();
+  // The figures and charts can be viewed for any quarter, so imported history (Q1 to Q3) is reachable, not only the live quarter.
+  const allQuarters = await listQuarters();
+  const live = allQuarters.find((q) => q.status === "ACTIVE") ?? allQuarters[0] ?? null;
+  const viewed = allQuarters.find((q) => q.id === wantedQuarter) ?? (await defaultQuarter());
   const activeWeek = weeks.find((w) => w.phase === "OPEN");
   const activeWeekId = activeWeek?.id;
   const publishedQuote = activeWeekId ? await getPublishedQuote(activeWeekId) : null;
   return (
     <>
       <Hero name={actor.name.split(" ")[0]} actions={[
-        can(actor, "violation.create") && { href: "/governance/violations?new=violation", label: "Report a violation" },
-        can(actor, "disbursement.create") && { href: "/finance?new=disbursement", label: "Request a disbursement" },
+        can(actor, "violation.create") && { href: "/violations?tab=violations&new=violation", label: "Report a violation" },
+        can(actor, "disbursement.create") && { href: "/violations?tab=fund&new=disbursement", label: "Request a disbursement" },
         can(actor, "weekly_report.create") && { href: "/weekly", label: "Weekly report" },
         can(actor, "users.manage") && { href: "/admin/people?new=user", label: "Add a user" },
         can(actor, "reports.view") && { href: "/reports", label: "Open reports" },
       ].filter((a): a is { href: string; label: string } => !!a)} />
       <div className="space-y-8">
-        <QuoteBanner quote={publishedQuote} />
-        {isBu || isExec || isHr || isFin ? <Analytics /> : null}
-        {isBu ? <BuDashboard buId={actor.buId!} buName={actor.buName ?? "your BU"} /> : null}
-        {isHr ? <HrDashboard canViolations={can(actor, "violation.create")} /> : null}
-        {isFin ? <FinanceDashboard /> : null}
-        {isExec ? <ExecutiveDashboard /> : null}
+        <QuoteBanner quote={publishedQuote} session={activeWeek ? `Week ${activeWeek.week_number} · ${new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(activeWeek.week_start_at))}` : undefined} />
+        {allQuarters.length > 1 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3" role="group" aria-label="Quarter filter">
+            <NavSelect id="dash-quarter" label="Quarter" value={viewed?.id ?? ""} hrefBase="/dashboard?quarter="
+              options={[...allQuarters].sort((x, y) => y.year - x.year || y.quarter_number - x.quarter_number).map((q) => ({ value: q.id, group: String(q.year), label: `Q${q.quarter_number} ${q.year} · ${q.status.toLowerCase()}` }))} />
+            {viewed && live && viewed.id !== live.id ? <span className="text-sm text-muted">Showing a past quarter. <Link href="/dashboard" className="underline">Back to the current quarter</Link></span> : null}
+          </div>
+        ) : null}
+        {isBu || isExec || isHr || isFin ? <Section key={`a-${viewed?.id}`} h={420}><Analytics quarterId={viewed?.id} /></Section> : null}
+        {isBu ? <Section h={260}><BuDashboard buId={actor.buId!} buName={actor.buName ?? "your BU"} /></Section> : null}
+        {isHr ? <Section h={160}><HrDashboard canViolations={can(actor, "violation.create")} /></Section> : null}
+        {isFin ? <Section h={160}><FinanceDashboard /></Section> : null}
+        {isExec ? <div className="flex justify-end"><ExecutiveCommentary module="DASHBOARD" subjectLabel="Executive dashboard" quarterId={viewed?.id ?? null} /></div> : null}
+        {isExec ? <Section key={`e-${viewed?.id}`} h={420}><ExecutiveDashboard quarterId={viewed?.id} /></Section> : null}
         {!isBu && !isExec && !isHr && !isFin ? (
           <Card><EmptyState title="Nothing to show yet">Your role does not have an operational dashboard. Use the navigation to open the areas you can access.</EmptyState></Card>
         ) : null}
@@ -67,6 +81,7 @@ async function BuDashboard({ buId, buName }: { buId: string; buName: string }) {
     return { week: w, id, view: id ? await getReportView(id) : null };
   }));
   const [qs, recent] = await Promise.all([quarter ? latestQuarterSnapshot(quarter.id, buId) : null, recentSnapshots(buId, 6)]);
+  const [trend, attendance] = await Promise.all([quarter ? getBuWeekTrend(buId, quarter.id).catch(() => []) : [], quarter ? getBuAttendance(buId, quarter.id).catch(() => new Map<string, { present: number; total: number }>()) : new Map<string, { present: number; total: number }>()]);
   const latestPerWeek = new Map<string, (typeof recent)[number]>();
   for (const s of recent) if (!latestPerWeek.has(s.reporting_week_id)) latestPerWeek.set(s.reporting_week_id, s);
 
@@ -90,44 +105,9 @@ async function BuDashboard({ buId, buName }: { buId: string; buName: string }) {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {rows.map(({ week, id, view }) => {
-          const holiday = week.reporting_state === "ORGANIZATION_HOLIDAY";
-          return (
-            <Card key={week.id}>
-              <CardHeader
-                title={formatWeekLabel(week)}
-                description={`${wat(week.week_start_at, { day: "numeric", month: "short" })} → final lock ${wat(week.final_lock_at)}`}
-                action={week.phase ? <PhaseBadge phase={week.phase} /> : undefined}
-              />
-              <div className="space-y-3 px-6 py-4 text-sm">
-                {holiday ? (
-                  <Banner tone="info" title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No weekly report is due for this week and it is excluded from your quarterly score.</Banner>
-                ) : view ? (
-                  <>
-                    {view.session_outcome === "SKIPPED" ? <Badge tone="warn">OKR session skipped — performance summary required</Badge> : null}
-                    <div className="flex flex-wrap items-center gap-2"><SubmissionBadge status={view.report.submission_status} /><ComplianceBadge status={view.compliance?.status} /></div>
-                    <dl className="grid grid-cols-3 gap-4">
-                      <div><dt className="text-muted">Goals</dt><dd className="text-xl font-semibold tabular-nums">{view.score_preview.total_goals}</dd></div>
-                      <div><dt className="text-muted">Done</dt><dd className="text-xl font-semibold tabular-nums">{view.score_preview.done_goals}</dd></div>
-                      <div><dt className="text-muted">{view.snapshot ? "Final score" : "Score preview"}</dt>
-                        <dd className="text-xl font-semibold"><ScoreText value={view.snapshot?.final_score ?? view.score_preview.final_score} /></dd></div>
-                    </dl>
-                    <div className="flex flex-wrap gap-4 text-muted">
-                      <Countdown to={week.content_lock_at} label="Content lock" /><Countdown to={week.final_lock_at} label="Final lock" />
-                    </div>
-                  </>
-                ) : week.phase === "OPEN" ? (
-                  <p className="text-muted">No report started. Add at least one SMART goal and submit before {contentLockPhrase(schedule.active)} WAT.</p>
-                ) : (
-                  <Banner tone="critical" title="No report was filed for this week">Reports can no longer be started after content lock. At final lock this week scores 0.00 and is recorded as non-compliant{week.phase === "FINAL_LOCKED" ? "" : " unless an authorised exception applies"}.</Banner>
-                )}
-                {!holiday && (id || week.phase === "OPEN") ? (
-                  <Link href={id ? `/weekly/${id}` : `/weekly?start=${week.id}`} className={buttonClass(id ? "secondary" : "primary", "sm")}>
-                    {id ? "Open report" : "Start report"}
-                  </Link>
-                ) : null}
-              </div>
-            </Card>
-          );
+          const here = trend.findIndex((t) => t.week === `W${week.week_number}`);
+          const before = here > 0 ? trend[here - 1] : null;
+          return <WeekCard key={week.id} week={week} id={id} view={view} previousScore={before ? before.score ?? before.goals : null} attendance={attendance.get(week.id) ?? null} contentLockPhrase={contentLockPhrase(schedule.active)} />;
         })}
       </div>
 
@@ -160,6 +140,7 @@ async function BuDashboard({ buId, buName }: { buId: string; buName: string }) {
       </Card>
 
       {quarter && <SubKrContributionCard quarterId={quarter.id} />}
+      <BuIntelligenceSection buId={buId} buName={buName} />
     </section>
   );
 }
@@ -184,8 +165,8 @@ async function HrDashboard({ canViolations }: { canViolations: boolean }) {
             <MetricCard label="Amendments awaiting decision" value={pending.length} href="/governance/amendments" hrefLabel="Review queue"
               definition="Attendance corrections that someone has asked for and nobody has approved or rejected yet. The person who asked cannot decide their own request." />
             {canViolations ? <MetricCard label="Open violations" value={open.length} note={`${naira(open.reduce((s, v) => s + Number(v.fine_amount), 0))} outstanding`}
-              href="/governance/violations" hrefLabel="Manage violations" definition="Violations that have been recorded and not yet settled or waived. The amount is the sum of their fines." /> : null}
-            {fund ? <MetricCard label="Violation fund (available)" value={Number(fund.available)} kind="currency" href="/finance" hrefLabel="Fund & requests"
+              href="/violations?tab=violations" hrefLabel="Manage violations" definition="Violations that have been recorded and not yet settled or waived. The amount is the sum of their fines." /> : null}
+            {fund ? <MetricCard label="Violation fund (available)" value={Number(fund.available)} kind="currency" href="/violations?tab=fund" hrefLabel="Fund & requests"
               definition="Money received from settled violations, less money already disbursed or committed to approved requests." /> : null}
           </div>
         </section>
@@ -203,7 +184,7 @@ async function HrDashboard({ canViolations }: { canViolations: boolean }) {
           <MetricCard label="Available to commit" value={fund ? Number(fund.available) : null} kind="currency"
             note={fund ? (fund.reconciled ? "✓ Ledger reconciled" : "⚠ Reconciliation mismatch") : undefined}
             definition="The fund balance after approved but not yet released requests are set aside." />
-          <MetricCard label="Waiting for your decision" value={waiting.length} href="/finance" hrefLabel="Approval queue"
+          <MetricCard label="Waiting for your decision" value={waiting.length} href="/violations?tab=fund" hrefLabel="Approval queue"
             definition="Disbursement requests that have been submitted or are under review and need an approve or reject decision." />
           <MetricCard label="Approved, awaiting release" value={toRelease.length} note={`${naira(toRelease.reduce((s, r) => s + Number(r.amount), 0))} committed`}
             definition="Requests that were approved but whose money has not been released yet. Release is a separate step by a different person." />
@@ -212,8 +193,8 @@ async function HrDashboard({ canViolations }: { canViolations: boolean }) {
     );
   }
 
-  async function ExecutiveDashboard() {
-    const quarter = await currentQuarter();
+  async function ExecutiveDashboard({ quarterId }: { quarterId?: string }) {
+    const quarter = (await listQuarters()).find((q) => q.id === quarterId) ?? (await currentQuarter());
     if (!quarter) return <Card><EmptyState title="No quarter configured">An Admin needs to create and activate a quarter.</EmptyState></Card>;
     const [d, fund] = await Promise.all([getExecutiveDashboard(quarter.id), fundSummaryOrNull()]);
     return (
@@ -241,6 +222,7 @@ async function HrDashboard({ canViolations }: { canViolations: boolean }) {
             </div>
           );
         })()}
+        <OrgIntelligenceSection quarterId={quarter.id} />
         <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
           <Card>
             <CardHeader title="Business Unit ranking" description="Ranked by quarterly execution score (primary). Weekly score is for the latest finalised week." />
@@ -283,9 +265,14 @@ async function HrDashboard({ canViolations }: { canViolations: boolean }) {
     );
   }
 
-  async function Analytics() {
-    const [quarter, now] = await Promise.all([currentQuarter(), serverNow()]);
+  async function Analytics({ quarterId }: { quarterId?: string }) {
+    const now = await serverNow();
+    const quarter = (await listQuarters()).find((q) => q.id === quarterId) ?? (await currentQuarter());
     if (!quarter) return null;
-    const cells = await getDashboardCells(quarter.id);
-    return <AnalyticsDashboard cells={cells} nowIso={now} quarterLabel={`Q${quarter.quarter_number} ${quarter.year}`} />;
+    const [cells, history] = await Promise.all([getDashboardCells(quarter.id), getTrendHistory()]);
+    return <AnalyticsDashboard cells={cells} history={history} quarterKey={`${quarter.year}-${quarter.quarter_number}`} nowIso={now} quarterLabel={`Q${quarter.quarter_number} ${quarter.year}`} />;
   }
+/** One dashboard section in its own loading boundary: the page frame appears at once and each section fills in when its figures are ready. */
+function Section({ h, children }: { h: number; children: ReactNode }) {
+  return <Suspense fallback={<div className="shimmer w-full rounded-2xl" style={{ height: h }} role="status" aria-label="Loading" />}>{children}</Suspense>;
+}

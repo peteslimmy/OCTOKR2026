@@ -69,7 +69,7 @@ describe("violation → ledger → disbursement over HTTP", () => {
 
     // HR requests; HR cannot decide; Finance decides; release is a separate step
     const amount = Number(types[0].default_fine);
-    const req = await hr.request("POST", "/api/v1/disbursement-requests", { amount, purpose: "API test", justification: "covered by integration test", idempotencyKey: key() });
+    const req = await hr.request("POST", "/api/v1/disbursement-requests", { amount, purpose: "Others", justification: "covered by integration test", idempotencyKey: key() });
     expect(req.status).toBe(200);
     const rid = req.json.data.request_id as string;
     expect((await hr.request("POST", `/api/v1/disbursement-requests/${rid}/approve`, { idempotencyKey: key() })).status).toBe(403);
@@ -115,11 +115,11 @@ describe("attendance governance over HTTP", () => {
     const lead = await as("lead.eng@4core.local");
     const fake = "11111111-1111-4111-8111-111111111111";
     expect((await lead.request("POST", "/api/v1/governance-sessions", { reportingWeekId: fake })).status).toBe(403);
-    expect((await lead.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, idempotencyKey: key() })).status).toBe(403);
+    expect((await lead.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, reason: "not allowed to skip", idempotencyKey: key() })).status).toBe(403);
     expect((await lead.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: false, idempotencyKey: key() })).status).toBe(422);
     const hr = await as("hr@4core.local");
     expect((await hr.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { idempotencyKey: key() })).status).toBe(422); // confirmation is mandatory
-    expect((await hr.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, idempotencyKey: key() })).status).toBe(404);
+    expect((await hr.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, reason: "no session this week", idempotencyKey: key() })).status).toBe(404);   // a reason is required, then the session is not found
     expect((await hr.request("POST", "/api/v1/governance-sessions/cancel", {})).status).toBeGreaterThanOrEqual(400); // there is no CANCELLED outcome
   });
 

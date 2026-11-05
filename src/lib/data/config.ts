@@ -16,7 +16,7 @@ export async function listConfigChanges(limit = 100): Promise<ConfigChangeRow[]>
 }
 
 export interface RoleRow { id: string; code: string; name: string; description: string | null; is_system: boolean; privileged: boolean; requires_mfa: boolean; members: number; permissions: string[] }
-export interface PermissionRow { code: string; description: string; protected: boolean; reserved?: boolean }
+export interface PermissionRow { code: string; description: string; protected: boolean; reserved?: boolean; module: string; risk: "low" | "medium" | "high" | "critical" }
 
 export async function listRoles(): Promise<RoleRow[]> {
   const sb = await userClient();
@@ -33,7 +33,7 @@ export async function listPermissions(): Promise<PermissionRow[]> {
 }
 
 export interface LockScheduleView { active: import("@/lib/domain/schedule").LockSchedule & { id: string; reason: string | null; created_at: string };
-  history: (import("@/lib/domain/schedule").LockSchedule & { id: string; reason: string | null; created_at: string })[]; first_affected_week: string | null; weeks_by_version: Record<string, number> }
+  history: (import("@/lib/domain/schedule").LockSchedule & { id: string; reason: string | null; created_at: string })[]; first_affected_week: string | null; weeks_by_version: Record<string, number>; weeks_reapplicable?: number }
 
 export async function getLockSchedule(): Promise<LockScheduleView> {
   const sb = await userClient();

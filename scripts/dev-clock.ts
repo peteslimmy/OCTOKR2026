@@ -16,8 +16,11 @@ if (!arg) {
   console.error("usage: dev-clock <ISO timestamp with offset | off>");
   process.exit(1);
 }
+// the test stack has its own containers: a run that points at it (OKR_TEST_STACK=1) must never touch the real database
+const DB = process.env.OKR_TEST_STACK === "1" ? "supabase_db_4core-okr-test" : "supabase_db_4core-okr";
+const REST = process.env.OKR_TEST_STACK === "1" ? "supabase_rest_4core-okr-test" : "supabase_rest_4core-okr";
 const sql = (q: string) =>
-  execFileSync("docker", ["exec", "supabase_db_4core-okr", "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", q], { stdio: "inherit" });
+  execFileSync("docker", ["exec", DB, "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", q], { stdio: "inherit" });
 
 if (arg === "off") {
   sql("alter database postgres reset app.dev_clock");
@@ -31,7 +34,7 @@ if (arg === "off") {
   sql(`alter database postgres set app.dev_clock = '${arg.replace(/'/g, "")}'`);
 }
 // PostgREST keeps pooled connections that were opened with the old database settings: recycle it.
-execFileSync("docker", ["restart", "supabase_rest_4core-okr"], { stdio: "ignore" });
+execFileSync("docker", ["restart", REST], { stdio: "ignore" });
 
 /**
  * `docker restart` returns as soon as the container starts, not when the API is serving again. A request made in that gap fails with a 5xx

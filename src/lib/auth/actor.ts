@@ -11,6 +11,8 @@ export interface Actor {
   buName: string | null;
   roles: string[];
   permissions: ReadonlySet<string>;
+  /** The password was set by someone else: it must be replaced before anything else can be used. */
+  mustChangePassword: boolean;
   /** Second-factor situation of this session (ADR-052). `totp` and `email` say which methods are set up; `aal` is effective. */
   mfa: {
     required: boolean;
@@ -37,6 +39,7 @@ type ProfileRow = {
   id: string;
   email: string;
   status: string;
+  must_change_password: boolean;
   employees: { first_name: string; last_name: string; business_unit_id: string; business_units: { name: string } | null } | null;
   user_roles: { roles: { code: string; role_permissions: { permissions: { code: string } | null }[] } | null }[];
 };
@@ -50,21 +53,28 @@ export const getActor = cache(async (): Promise<Actor | null> => {
   const { data: auth } = await sb.auth.getUser();
   if (!auth.user) return null;
   // The profile and the second-factor status do not depend on each other: ask for both at once (one round trip fewer on every request).
-  const [{ data, error }, { data: m }] = await Promise.all([
+  const [{ data, error }, { data: m }, { data: grants }, { data: domainOk }] = await Promise.all([
     sb
       .from("users")
       .select(
-        "id, email, status, employees(first_name, last_name, business_unit_id, business_units(name)), user_roles!user_roles_user_id_fkey(roles(code, role_permissions(permissions(code))))",
+        "id, email, status, must_change_password, employees(first_name, last_name, business_unit_id, business_units(name)), user_roles!user_roles_user_id_fkey(roles(code, role_permissions(permissions(code))))",
       )
       .eq("id", auth.user.id)
       .maybeSingle<ProfileRow>(),
     sb.rpc("read_my_mfa_status"),
+    // permissions granted to this person directly (not through a role), unless they have expired
+    sb.from("user_permission_grants").select("expires_at, permissions(code)").eq("user_id", auth.user.id),
+    // only an approved email domain may use the app; the Super Admin is the one exception
+    sb.rpc("my_domain_allowed"),
   ]);
   if (error) console.error("getActor profile query failed:", error.message);
-  if (error || !data || data.status !== "ACTIVE") return null;
+  if (error || !data || data.status !== "ACTIVE" || domainOk !== true) return null;
   const roles = data.user_roles.map((ur) => ur.roles?.code).filter((c): c is string => !!c);
   const permissions = new Set<string>();
   for (const ur of data.user_roles) for (const rp of ur.roles?.role_permissions ?? []) if (rp.permissions) permissions.add(rp.permissions.code);
+  for (const g of (grants ?? []) as unknown as { expires_at: string | null; permissions: { code: string } | null }[]) {
+    if (g.permissions && (!g.expires_at || new Date(g.expires_at).getTime() > Date.now())) permissions.add(g.permissions.code);
+  }
   const status = (m as MfaStatus | null) ?? { required: false, enrolled: false, totp: false, email: false, emailVerifiedAt: null, aal: "aal1" as const };
   const mfa: Actor["mfa"] = {
     required: status.required,
@@ -82,6 +92,7 @@ export const getActor = cache(async (): Promise<Actor | null> => {
     buName: data.employees?.business_units?.name ?? null,
     roles,
     permissions,
+    mustChangePassword: data.must_change_password,
     mfa,
   };
 });
@@ -90,6 +101,7 @@ export const getActor = cache(async (): Promise<Actor | null> => {
 export async function requireActor(opts: { partial?: boolean } = {}): Promise<Actor> {
   const a = await getActor();
   if (!a) redirect("/login");
+  if (a.mustChangePassword) redirect("/change-password");
   if (!opts.partial) enforceMfaForPage(a);
   return a;
 }

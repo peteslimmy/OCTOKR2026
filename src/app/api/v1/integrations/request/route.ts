@@ -2,6 +2,8 @@ import { z } from "zod";
 import { api, fail, requirePerm } from "@/lib/api/handler";
 import { requestConfigChange } from "@/lib/api/config-request";
 import { KeyMissingError, encryptSecret, keyringFromEnv } from "@/lib/integrations/crypto";
+import { forgetRuntime } from "@/lib/integrations/runtime";
+import { randomUUID } from "node:crypto";
 import { assertPublicHost, assertPublicUrl, UnsafeAddressError } from "@/lib/integrations/ssrf";
 import { checkSettings, withDefaults, type IntegrationKind } from "@/lib/integrations/types";
 import { adminClient } from "@/lib/supabase/admin";
@@ -20,6 +22,7 @@ const body = z.object({
   settings: z.record(z.string(), z.unknown()).optional(),
   secrets: z.record(z.string().max(40), z.string().max(2000).nullable()).optional(),
   reason: z.string().trim().min(1).max(2000),
+  applyNow: z.boolean().optional(),
 });
 
 interface SavedIntegration { id: string; kind: string; name: string; enabled: boolean; settings: Record<string, unknown>; secrets: Record<string, string> }
@@ -28,6 +31,15 @@ const unprocessable = (message: string, details?: unknown) => fail("VALIDATION_E
 export const POST = api({ stepUp: true, body }, async (ctx) => {
   const { actor, body: b } = ctx;
   requirePerm(actor, "integrations.configure");
+  // A Super Admin who is the only approver can apply the change at once: no second approver, a fresh authenticator code, a written reason, and the
+  // emergency record that alerts the other administrators. The database checks the permission (config.emergency); this is the same path as Approvals.
+  const send = async (topic: string, target: string | null, proposed: Record<string, unknown>) => {
+    if (!b.applyNow) return requestConfigChange(ctx, topic, target, proposed, b.reason);
+    if (b.reason.length < 10) throw unprocessable("Give a reason of at least 10 characters to apply a change without a second approver.");
+    const out = await ctx.rpc("emergency_config_change", { p_actor: actor.id, p_topic: topic, p_target: target, p_proposed: proposed, p_reason: b.reason, p_idempotency_key: randomUUID() });
+    forgetRuntime();
+    return out;
+  };
   const sb = adminClient();
 
   let kindCode = b.kind;
@@ -41,7 +53,7 @@ export const POST = api({ stepUp: true, body }, async (ctx) => {
   }
 
   if (b.action === "DELETE") {
-    return requestConfigChange(ctx, "INTEGRATION", b.id!, { action: "DELETE" }, b.reason);
+    return send("INTEGRATION", b.id!, { action: "DELETE" });
   }
 
   const { data: kindRow } = await sb.from("integration_kinds").select("code, slot, label, description, setting_fields, secret_fields").eq("code", kindCode ?? "").maybeSingle();
@@ -91,5 +103,5 @@ export const POST = api({ stepUp: true, body }, async (ctx) => {
 
   const proposed = { action: b.action, kind: kind.code, name, enabled: b.enabled ?? existing?.enabled ?? false, settings, secrets: encrypted };
   const target = b.action === "CREATE" ? `${kind.code}:${name.toLowerCase()}` : b.id!;
-  return requestConfigChange(ctx, "INTEGRATION", target, proposed, b.reason);
+  return send("INTEGRATION", target, proposed);
 });

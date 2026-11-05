@@ -101,6 +101,7 @@ describe("sign-in import API", () => {
     const admin = await as("admin@4core.local");
     const tag = randomUUID().slice(0, 8);
     const email = `signin-${tag}@example.test`;
+    await db("insert into allowed_email_domains (domain) values ('example.test') on conflict do nothing");   // accounts exist only on approved email domains
     const unit = (await db<{ id: string }>("select id from business_units where code <> 'HQ' order by code limit 1"))[0].id;
     await db("insert into employees (organisation_id, email, first_name, last_name, business_unit_id) select organisation_id, $1, 'Sign', 'In', $2 from business_units where id = $2", [email, unit]);
 

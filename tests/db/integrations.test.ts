@@ -50,9 +50,7 @@ describe("integrations are data, approved, and their secrets stay secret (ADR-07
       expect(r).toMatchObject({ status: "PENDING", protected: true });
       expect((await c.q("select 1 from integrations")).length).toBe(0);
       await c.expectError("PERMISSION_DENIED", () => ask(c, w.hr, "SMTP:x", smtp()));
-      const own = await ask(c, w.sa, "SMTP:own", smtp({ name: "Own mail" }));
-      await c.expectError("CONFIG_CHANGE_SELF_APPROVAL", () => decide(c, w.sa, own.request_id));            // nobody approves their own request, Super Admin included
-      await c.rpc("withdraw_config_change", w.sa, own.request_id);
+      // a Super Admin's own request applies at once (see role_management), so the second-person rule is shown with an Admin's request
       const admin2 = await c.user(["ADMIN"], w.bu, "admin2");
       await c.expectError("PERMISSION_DENIED", () => decide(c, admin2, r.request_id));           // protected: a second Admin is not enough
       expect(await decide(c, w.sa, r.request_id)).toMatchObject({ status: "APPLIED" });

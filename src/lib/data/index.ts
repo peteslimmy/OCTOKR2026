@@ -1,4 +1,5 @@
 import "server-only";
+import { evaluateSmart, SMART_ENGINE_VERSION } from "@/lib/domain/smart";
 import { dbError } from "@/lib/data/errors";
 import { userClient } from "@/lib/supabase/server";
 
@@ -12,6 +13,7 @@ export interface ReportingWeek {
   id: string; quarter_id: string; week_year: number; week_number: number; week_start_at: string; week_end_at: string;
   content_lock_at: string; final_lock_at: string; status: string; reporting_state: "NORMAL" | "ORGANIZATION_HOLIDAY";
   phase?: "NOT_OPEN" | "OPEN" | "CONTENT_LOCKED" | "FINAL_LOCKED";
+  locks_suspended_at?: string | null; locks_suspended_reason?: string | null; opens_at_override?: string | null; opens_override_reason?: string | null;
 }
 
 function unwrap<T>(res: { data: T | null; error: { message: string } | null }, what: string): T {
@@ -27,6 +29,21 @@ export async function listQuarters(): Promise<Quarter[]> {
 /** Active quarter, else the most recent one. */
 export async function currentQuarter(): Promise<Quarter | null> {
   const all = await listQuarters();
+  return all.find((q) => q.status === "ACTIVE") ?? all[0] ?? null;
+}
+
+/**
+ * The quarter to show when nobody picked one: the active quarter if it already has weekly reports, otherwise the most recent quarter
+ * that does, otherwise the active/latest one. Keeps a freshly opened quarter from hiding every figure that exists.
+ */
+export async function defaultQuarter(): Promise<Quarter | null> {
+  const all = await listQuarters();
+  const sb = await userClient();
+  const ordered = [...all.filter((q) => q.status === "ACTIVE"), ...all.filter((q) => q.status !== "ACTIVE")];
+  for (const q of ordered) {
+    const { count } = await sb.from("weekly_reports").select("id, reporting_weeks!inner(quarter_id)", { count: "exact", head: true }).eq("reporting_weeks.quarter_id", q.id);
+    if ((count ?? 0) > 0) return q;
+  }
   return all.find((q) => q.status === "ACTIVE") ?? all[0] ?? null;
 }
 
@@ -50,7 +67,7 @@ export interface StrategyTree {
   quarter: Quarter;
   objective: { id: string; title: string; description: string | null } | null;
   key_results: {
-    id: string; code: string; title: string; description: string | null; status?: "ACTIVE" | "RETIRED";
+    id: string; code: string; title: string; description: string | null; status?: "ACTIVE" | "RETIRED"; mapped_goals?: number; done_goals?: number; execution?: number | null;
     sub_key_results: { id: string; code: string; title: string; description: string | null; status?: "ACTIVE" | "RETIRED"; mapped_goals: number; done_goals: number; execution: number | null }[];
   }[];
   readiness: string[];
@@ -118,15 +135,20 @@ export async function reportIdFor(buId: string, weekId: string): Promise<string 
 export interface ReportView {
   report: {
     id: string; status: string; submission_status: "NOT_SUBMITTED" | "SUBMITTED"; review_status: "NOT_REVIEWED" | "REVIEWED";
-    version: number; submitted_at: string | null; skipped_session_summary_comment: string | null; reviewed_at: string | null; final_locked_at: string | null;
+    version: number; submitted_at: string | null; skipped_session_summary_comment: string | null; comment?: string | null; reviewed_at: string | null; final_locked_at: string | null;
     review_comments: string | null; review_initiated_by: string | null; review_rejection_reason: string | null;
   };
   business_unit: { id: string; code: string; name: string };
   week: { id: string; week_number: number; week_year: number; week_start_at: string; content_lock_at: string; final_lock_at: string; reporting_state: string };
   phase: "NOT_OPEN" | "OPEN" | "CONTENT_LOCKED" | "FINAL_LOCKED" | "LATE_OPEN";
+  /** The quarter is locked: statuses can no longer be corrected. */
+  quarter_locked?: boolean;
+  /** A submitted report in a week an administrator holds open: statuses can be set and corrected as after content lock. */
+  status_changes_open?: boolean;
   late_exception: { id: string; status: string; reason: string; authorised_at: string } | null;
   session_outcome: "SCHEDULED" | "HELD" | "SKIPPED";
   summary_required: boolean | null;
+  skip_reason?: string | null;
   goals: GoalView[];
   score_preview: { total_goals: number; done_goals: number; base_score: number; applied_penalty_rate: number; final_score: number };
   snapshot: { version: number; state: string; base_score: number; combined_penalty_rate: number; final_score: number; applied_penalty_rates: unknown[]; reason: string } | null;
@@ -135,6 +157,7 @@ export interface ReportView {
 export interface GoalView {
   id: string; title: string; description: string | null; goal_type: "KR_ALIGNED" | "STRETCH"; position: number;
   status: "DONE" | "NOT_DONE"; has_undefined_tasks: boolean;
+  bu_goal?: { id: string; title: string } | null;
   sub_key_result: { id: string; code: string; title: string; kr_code: string; kr_title: string } | null;
   evaluation: { specific_score: number; measurable_score: number; achievable_score: number; relevant_score: number; time_bound_score: number; overall_score: number; warnings: string[]; suggestions: string[]; engine_version: string } | null;
   tasks: { id: string; description: string; status: "UNDEFINED" | "DONE" | "NOT_DONE"; position: number }[];
@@ -144,7 +167,14 @@ export async function getReportView(reportId: string): Promise<ReportView | null
   const sb = await userClient();
   const { data, error } = await sb.rpc("read_report_view", { p_report_id: reportId });
   if (error) throw dbError(error, "report view");
-  return (data as ReportView | null) ?? null;
+  const view = (data as ReportView | null) ?? null;
+  // The SMART rating is worked out from the goal's own wording every time it is shown, with the current rules (deterministic; nothing is saved), so a goal always
+  // carries the rating the present checker would give it, whatever rules were in force when it was written.
+  if (view) view.goals = view.goals.map((g) => {
+    const e = evaluateSmart({ title: g.title, description: g.description, subKrTitle: g.sub_key_result?.title ?? null, goalType: g.goal_type });
+    return { ...g, evaluation: { specific_score: e.specific, measurable_score: e.measurable, achievable_score: e.achievable, relevant_score: e.relevant, time_bound_score: e.timeBound, overall_score: e.overall, warnings: e.warnings, suggestions: e.suggestions, engine_version: SMART_ENGINE_VERSION } };
+  });
+  return view;
 }
 
 export interface WeekOverviewRow {
@@ -228,16 +258,25 @@ export async function listEmployees(): Promise<EmployeeRow[]> {
   return out;
 }
 
-export async function listUsers() {
+/** The Super Admin account is kept out of every list for everyone except a Super Admin. */
+export async function listUsers(viewerIsSuperAdmin = false) {
   const sb = await userClient();
-  return unwrap(
+  const rows = unwrap(
     await sb.from("users").select("id, email, status, last_login_at, employees(first_name, last_name, business_unit_id, business_units(name)), user_roles!user_roles_user_id_fkey(roles(code))").order("email"),
     "users",
   ) as unknown as { id: string; email: string; status: string; last_login_at: string | null; employees: { first_name: string; last_name: string; business_unit_id: string; business_units: { name: string } | null } | null; user_roles: { roles: { code: string } | null }[] }[];
+  return viewerIsSuperAdmin ? rows : rows.filter((u) => !u.user_roles.some((r) => r.roles?.code === "SUPER_ADMIN"));
 }
 
 export async function currentPenaltyRate(): Promise<number | null> {
   const sb = await userClient();
   const { data } = await sb.from("integrity_penalty_configurations").select("rate").is("effective_to", null).order("effective_from", { ascending: false }).limit(1).maybeSingle();
   return (data as { rate: number } | null)?.rate ?? null;
+}
+
+export interface BuGoalRow { id: string; business_unit_id: string; quarter_id: string; title: string; position: number; status: "ACTIVE" | "RETIRED"; created_at: string }
+/** A unit's own goals for a quarter, read as the signed-in person (row-level security limits it to units they may see). */
+export async function listBuGoals(buId: string, quarterId: string): Promise<BuGoalRow[]> {
+  const sb = await userClient();
+  return unwrap(await sb.from("bu_goals").select("id, business_unit_id, quarter_id, title, position, status, created_at").eq("business_unit_id", buId).eq("quarter_id", quarterId).order("position"), "business unit goals") as BuGoalRow[];
 }

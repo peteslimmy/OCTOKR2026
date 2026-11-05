@@ -55,8 +55,8 @@ export function LastWeekHint({ weekId, buId, buName }: { weekId: string; buId: s
 
   return (
     <>
-      <Button variant="secondary" onClick={show} aria-keyshortcuts="L" title="Shortcut: L">
-        <History className="h-4 w-4" aria-hidden />Last Week — Outstanding Tasks
+      <Button variant="secondary" size="sm" className="mb-1 h-6 gap-1 px-2 text-[11px]" onClick={show} aria-keyshortcuts="L" title="Shortcut: L">
+        <History className="h-3 w-3" aria-hidden />Last Week — Outstanding Tasks
       </Button>
       <Modal open={open} onOpenChange={setOpen} title="Last week's outstanding tasks" description={`${buName}${prevLabel ? ` · ${prevLabel}` : " · previous reporting week"}`}>
         <div className="space-y-3 text-sm" aria-live="polite">

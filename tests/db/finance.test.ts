@@ -85,10 +85,10 @@ describe("disbursements (FR-FIN-*, AC-FIN-*)", () => {
       await c.expectError("VALIDATION_ERROR", () => c.rpc("create_disbursement_request", w.hr, 10.005, "x", "y", key()));
       await c.expectError("VALIDATION_ERROR", () => c.rpc("create_disbursement_request", w.hr, 1000, " ", "y", key()));
       await c.expectError("INSUFFICIENT_FUNDS", () => c.rpc("create_disbursement_request", w.hr, 100000.01, "Too much", "n/a", key()));
-      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 30000, "Team event", "Quarterly culture event", key());
+      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 30000, "Others", "Quarterly culture event", key());
       expect((await c.q("select count(*)::int n from notifications where event_type = 'DISBURSEMENT_REQUESTED' and user_id = $1", [w.finance]))[0].n).toBe(1);
       await c.expectError("PERMISSION_DENIED", () => c.rpc("decide_disbursement_request", w.hr, r.request_id, true, null, key()));
-      const mine = await c.rpc<{ request_id: string }>("create_disbursement_request", w.both, 1000, "Own request", "self", key());
+      const mine = await c.rpc<{ request_id: string }>("create_disbursement_request", w.both, 1000, "Others", "self", key());
       await c.expectError("DISBURSEMENT_SELF_APPROVAL", () => c.rpc("decide_disbursement_request", w.both, mine.request_id, true, null, key()));
       await c.expectError("DISBURSEMENT_SELF_APPROVAL", () => c.rpc("decide_disbursement_request", w.both, mine.request_id, false, "no", key()));
       await c.expectError("DISBURSEMENT_SELF_APPROVAL", () => c.rpc("start_disbursement_review", w.both, mine.request_id));
@@ -106,13 +106,13 @@ describe("disbursements (FR-FIN-*, AC-FIN-*)", () => {
     await withTx(async (c) => {
       const w = await world(c);
       await fund(c, w, 50000);
-      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 20000, "Training", "Certification course", key());
+      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 20000, "Data", "Certification course", key());
       const dk = key();
       await c.rpc("decide_disbursement_request", w.finance, r.request_id, true, null, dk);
       expect((await c.rpc<{ replayed: boolean }>("decide_disbursement_request", w.finance, r.request_id, true, null, dk)).replayed).toBe(true);
       expect(await bal(c)).toBe(50000);                                   // approved, but no cash has moved
       await c.expectError("PERMISSION_DENIED", () => c.rpc("record_disbursement", w.hr, r.request_id, "BANK-1", key()));
-      const own = await c.rpc<{ request_id: string }>("create_disbursement_request", w.both, 1000, "Own", "x", key());
+      const own = await c.rpc<{ request_id: string }>("create_disbursement_request", w.both, 1000, "Others", "x", key());
       await c.rpc("decide_disbursement_request", w.finance, own.request_id, true, null, key());
       await c.expectError("DISBURSEMENT_SELF_APPROVAL", () => c.rpc("record_disbursement", w.both, own.request_id, "BANK-X", key()));
       const k = key();
@@ -133,8 +133,8 @@ describe("disbursements (FR-FIN-*, AC-FIN-*)", () => {
     await withTx(async (c) => {
       const w = await world(c);
       await fund(c, w, 100000);
-      const a = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 70000, "A", "a", key());
-      const b = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 60000, "B", "b", key());   // each fits on its own at creation
+      const a = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 70000, "Data", "a", key());
+      const b = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 60000, "Data", "b", key());   // each fits on its own at creation
       await c.rpc("decide_disbursement_request", w.finance, a.request_id, true, null, key());
       await c.expectError("INSUFFICIENT_FUNDS", () => c.rpc("decide_disbursement_request", w.finance, b.request_id, true, null, key()));
       expect((await c.q("select status from disbursement_requests where id = $1", [b.request_id]))[0].status).toBe("SUBMITTED");
@@ -148,7 +148,7 @@ describe("disbursements (FR-FIN-*, AC-FIN-*)", () => {
       const w = await world(c);
       await fund(c, w, 40000);
       await fund(c, w, 10000);
-      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 15000, "X", "y", key());
+      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 15000, "Others", "y", key());
       await c.rpc("decide_disbursement_request", w.finance, r.request_id, true, null, key());
       await c.rpc("record_disbursement", w.finance2, r.request_id, "B-1", key());
       const s = await c.asUser(w.finance, () => c.rpc<{ balance: string; inflow: string; outflow: string; reconciled: boolean; available: string }>("read_fund_summary"));
@@ -177,9 +177,118 @@ describe("finance data security (RLS)", () => {
       expect(await c.asUser(w.lead, () => c.q("select id from violations"))).toEqual([]);
       await c.expectError("permission denied", () => c.asUser(w.finance, () => c.q("insert into financial_ledger_entries (fund_id, entry_type, amount, source_type, source_id, reference, created_by) select id, 'CREDIT', 1, 'REVERSAL', gen_random_uuid(), 'hack', $1 from violation_funds", [w.finance])));
       // a requester sees their own request; an unrelated BU Lead sees none
-      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 100, "p", "j", key());
+      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 100, "Others", "j", key());
       expect((await c.asUser(w.hr, () => c.q("select id from disbursement_requests where id = $1", [r.request_id]))).length).toBe(1);
       expect(await c.asUser(w.lead, () => c.q("select id from disbursement_requests"))).toEqual([]);
+    });
+  });
+});
+
+describe("fund summary for someone who may see the fund but not the ledger", () => {
+  it("HR sees the real balance and no false reconciliation mismatch", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      await fund(c, w, 5000);
+      const s = (await c.asUser(w.hr, () => c.q<{ s: { balance: string; reconciled: boolean } }>("select read_fund_summary() s")))[0].s;
+      expect(Number(s.balance)).toBe(5000);
+      expect(s.reconciled).toBe(true);
+    });
+  });
+});
+
+describe("names on request screens", () => {
+  it("Finance sees who raised a request even though they cannot open that person's profile", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      await fund(c, w, 5000);
+      const req = await c.rpc<{ id?: string } | string>("create_disbursement_request", w.hr, 1000, "Others", "for the session", key());
+      void req;
+      const rows = (await c.asUser(w.finance, () => c.q<{ r: { requester_name: string | null }[] }>("select read_disbursement_requests() r")))[0].r;
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) expect(r.requester_name).toBeTruthy();
+    });
+  });
+});
+
+describe("revising a rejected request", () => {
+  it("only the requester can revise a rejected request, once, with a note; the rejected one is untouched", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      await fund(c, w, 20000);
+      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 9000, "Others", "first try", key());
+      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("resubmit_disbursement_request", w.hr, r.request_id, 8000, "Others", "again", "why", key()));
+      await c.rpc("decide_disbursement_request", w.finance, r.request_id, false, "this is not clear", key());
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("resubmit_disbursement_request", w.both, r.request_id, 8000, "Others", "again", "why", key()));
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("resubmit_disbursement_request", w.hr, r.request_id, 8000, "Others", "again", "  ", key()));
+      const k = key();
+      const n = await c.rpc<{ request_id: string; replayed: boolean }>("resubmit_disbursement_request", w.hr, r.request_id, 8000, "Others", "clearer reason", "added the event date", k);
+      expect(n.replayed).toBe(false);
+      expect((await c.rpc<{ replayed: boolean }>("resubmit_disbursement_request", w.hr, r.request_id, 8000, "Others", "clearer reason", "added the event date", k)).replayed).toBe(true);
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("resubmit_disbursement_request", w.hr, r.request_id, 7000, "Others", "third", "again", key()));
+      const rows = (await c.asUser(w.finance, () => c.q<{ r: { id: string; status: string; resubmits: string | null; resubmitted_as: string | null; resubmit_note: string | null }[] }>("select read_disbursement_requests() r")))[0].r;
+      const old = rows.find((x) => x.id === r.request_id)!, fresh = rows.find((x) => x.id === n.request_id)!;
+      expect(old).toMatchObject({ status: "REJECTED", resubmitted_as: n.request_id });
+      expect(fresh).toMatchObject({ status: "SUBMITTED", resubmits: r.request_id, resubmit_note: "added the event date" });
+    });
+  });
+});
+
+describe("withdrawing a fund request", () => {
+  it("lets only the requester withdraw it, only while it waits, and commits no money", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      await fund(c, w, 20000);
+      const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 3000, "Others", "event", key());
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("withdraw_disbursement_request", w.both, r.request_id));
+      await c.rpc("withdraw_disbursement_request", w.hr, r.request_id);
+      expect((await c.q<{ status: string }>("select status from disbursement_requests where id = $1", [r.request_id]))[0].status).toBe("WITHDRAWN");
+      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("withdraw_disbursement_request", w.hr, r.request_id));
+      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("decide_disbursement_request", w.finance, r.request_id, true, null, key()));
+      const pending = (await c.asUser(w.finance, () => c.q<{ s: { pending_requests: number; committed: string } }>("select read_fund_summary() s")))[0].s;
+      expect(pending.pending_requests).toBe(0);
+      expect(Number(pending.committed)).toBe(0);
+      // an approved request can no longer be withdrawn
+      const r2 = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 1000, "Others", "second", key());
+      await c.rpc("decide_disbursement_request", w.finance, r2.request_id, true, null, key());
+      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("withdraw_disbursement_request", w.hr, r2.request_id));
+    });
+  });
+});
+
+describe("what the Violations & Funds screens read", () => {
+  it("lists a settled violation with its method and generated reference, and keeps void and open ones apart", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const open = await c.rpc<{ violation_id: string }>("create_violation", w.hr, w.staff, null, w.vt, null, null, null, key());
+      const paid = await c.rpc<{ violation_id: string }>("create_violation", w.hr, w.staff, null, w.vt, null, null, null, key());
+      const voided = await c.rpc<{ violation_id: string }>("create_violation", w.hr, w.staff, null, w.vt, null, null, null, key());
+      await c.rpc("record_violation_payment", w.hr, paid.violation_id, "SAL", null, "2031-01-14", key());
+      const hr2 = await c.user(["HR"], w.bu, "hr2");
+      await c.rpc("void_violation", hr2, voided.violation_id, "contested and cleared");
+      const rows = await c.asUser(w.hr, () => c.rpc<{ id: string; status: string; payment: { method: string; reference: string } | null }[]>("read_violations"));
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      expect(byId.get(open.violation_id)?.status).toBe("OPEN");
+      expect(byId.get(open.violation_id)?.payment).toBeNull();
+      expect(byId.get(paid.violation_id)?.status).toBe("DEDUCTION_RECORDED");
+      expect(byId.get(paid.violation_id)?.payment?.method).toBe("SAL");
+      expect(byId.get(paid.violation_id)?.payment?.reference).toMatch(/^SAL-\d{4}-\d{6}$/);
+      expect(byId.get(voided.violation_id)?.status).toBe("VOID");
+      // the fund counts the one payment and nothing for the void or open ones, and the books balance
+      const f = (await c.asUser(w.finance, () => c.q<{ s: { inflow: string; reconciled: boolean } }>("select read_fund_summary() s")))[0].s;
+      expect(Number(f.inflow)).toBe(5000);
+      expect(f.reconciled).toBe(true);
+    });
+  });
+});
+
+describe("a record that does not exist is reported as not found", () => {
+  it("answers NOT_FOUND for an unknown violation (edit, void, pay), not success", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const ghost = "11111111-1111-4111-8111-111111111111";
+      await c.expectError("NOT_FOUND", () => c.rpc("update_violation", w.hr, ghost, null, null, "x"));
+      await c.expectError("NOT_FOUND", () => c.rpc("void_violation", w.hr, ghost, "reason"));
+      await c.expectError("NOT_FOUND", () => c.rpc("record_violation_payment", w.hr, ghost, "PAY", null, "2031-01-14", key()));
     });
   });
 });

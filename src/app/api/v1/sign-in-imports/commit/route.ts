@@ -15,6 +15,7 @@ export const POST = api({ stepUp: true, body }, async ({ actor, body: b, correla
   const { ok, problems } = await checkSignIns(b.people.map((p) => ({ ...p, email: p.email.toLowerCase() })), actor);
   const admin = adminClient(correlationId);
   const results: { row: number; email: string; created: boolean; message: string | null; setupLink: string | null }[] = problems.map((p) => ({ row: p.row, email: b.people.find((x) => x.row === p.row)?.email ?? "", created: false, message: p.message, setupLink: null }));
+  const made: { userId: string; email: string; roles: string[] }[] = [];
   for (const p of ok) {
     const { data: emp } = await admin.from("employees").select("first_name, last_name, business_unit_id").eq("email", p.email).single();
     if (!emp) { results.push({ row: p.row, email: p.email, created: false, message: "The employee could not be read.", setupLink: null }); continue; }
@@ -27,9 +28,12 @@ export const POST = api({ stepUp: true, body }, async ({ actor, body: b, correla
       results.push({ row: p.row, email: p.email, created: false, message: e instanceof ApiError ? e.err.message : "Could not be created.", setupLink: null });
       continue;
     }
+    made.push({ userId: created.data.user.id, email: p.email, roles: p.roles });
     const link = await admin.auth.admin.generateLink({ type: "recovery", email: p.email });
     results.push({ row: p.row, email: p.email, created: true, message: null, setupLink: link.data?.properties?.action_link ?? null });
   }
   if (!results.length) throw fail("VALIDATION_ERROR", 422, "Nobody to create.");
-  return { results: results.sort((a, b2) => a.row - b2.row), created: results.filter((r) => r.created).length };
+  // a record of who this import created, so a Super Admin can roll it back inside the window (ADR-088)
+  const batchId = made.length ? await rpc<string>("record_sign_in_import", { p_actor: actor.id, p_users: made }) : null;
+  return { results: results.sort((a, b2) => a.row - b2.row), created: results.filter((r) => r.created).length, batchId };
 });

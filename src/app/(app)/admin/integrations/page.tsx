@@ -23,7 +23,7 @@ export default async function IntegrationsPage() {
       <div className="space-y-6">
         {envMail && !emailInUse ? <Banner tone="info" title="Email is currently set in the server's files">Mail goes out through <code>{envMail}</code> from the server&apos;s environment. An email service enabled here takes over from it.</Banner> : null}
         {allowPrivateHosts() ? <Banner tone="warn" title="Internal addresses are allowed">INTEGRATIONS_ALLOW_PRIVATE_HOSTS is on, so integrations may call addresses inside your network. This is for development only.</Banner> : null}
-        <IntegrationsManager kinds={kinds} items={items} canConfigure={can(actor, "integrations.configure")} canTest={can(actor, "integrations.test")} encryptionConfigured={encryptionConfigured()} />
+        <IntegrationsManager kinds={kinds} items={items} canConfigure={can(actor, "integrations.configure")} canTest={can(actor, "integrations.test")} canApplyNow={can(actor, "config.emergency")} encryptionConfigured={encryptionConfigured()} />
       </div>
     </>
   );

@@ -202,7 +202,9 @@ export function useAction() {
       setPending(true);
       try {
         const out = await fn();
-        if (opts.success) toast.success(opts.success);
+        // a Super Admin's configuration change is applied at once: say so instead of "sent for approval"
+        const applied = (out as { status?: string } | null)?.status === "APPLIED";
+        if (opts.success) toast.success(applied && opts.success.startsWith("Sent for approval") ? "Saved and applied." : opts.success);
         if (opts.refresh !== false) router.refresh();
         return { value: out };
       } catch (e) {

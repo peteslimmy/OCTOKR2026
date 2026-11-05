@@ -20,6 +20,8 @@ const logger = pino({
 });
 
 export class ApiError extends Error {
+  /** The database's own message, kept for routes that can safely explain it (never sent to the browser by default). */
+  raw?: string;
   constructor(public readonly err: DomainError) {
     super(err.message);
   }
@@ -91,6 +93,8 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
       mark("actor", tActor);
       seen = actor;
       if (!actor && !opts.public) throw fail("AUTHENTICATION_REQUIRED", 401, "Please sign in to continue.");
+      // a password someone else chose must be replaced first: nothing but the sign-in and password routes works until then
+      if (actor?.mustChangePassword && !opts.public && !new URL(req.url).pathname.startsWith("/api/v1/auth/")) throw fail("PASSWORD_CHANGE_REQUIRED", 403, "Choose a new password before continuing.");
       if (actor && !opts.public && !opts.partial) {
         if (actor.mfa.required && !actor.mfa.enrolled) throw fail("MFA_ENROLMENT_REQUIRED", 403, "Your role requires a second factor. Set one up under Account security.");
         if (actor.mfa.enrolled && actor.mfa.aal !== "aal2") throw fail("MFA_REQUIRED", 401, "Enter your authenticator or email code to continue.");
@@ -120,7 +124,7 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
 
       const rpc = async <T,>(fn: string, args: Record<string, unknown>): Promise<T> => {
         const { data, error } = await adminClient(correlationId).rpc(fn, args);
-        if (error) throw new ApiError(toDomainError(error));
+        if (error) { const e = new ApiError(toDomainError(error)); e.raw = error.message; throw e; }
         return data as T;
       };
       const tHandler = performance.now();

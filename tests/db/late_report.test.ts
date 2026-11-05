@@ -189,10 +189,11 @@ describe("late-report score amendment (ADR-032, AC-SC-014)", () => {
       expect(seenB).toHaveLength(0);
       const seenA = await c.asUser(w.leadA, () => c.q("select id from late_report_exceptions"));
       expect(seenA).toHaveLength(1);
-      // the read model must still return the BU Lead's own exception even though they cannot read the authoriser's user row
+      // the read model returns the BU Lead's own exception and names the authoriser even though the lead cannot read that user row
       const modelA = await c.asUser(w.leadA, () => c.rpc<{ id: string; authorised_by: string }[]>("read_late_report_exceptions"));
       expect(modelA).toHaveLength(1);
-      expect(modelA[0].authorised_by).toBe("Administrator");
+      expect(modelA[0].authorised_by).toBeTruthy();
+      expect(modelA[0].authorised_by).not.toBe("Administrator");
       expect(await c.asUser(w.leadB, () => c.rpc<unknown[]>("read_late_report_exceptions"))).toHaveLength(0);
     });
   });

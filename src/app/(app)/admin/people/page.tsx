@@ -5,7 +5,7 @@ import { can, requireActor } from "@/lib/auth/actor";
 import { listRoles } from "@/lib/data/config";
 import { listPermissionGrants } from "@/lib/data/governance";
 import { listBusinessUnits, listEmployees, listUsers } from "@/lib/data";
-import { CreateUserButton, DesignationsButton, RosterToggle, UserRowActions, DeleteUserButton, BulkDeleteUsers } from "../admin-actions";
+import { CreateUserButton, DesignationsButton, RosterToggle, GiveSignInButton, UserRowActions, DeleteUserButton, BulkDeleteUsers } from "../admin-actions";
 
 export const metadata: Metadata = { title: "People" };
 
@@ -13,7 +13,12 @@ export default async function PeoplePage() {
   const actor = await requireActor();
   if (!can(actor, "users.manage")) return <Card><div className="p-6 text-sm">People management is not available for your role.</div></Card>;
   const grantPrivileged = can(actor, "roles.manage");
-  const [bus, users, roleRows, employees] = await Promise.all([listBusinessUnits(), listUsers(), listRoles(), listEmployees()]);
+  const viewerIsSuper = actor.roles.includes("SUPER_ADMIN");
+  const [bus, allUsers, roleRows, allEmployees] = await Promise.all([listBusinessUnits(), listUsers(true), listRoles(), listEmployees()]);
+  // the Super Admin account is a reserve account: only a Super Admin can see it
+  const hiddenIds = new Set(viewerIsSuper ? [] : allUsers.filter((u) => u.user_roles.some((r) => r.roles?.code === "SUPER_ADMIN")).map((u) => u.id));
+  const users = allUsers.filter((u) => !hiddenIds.has(u.id));
+  const employees = allEmployees.filter((e) => !(e.users && hiddenIds.has(e.users.id)));
   const grants = grantPrivileged ? await listPermissionGrants() : {};
   const roleOptions = roleRows.map((r) => ({ code: r.code, name: r.name, privileged: r.privileged }));
   const roleName = new Map(roleRows.map((r) => [r.code, r.name]));
@@ -56,7 +61,7 @@ export default async function PeoplePage() {
                   <td>{e.business_units?.name}</td>
                   <td><Badge tone={e.users ? "brand" : "undefined"}>{e.users ? "has sign-in" : "attendance only"}</Badge></td>
                   <td><Badge tone={e.on_attendance_roster ? "done" : "undefined"}>{e.on_attendance_roster ? "on roster" : "off roster"}</Badge>{e.employment_status !== "ACTIVE" ? <Badge tone="critical">inactive</Badge> : null}</td>
-                  <td className="text-right"><RosterToggle id={e.id} name={`${e.first_name} ${e.last_name}`} onRoster={e.on_attendance_roster} /></td>
+                  <td className="text-right"><span className="inline-flex gap-1">{!e.users && e.employment_status === "ACTIVE" ? <GiveSignInButton id={e.id} name={`${e.first_name} ${e.last_name}`} email={e.email} grantPrivileged={grantPrivileged} roleOptions={roleOptions} /> : null}<RosterToggle id={e.id} name={`${e.first_name} ${e.last_name}`} onRoster={e.on_attendance_roster} /></span></td>
                 </tr>
               ))}
             </DataTable>

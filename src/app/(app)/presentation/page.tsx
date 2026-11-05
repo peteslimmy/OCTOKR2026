@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ComplianceBadge, ScoreText, SubmissionBadge, wat } from "@/components/status";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
 import { activeWeeks, getReportView, getWeekOverview, recentFinalWeeks } from "@/lib/data";
+import { getPublishedQuote } from "@/lib/data/governance";
+import { BuIntelligenceSection } from "@/components/insights/intelligence";
 import { LastWeekHint } from "./last-week-hint";
+import { SessionNotesLauncher } from "./session-notes-launcher";
+import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
 import { PresenterView } from "./presenter-view";
+import { QuotePresenter } from "./quote-presenter";
+import { WeekStrip } from "./week-strip";
 import { formatWeekLabel } from "@/lib/domain/week-label";
 
 export const metadata: Metadata = { title: "Presentation" };
@@ -14,13 +20,20 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
   const actor = await requireActor();
   if (!can(actor, "presentation.view")) return <Card><EmptyState title="Presentation mode is not available for your role" /></Card>;
   const sp = await searchParams;
-  const weeks = [...(await activeWeeks()), ...(await recentFinalWeeks(6))];
+  const weeks = [...(await activeWeeks()), ...(await recentFinalWeeks(52))];
   const unique = weeks.filter((w, i) => weeks.findIndex((x) => x.id === w.id) === i);
   // Default to the week being presented: the most recent one that has passed content lock.
   const week = unique.find((w) => w.id === sp.week) ?? unique.find((w) => w.phase === "CONTENT_LOCKED" || w.status === "FINAL_LOCKED") ?? unique[0];
   if (!week) return <Card><EmptyState title="No reporting week yet">Weeks appear once a quarter is activated.</EmptyState></Card>;
 
   const overview = await getWeekOverview(week.id);
+  // the week's quote, with the speakers of the sessions either side of it
+  const ordered = [...unique].sort((a, b) => a.week_start_at.localeCompare(b.week_start_at));
+  const at = ordered.findIndex((w) => w.id === week.id);
+  const around = (w: (typeof ordered)[number] | undefined) => (w ? getPublishedQuote(w.id).catch(() => null) : Promise.resolve(null));
+  const [quote, quoteBefore, quoteAfter] = await Promise.all([around(week), around(ordered[at - 1]), around(ordered[at + 1])]);
+  const neighbour = (w: (typeof ordered)[number] | undefined, q: typeof quote) => (w ? `Week ${w.week_number}${q ? `: ${q.speaker_name}` : ""}` : null);
+  const month = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(week.week_start_at));
   const idx = Math.max(0, overview.findIndex((o) => o.business_unit.id === sp.bu));
   const current = overview[idx];
   const view = current?.report_id ? await getReportView(current.report_id) : null;
@@ -30,20 +43,20 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
 
   return (
     <>
-      <PageHeader title="Presentation mode" description={`${formatWeekLabel(week)} · final lock ${wat(week.final_lock_at)}`}
-        actions={<Link href="/dashboard" className="rounded-lg border border-line bg-panel px-4 py-2 text-sm">Exit presentation</Link>} />
-      <div className="mb-4 flex flex-wrap gap-2" role="navigation" aria-label="Reporting weeks">
-        {unique.map((w) => (
-          <Link key={w.id} href={`/presentation?week=${w.id}`} aria-current={w.id === week.id ? "page" : undefined}
-            className={`rounded-full border px-3 py-1 text-sm ${w.id === week.id ? "border-brand-700 bg-brand-100 text-brand-800" : "border-line bg-panel"}`}>
-            {formatWeekLabel(w)}{w.reporting_state === "ORGANIZATION_HOLIDAY" ? " (holiday)" : ""}
-          </Link>
-        ))}
+      <div className="mb-6 flex items-end gap-4">
+        <div className="shrink-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">Presentation mode</h1>
+          <p className="mt-1 text-sm text-muted">{`${formatWeekLabel(week)} · final lock ${wat(week.final_lock_at)}`}</p>
+        </div>
+        <WeekStrip currentId={week.id} weeks={unique.map((w) => ({ id: w.id, label: formatWeekLabel(w), holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" }))} />
+        {quote ? <QuotePresenter quote={quote.quote} speaker={quote.speaker_name} businessUnit={quote.business_unit} session={`Week ${week.week_number} · ${month}`}
+          previous={neighbour(ordered[at - 1], quoteBefore)} next={neighbour(ordered[at + 1], quoteAfter)} /> : null}
+        <Link href="/dashboard" className="shrink-0 rounded-lg border border-line bg-panel px-4 py-2 text-sm">Exit presentation</Link>
       </div>
       {week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Card><EmptyState title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No BU reports are due for this week.</EmptyState></Card> : (
         <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <Card>
-            <nav aria-label="Business units"><ul className="divide-y divide-line">
+            <nav aria-label="Business units" className="max-h-[calc(100vh-13rem)] overflow-y-auto"><ul className="divide-y divide-line">
               {overview.map((o, i) => (
                 <li key={o.business_unit.id}>
                   <Link href={`${base}&bu=${o.business_unit.id}`} aria-current={i === idx ? "page" : undefined}
@@ -56,14 +69,18 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
             </ul></nav>
           </Card>
           <div className="space-y-4">
-            {current ? <div className="flex justify-end"><LastWeekHint weekId={week.id} buId={current.business_unit.id} buName={current.business_unit.name} /></div> : null}
             {current ? (
               view ? <PresenterView view={view} canCorrect={can(actor, "integrity_correction.create")}
-                    prevHref={`${base}&bu=${prev.business_unit.id}`} nextHref={`${base}&bu=${next.business_unit.id}`} buName={current.business_unit.name} />
+                    prevHref={`${base}&bu=${prev.business_unit.id}`} nextHref={`${base}&bu=${next.business_unit.id}`} buName={current.business_unit.name}
+                    intelligence={<BuIntelligenceSection buId={current.business_unit.id} buName={current.business_unit.name} quarterId={week.quarter_id} compact />}
+                    lastWeek={<LastWeekHint weekId={week.id} buId={current.business_unit.id} buName={current.business_unit.name} />} />
                 : (<Card><EmptyState title={`${current.business_unit.name} has no report for this week`}>
                     <span className="flex flex-wrap items-center justify-center gap-2"><SubmissionBadge status="NOT_SUBMITTED" /><ComplianceBadge status={current.compliance} /></span>
                   </EmptyState></Card>)
             ) : <Card><EmptyState title="No business units" /></Card>}
+            {current ? <Card data-testid="presentation-executive-commentary"><CardHeader title="Executive commentary" description={`Observations and recommendations about ${current.business_unit.name} this week. Commenting changes nothing in the report.`}
+              action={<ExecutiveCommentary module="PRESENTATION" subjectType="BUSINESS_UNIT" subjectId={current.business_unit.id} subjectLabel={`${current.business_unit.name} · ${formatWeekLabel(week)}`} businessUnitId={current.business_unit.id} quarterId={week.quarter_id} reportingWeekId={week.id} />} /></Card> : null}
+            {current && can(actor, "session_notes.view") ? <SessionNotesLauncher buId={current.business_unit.id} buName={current.business_unit.name} weekId={week.id} canCreate={can(actor, "session_notes.create")} /> : null}
           </div>
         </div>
       )}

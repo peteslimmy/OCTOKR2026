@@ -70,7 +70,7 @@ describe("weekly roster (FR-ATT-002/003/004)", () => {
       await c.expectError("IMMUTABLE_RECORD", () => c.q("update attendance_records set status = 'PRESENT' where id = $1", [a]));
       await c.expectError("IMMUTABLE_RECORD", () => c.q("delete from attendance_records where id = $1", [a]));
       await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("finalize_attendance_roster", w.hr, w.session, true));
-      await c.expectError("ATTENDANCE_SESSION_NOT_SKIPPABLE", () => c.rpc("skip_okr_session", w.hr, w.session, true, "k1"));
+      await c.expectError("ATTENDANCE_SESSION_NOT_SKIPPABLE", () => c.rpc("skip_okr_session", w.hr, w.session, true, "k1", "Test reason: session not held"));
     });
   });
 });
@@ -82,9 +82,9 @@ describe("Skip OKR for this week (FR-ATT-006/009, AC-ATT-010)", () => {
       await c.rpc("create_attendance_roster", w.hr, w.session);          // an unfinalised draft is replaced, not mixed in
       const [a] = (await c.q<{ id: string }>("select id from attendance_records limit 1")).map((r) => r.id);
       await c.rpc("set_attendance_status", w.hr, a, "ABSENT", null);
-      await c.expectError("PERMISSION_DENIED", () => c.rpc("skip_okr_session", w.lead, w.session, true, "k0"));
-      await c.expectError("VALIDATION_ERROR", () => c.rpc("skip_okr_session", w.hr, w.session, false, "k0"));
-      const r1 = await c.rpc<{ staff_tagged: number; replayed: boolean }>("skip_okr_session", w.hr, w.session, true, "skip-key-1");
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("skip_okr_session", w.lead, w.session, true, "k0", "Test reason: session not held"));
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("skip_okr_session", w.hr, w.session, false, "k0", "Test reason: session not held"));
+      const r1 = await c.rpc<{ staff_tagged: number; replayed: boolean }>("skip_okr_session", w.hr, w.session, true, "skip-key-1", "Test reason: session not held");
       expect(r1).toMatchObject({ staff_tagged: 6, replayed: false });
       const rows = await c.q("select status, source from attendance_records where governance_session_id = $1", [w.session]);
       expect(rows).toHaveLength(6);
@@ -93,11 +93,11 @@ describe("Skip OKR for this week (FR-ATT-006/009, AC-ATT-010)", () => {
       expect((await c.q("select count(*)::int n from notifications where event_type = 'OKR_SESSION_SKIPPED' and user_id = $1", [w.lead]))[0].n).toBe(1);
       expect((await c.q("select count(*)::int n from audit_logs where action = 'OKR_SESSION_SKIPPED'"))[0].n).toBe(1);
       // retry: same result, no duplicate rows/notifications/audit
-      const r2 = await c.rpc<{ replayed: boolean; staff_tagged: number }>("skip_okr_session", w.hr, w.session, true, "skip-key-1");
+      const r2 = await c.rpc<{ replayed: boolean; staff_tagged: number }>("skip_okr_session", w.hr, w.session, true, "skip-key-1", "Test reason: session not held");
       expect(r2).toMatchObject({ replayed: true, staff_tagged: 6 });
       expect((await c.q("select count(*)::int n from attendance_records where governance_session_id = $1", [w.session]))[0].n).toBe(6);
       expect((await c.q("select count(*)::int n from audit_logs where action = 'OKR_SESSION_SKIPPED'"))[0].n).toBe(1);
-      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("skip_okr_session", w.hr, w.session, true, "different-key"));
+      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("skip_okr_session", w.hr, w.session, true, "different-key", "Test reason: session not held"));
       // generated rows are never individually editable; no CANCELLED outcome exists
       const gen = (await c.q<{ id: string }>("select id from attendance_records where governance_session_id = $1 limit 1", [w.session]))[0].id;
       await c.expectError("IMMUTABLE_RECORD", () => c.rpc("set_attendance_status", w.hr, gen, "PRESENT", null));
@@ -111,7 +111,7 @@ describe("Skip OKR for this week (FR-ATT-006/009, AC-ATT-010)", () => {
       const w = await world(c);
       await c.q(`create function boom() returns trigger language plpgsql as $$ begin if new.status = 'VIRTUAL_PRESENT' and new.employee_id = '${w.staff[1].id}' then raise exception 'BOOM'; end if; return new; end $$`);
       await c.q("create trigger boom_t before insert on attendance_records for each row execute function boom()");
-      await c.expectError("BOOM", () => c.rpc("skip_okr_session", w.hr, w.session, true, "k-boom"));
+      await c.expectError("BOOM", () => c.rpc("skip_okr_session", w.hr, w.session, true, "k-boom", "Test reason: session not held"));
       expect((await c.q("select outcome, roster_status from governance_sessions where id = $1", [w.session]))[0]).toEqual({ outcome: "SCHEDULED", roster_status: "NONE" });
       expect((await c.q("select count(*)::int n from attendance_records where governance_session_id = $1", [w.session]))[0].n).toBe(0);
       expect((await c.q("select count(*)::int n from audit_logs where action = 'OKR_SESSION_SKIPPED'"))[0].n).toBe(0); // no success logged on failure
@@ -121,7 +121,7 @@ describe("Skip OKR for this week (FR-ATT-006/009, AC-ATT-010)", () => {
   it("creates no absence violation, does not waive weekly reporting, and requires the manual summary", async () => {
     await withTx(async (c) => {
       const w = await world(c);
-      await c.rpc("skip_okr_session", w.hr, w.session, true, "k1");
+      await c.rpc("skip_okr_session", w.hr, w.session, true, "k1", "Test reason: session not held");
       const vt = await c.rpc<string>("create_violation_type", w.hr, "LATE", "Late arrival", "LOW", 500);
       await c.expectError("VIOLATION_NOT_ALLOWED_SKIPPED_SESSION", () => c.rpc("create_violation", w.hr, w.staff[0].id, w.session, vt, null, null, null, "v-skip"));
       // the weekly report is still mandatory and needs the manual summary
@@ -138,7 +138,7 @@ describe("Skip OKR for this week (FR-ATT-006/009, AC-ATT-010)", () => {
       const w = await world(c);
       await c.setNow("2031-01-05T09:00:00+01:00");
       await c.rpc("declare_organization_holiday", w.hr, [w.wk], "Closure", "hol-1");
-      await c.expectError("REPORTING_NOT_REQUIRED", () => c.rpc("skip_okr_session", w.hr, w.session, true, "k1"));
+      await c.expectError("REPORTING_NOT_REQUIRED", () => c.rpc("skip_okr_session", w.hr, w.session, true, "k1", "Test reason: session not held"));
       expect((await c.q("select count(*)::int n from attendance_records"))[0].n).toBe(0); // holiday never creates VIRTUAL_PRESENT rows
     });
   });
@@ -222,7 +222,7 @@ describe("attendance amendments (ADR-031, AC-ATT-002..009)", () => {
       await c.rpc("create_attendance_roster", w.hr, w.session);
       const rec = (await c.q<{ id: string }>("select id from attendance_records limit 1"))[0].id;
       await c.expectError("ATTENDANCE_SESSION_NOT_AMENDABLE", () => c.rpc("submit_attendance_amendment", w.hr, rec, "ABSENT", "r", null, "d1"));
-      await c.rpc("skip_okr_session", w.hr, w.session, true, "k1");
+      await c.rpc("skip_okr_session", w.hr, w.session, true, "k1", "Test reason: session not held");
       const rec2 = (await c.q<{ id: string }>("select id from attendance_records limit 1"))[0].id;
       await c.expectError("ATTENDANCE_SESSION_NOT_AMENDABLE", () => c.rpc("submit_attendance_amendment", w.hr, rec2, "ABSENT", "r", null, "d2"));
     });

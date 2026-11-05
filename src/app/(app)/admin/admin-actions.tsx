@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ApiFailure, apiRequest, ConfirmButton, Modal, useAction, useOpenOnNew } from "@/components/ui/client";
+import { ApiFailure, apiRequest, ConfirmButton, Modal, toast, useAction, useOpenOnNew } from "@/components/ui/client";
 import { Badge, Banner, Button, Input, Label, Select, Textarea, Field } from "@/components/ui/primitives";
 import { ReviewRow, StepForm } from "@/components/ui/step-form";
 
@@ -67,17 +67,19 @@ export function CreateUserButton({ bus, grantPrivileged, roleOptions }: { bus: {
   const [open, setOpen] = useState(useOpenOnNew("user"));
   const [f, setF] = useState({ email: "", firstName: "", lastName: "", businessUnitId: "", roles: [] as string[] });
   const [link, setLink] = useState<string | null>(null);
+  const [pw, setPw] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const { pending, run } = useAction();
   const roles = roleOptions.filter((r) => grantPrivileged || !r.privileged);
   return (
     <>
-      <Button size="sm" onClick={() => { setOpen(true); setLink(null); setErr(null); }}>Add user</Button>
-      <Modal open={open} onOpenChange={setOpen} title="Add user" description="An invitation link is generated so the person sets their own password.">
+      <Button size="sm" onClick={() => { setOpen(true); setLink(null); setPw(null); setErr(null); }}>Add user</Button>
+      <Modal open={open} onOpenChange={setOpen} title="Add user" description="A first-login password and a setup link are generated for you to pass on.">
         {link ? (
           <div className="space-y-3">
-            <Banner tone="done" title="User created">Share this one-time setup link securely. It is shown only now.</Banner>
-            <Input readOnly value={link} aria-label="Setup link" onFocus={(e) => e.currentTarget.select()} />
+            <Banner tone="done" title="User created">Send {f.email} the initial password below. It is shown only now. They will be asked to choose their own password when they first sign in.</Banner>
+            {pw ? <div><Label htmlFor="u-pw">Initial password</Label><div className="flex gap-2"><Input id="u-pw" readOnly value={pw} className="font-mono" onFocus={(e) => e.currentTarget.select()} /><Button variant="secondary" onClick={() => { void navigator.clipboard?.writeText(pw); toast.info("Password copied."); }}>Copy</Button></div></div> : null}
+            <div><Label htmlFor="u-link">Or a one-time setup link, where they choose their own password</Label><Input id="u-link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} /></div>
             <div className="flex justify-end"><Button onClick={() => setOpen(false)}>Done</Button></div>
           </div>
         ) : (
@@ -86,9 +88,9 @@ export function CreateUserButton({ bus, grantPrivileged, roleOptions }: { bus: {
               onSubmit={async () => {
                 setErr(null);
                 const out = await run(async () => {
-                  try { return await apiRequest<{ setupLink: string | null }>("POST", "users", f); } catch (x) { setErr((x as ApiFailure).message); throw x; }
+                  try { return await apiRequest<{ setupLink: string | null; initialPassword?: string }>("POST", "users", f); } catch (x) { setErr((x as ApiFailure).message); throw x; }
                 }, { success: "User created." });
-                if (out) setLink(out.value.setupLink ?? "(no link generated — use password recovery)");
+                if (out) { setPw(out.value.initialPassword ?? null); setLink(out.value.setupLink ?? "(no link generated — use password recovery)"); }
               }}
               steps={[
                 { id: "person", title: "Person", valid: !!f.firstName.trim() && !!f.lastName.trim() && !!f.email.trim(), content: (<>
@@ -324,6 +326,44 @@ export function HolidayRequests({ requests, me }: { requests: { id: string; stat
   );
 }
 
+/** Gives an employee who is on the roster only (no sign-in) the ability to sign in, with the roles chosen here. */
+export function GiveSignInButton({ id, name, email, grantPrivileged, roleOptions }: { id: string; name: string; email: string; grantPrivileged: boolean; roleOptions: RoleOption[] }) {
+  const [open, setOpen] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [out, setOut] = useState<{ pw: string | null; link: string | null } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const { run, pending } = useAction();
+  const options = roleOptions.filter((r) => grantPrivileged || !r.privileged);
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => { setOpen(true); setOut(null); setErr(null); setRoles([]); }}>Give sign-in</Button>
+      <Modal open={open} onOpenChange={setOpen} title={`Give ${name} a sign-in`} description={`${email} keeps their unit and attendance record. They will sign in with this email.`}>
+        {out ? (
+          <div className="space-y-3">
+            <Banner tone="done" title="Sign-in created">Send {email} the initial password. It is shown only now. They will be asked to choose their own password when they first sign in.</Banner>
+            {out.pw ? <div><Label htmlFor={`gs-pw-${id}`}>Initial password</Label><div className="flex gap-2"><Input id={`gs-pw-${id}`} readOnly value={out.pw} className="font-mono" onFocus={(e) => e.currentTarget.select()} /><Button variant="secondary" onClick={() => { void navigator.clipboard?.writeText(out.pw!); toast.info("Password copied."); }}>Copy</Button></div></div> : null}
+            {out.link ? <div><Label htmlFor={`gs-link-${id}`}>Or a one-time setup link</Label><Input id={`gs-link-${id}`} readOnly value={out.link} onFocus={(e) => e.currentTarget.select()} /></div> : null}
+            <div className="flex justify-end"><Button onClick={() => setOpen(false)}>Done</Button></div>
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={async (e) => {
+            e.preventDefault(); setErr(null);
+            const r = await run(async () => { try { return await apiRequest<{ setupLink: string | null; initialPassword?: string }>("POST", "users", { employeeId: id, roles }); } catch (x) { setErr((x as ApiFailure).message); throw x; } }, { success: "Sign-in created." });
+            if (r) setOut({ pw: r.value.initialPassword ?? null, link: r.value.setupLink });
+          }}>
+            <fieldset><legend className="mb-1 text-sm font-medium">Roles</legend>
+              <div className="grid grid-cols-2 gap-1">{options.map((r) => (
+                <label key={r.code} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={roles.includes(r.code)} onChange={(e) => setRoles(e.target.checked ? [...roles, r.code] : roles.filter((x) => x !== r.code))} />{r.name}</label>))}</div>
+            </fieldset>
+            {err ? <p role="alert" className="text-sm text-[var(--critical-fg)]">{err}</p> : null}
+            <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending || roles.length === 0}>{pending ? "Creating…" : "Create sign-in"}</Button></div>
+          </form>
+        )}
+      </Modal>
+    </>
+  );
+}
+
 export function RosterToggle({ id, name, onRoster }: { id: string; name: string; onRoster: boolean }) {
   const { run } = useAction();
   return (
@@ -489,6 +529,63 @@ export function DiscardReportButton({ reportId, reportStatus, submissionStatus }
             )}
           </div>
         </div>
+      </Modal>
+    </>
+  );
+}
+
+/** Super Admin: switch a week's content lock and final lock off so reports can be created or finished by hand, then back on. */
+export function WeekLockSwitch({ weekId, weekLabel, suspended, disabled }: { weekId: string; weekLabel: string; suspended: boolean; disabled?: boolean }) {
+  const { run, pending } = useAction();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <>
+      <Button size="sm" variant={suspended ? "primary" : "secondary"} disabled={disabled} onClick={() => setOpen(true)}>{suspended ? "Restore locks" : "Suspend locks"}</Button>
+      <Modal open={open} onOpenChange={setOpen} title={`${suspended ? "Restore" : "Suspend"} the locks for ${weekLabel}?`}
+        description={suspended
+          ? "The content lock and final lock apply again. If their times have already passed, the week locks and is finalised at the next scheduled run, and any report not submitted scores as normal."
+          : "While suspended the week stays open: Business Unit Leads can create and edit goals and tasks, mark tasks and submit, whatever the clock says. The week is not locked or finalised until you restore the locks."}>
+        <form className="space-y-3" onSubmit={async (e) => {
+          e.preventDefault();
+          const ok = await run(() => apiRequest("POST", `reporting-weeks/${weekId}/lock-suspension`, { suspend: !suspended, reason }), { success: suspended ? "Locks restored." : "Locks suspended. The week is open for reporting." });
+          if (ok) { setOpen(false); setReason(""); }
+        }}>
+          <Field id={`lock-reason-${weekId}`} label="Reason" hint="Recorded in the audit trail."><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
+          <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={pending || !reason.trim()}>{suspended ? "Restore locks" : "Suspend locks"}</Button></div>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
+const WAT_OFFSET_MS = 3_600_000;   // Africa/Lagos is UTC+1 all year
+const toWatInput = (iso: string) => new Date(new Date(iso).getTime() + WAT_OFFSET_MS).toISOString().slice(0, 16);
+
+/** Set when reporting opens for one week (Lagos time), or put it back on the default. */
+export function WeekOpeningEditor({ weekId, weekLabel, opensAt, overridden }: { weekId: string; weekLabel: string; opensAt: string; overridden: boolean }) {
+  const { run, pending } = useAction();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(toWatInput(opensAt));
+  const [reason, setReason] = useState("");
+  const send = async (iso: string | null, success: string) => {
+    const ok = await run(() => apiRequest("POST", `reporting-weeks/${weekId}/opening`, { opensAt: iso, reason }), { success });
+    if (ok) { setOpen(false); setReason(""); }
+  };
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => { setValue(toWatInput(opensAt)); setOpen(true); }}>Change opening</Button>
+      <Modal open={open} onOpenChange={setOpen} title={`When does reporting open for ${weekLabel}?`}
+        description="Business Unit Leads can start the week's report from this moment (Lagos time). The content lock and final lock are not affected.">
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void send(`${value}:00+01:00`, "Opening time saved."); }}>
+          <Field id={`open-at-${weekId}`} label="Reporting opens (WAT)"><Input type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} required /></Field>
+          <Field id={`open-reason-${weekId}`} label="Reason" hint="Recorded in the audit trail."><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
+          <div className="flex flex-wrap justify-end gap-2">
+            {overridden ? <Button type="button" variant="ghost" disabled={pending || !reason.trim()} onClick={() => void send(null, "Back to the default opening time.")}>Reset to default</Button> : null}
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={pending || !reason.trim() || !value}>Save</Button>
+          </div>
+        </form>
       </Modal>
     </>
   );

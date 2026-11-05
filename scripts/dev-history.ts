@@ -70,7 +70,7 @@ async function main() {
         const title = GOAL_TITLES[(g + i) % GOAL_TITLES.length];
         const tasks = [{ description: "Draft the deliverable" }, { description: "Review it with the owner" }];
         const version = (must(await sb.from("weekly_reports").select("version").eq("id", reportId).single(), "version") as { version: number }).version;
-        const evaluation = evaluateSmart({ title, description: null, taskDescriptions: tasks.map((t) => t.description), subKrTitle: stretch ? null : sub.title, goalType: stretch ? "STRETCH" : "KR_ALIGNED" });
+        const evaluation = evaluateSmart({ title, description: null, subKrTitle: stretch ? null : sub.title, goalType: stretch ? "STRETCH" : "KR_ALIGNED" });
         await rpc("create_goal", { p_actor: u.id, p_report_id: reportId, p_goal_type: stretch ? "STRETCH" : "KR_ALIGNED", p_sub_kr_id: stretch ? null : sub.id,
           p_title: title, p_description: null, p_tasks: tasks, p_evaluation: evaluation, p_expected_version: version });
       }

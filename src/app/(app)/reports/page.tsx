@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, FileBarChart, Lightbulb, Wrench } from "lucide-react";
+import { Download, Lightbulb, Wrench } from "lucide-react";
 import { Chart } from "@/components/reports/charts";
 import { ReportFilters, paramString } from "@/components/reports/filters";
 import { ResultTable, SummaryTiles } from "@/components/reports/report-view";
@@ -8,7 +8,7 @@ import { Badge, buttonClass, Card, CardHeader, EmptyState, PageHeader } from "@/
 import { requireActor } from "@/lib/auth/actor";
 import { listQuarters } from "@/lib/data";
 import { availableReports, authoriseReport, readParams } from "@/lib/reports/access";
-import { BLOCKED_REPORTS, REPORTS, reportById } from "@/lib/reports/catalogue";
+import { REPORTS, reportById } from "@/lib/reports/catalogue";
 import { runInsights } from "@/lib/reports/insights-run";
 import { runReport } from "@/lib/reports/run";
 import type { ReportCategory } from "@/lib/reports/types";
@@ -110,18 +110,6 @@ export default async function ReportsOverview({ searchParams }: PageProps<"/repo
               </ul>
             </Card>
           ))}
-          <Card>
-            <CardHeader title="Not available yet" description="Requested or expected reports that cannot be produced truthfully from the data the application holds today." />
-            <ul className="divide-y divide-line">
-              {BLOCKED_REPORTS.map((b) => (
-                <li key={b.title} className="px-6 py-3 text-sm">
-                  <p className="flex flex-wrap items-center gap-2 font-medium"><FileBarChart className="h-4 w-4 text-muted" aria-hidden />{b.title}<Badge tone="locked">Blocked</Badge></p>
-                  <p className="mt-1 text-muted">{b.reason}</p>
-                  <p className="text-xs text-muted">Needs: {b.needs}</p>
-                </li>
-              ))}
-            </ul>
-          </Card>
         </section>
       </div>
     </>

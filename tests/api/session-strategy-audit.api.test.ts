@@ -120,7 +120,7 @@ describe("refused requests are audited", () => {
   it("a Business Unit Lead refused on a restricted route leaves an ACCESS_DENIED row without identifiers or content", async () => {
     const lead = await as("lead.eng@4core.local");
     const secret = randomUUID();                       // the idempotency key: request content must never reach the audit row
-    const r = await lead.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, idempotencyKey: secret });
+    const r = await lead.request("POST", `/api/v1/governance-sessions/${fake}/skip-okr`, { confirm: true, reason: "not allowed to skip", idempotencyKey: secret });
     expect(r.status).toBe(403);
     const db = new Client({ connectionString: process.env.DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54422/postgres" });
     await db.connect();

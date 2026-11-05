@@ -10,12 +10,15 @@ import { LockScheduleForm } from "../lock-schedule-form";
 import { RetentionForm } from "../retention-form";
 import { ReminderSettings } from "../reminder-settings";
 import { PenaltyRateForm } from "../admin-actions";
+import { listAllowedDomains } from "@/lib/data/governance";
+import { EmailDomains } from "./email-domains";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const actor = await requireActor();
   const [rate, schedule] = await Promise.all([currentPenaltyRate(), getLockSchedule()]);
+  const domains = actor.roles.includes("SUPER_ADMIN") ? (await listAllowedDomains().catch(() => [])).map((d) => d.domain) : null;
   const retention = can(actor, "retention.configure") ? await getRetention() : null;
   const mailNow = await resolveEmail().catch(() => ({ transport: null }));
   const emailSummary = can(actor, "reminders.configure") ? await getEmailSummary() : null;
@@ -23,6 +26,12 @@ export default async function SettingsPage() {
     <>
       <PageHeader title="Settings" description="Scoring penalty, lock times, reminders and data retention. Changes to governance settings are approved by a different person." />
       <div className="space-y-6">
+        {domains ? (
+          <Card>
+            <CardHeader title="Approved email domains" description="Only people whose email is on one of these domains can be added or sign in. The Super Admin account is the one exception and may use any address." />
+            <EmailDomains domains={domains} />
+          </Card>
+        ) : null}
         {can(actor, "integrity_penalty.configure") ? (
           <Card>
             <CardHeader title="Integrity penalty rate" description="Applied as a percentage of a BU's original weekly base score when a DONE task is corrected to NOT_DONE. Multiple applied penalties are summed, then applied once. Past scores never change when this rate changes." />
@@ -32,8 +41,8 @@ export default async function SettingsPage() {
 
         {can(actor, "reporting.week.manage") ? (
           <Card>
-            <CardHeader title="Lock times" description="When goals and tasks lock and when a week is scored. Changes are approved by a different person and never alter a week that already exists." />
-            <LockScheduleForm active={schedule.active} history={schedule.history} firstAffected={schedule.first_affected_week} canChange />
+            <CardHeader title="Reporting window and locks" description="When reporting opens, when goals and tasks lock and when a week is scored. A change applies to weeks generated afterwards; existing weeks move only when you apply the policy to them." />
+            <LockScheduleForm active={schedule.active} history={schedule.history} firstAffected={schedule.first_affected_week} canChange reapplicable={schedule.weeks_reapplicable ?? 0} />
           </Card>
         ) : null}
         {retention ? (

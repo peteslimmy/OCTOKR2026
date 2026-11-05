@@ -98,6 +98,8 @@ async function main() {
   const eng = await bu("ENG", "Engineering");
   const sales = await bu("SALES", "Sales");
 
+  // accounts exist only on approved email domains: the seed people use this one
+  must(await sb.from("allowed_email_domains").upsert({ domain: "4core.local" }), "approve the seed domain");
   const people: [string, string, string, string, string[]][] = [
     ["admin@4core.local", "Ada", "Admin", hqBu, ["ADMIN"]],
     ["hr@4core.local", "Hana", "Resources", hr, ["HR", "BU_LEAD"]],

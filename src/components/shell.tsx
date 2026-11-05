@@ -3,8 +3,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
 import {
-  AlertTriangle, Banknote, Bell, BookOpen, Bookmark, Building2, CalendarDays, ChevronDown, FileBarChart, FileClock, Inbox, Landmark, LayoutDashboard, Lightbulb, ListChecks,
-  Lock, LogOut, Menu, Palette, PanelsTopLeft, Presentation, ScrollText, Search, ShieldCheck, SlidersHorizontal, Target, TrendingUp, Upload, UserCog, Users, Wallet, Wrench, X,
+  AlertTriangle, Banknote, Bell, BookOpen, Bookmark, Building2, CalendarDays, ChevronDown, FileBarChart, FileClock, Flag, Inbox, Landmark, LayoutDashboard, Lightbulb, ListChecks,
+  Lock, LogOut, Menu, NotebookPen, Palette, PanelLeftClose, PanelLeftOpen, PanelsTopLeft, Presentation, ScrollText, Search, ShieldCheck, SlidersHorizontal, Target, TrendingUp, Upload, UserCog, Users, Wallet, Wrench, X,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
@@ -17,7 +17,7 @@ const ICONS = {
   dashboard: LayoutDashboard, strategy: Target, weekly: ListChecks, performance: TrendingUp, presentation: Presentation, reports: FileBarChart, insights: Lightbulb,
   builder: Wrench, saved: Bookmark, governance: Landmark, violations: AlertTriangle, amendments: FileClock, finance: Wallet, ledger: BookOpen, disbursement: Banknote,
   units: Building2, people: Users, roles: ShieldCheck, import: Upload, calendar: CalendarDays, settings: SlidersHorizontal, approvals: Inbox, branding: Palette, audit: ScrollText,
-  account: UserCog, site: PanelsTopLeft,
+  account: UserCog, site: PanelsTopLeft, bugoals: Flag, notes: NotebookPen,
 } as const;
 export type IconName = keyof typeof ICONS;
 export interface NavItem { href: string; label: string; icon: IconName; hint?: string; exact?: boolean }
@@ -32,6 +32,8 @@ const STORE = "okr.nav.collapsed";
 // Which groups the person collapsed is a per-browser convenience, read without an effect so the server render stays stable.
 const subscribeNav = (cb: () => void) => { window.addEventListener("okr-nav", cb); return () => window.removeEventListener("okr-nav", cb); };
 const readNav = () => { try { return localStorage.getItem(STORE) ?? "[]"; } catch { return "[]"; } };
+const SIDEBAR = "okr.sidebar.hidden";
+const readSidebar = () => { try { return localStorage.getItem(SIDEBAR) === "1"; } catch { return false; } };
 const matches = (path: string, href: string) => path === href || path.startsWith(href + "/");
 
 export function Shell({ groups, create, brand, user, quarterLabel, locks = [], unread, children }: {
@@ -46,6 +48,11 @@ export function Shell({ groups, create, brand, user, quarterLabel, locks = [], u
   const rawCollapsed = useSyncExternalStore(subscribeNav, readNav, () => "[]");
   const collapsed = useMemo<string[]>(() => { try { return JSON.parse(rawCollapsed) as string[]; } catch { return []; } }, [rawCollapsed]);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const sidebarHidden = useSyncExternalStore(subscribeNav, readSidebar, () => false);
+  const toggleSidebar = () => {
+    try { localStorage.setItem(SIDEBAR, sidebarHidden ? "0" : "1"); } catch { /* preferences are optional */ }
+    window.dispatchEvent(new Event("okr-nav"));
+  };
 
   const toggle = (label: string) => {
     const next = collapsed.includes(label) ? collapsed.filter((x) => x !== label) : [...collapsed, label];
@@ -105,11 +112,15 @@ export function Shell({ groups, create, brand, user, quarterLabel, locks = [], u
         <button className="rounded-lg p-2 hover:bg-surface lg:hidden" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(true)}>
           <Menu className="h-5 w-5" aria-hidden />
         </button>
-        <Link href="/dashboard" aria-label={`${brand.name}: dashboard`} className="flex items-center gap-2 font-semibold">
+        <button type="button" className="hidden rounded-lg p-2 hover:bg-surface lg:inline-flex" onClick={toggleSidebar} aria-pressed={sidebarHidden}
+          aria-label={sidebarHidden ? "Show navigation sidebar" : "Hide navigation sidebar"} title={sidebarHidden ? "Show sidebar" : "Hide sidebar"}>
+          {sidebarHidden ? <PanelLeftOpen className="h-5 w-5" aria-hidden /> : <PanelLeftClose className="h-5 w-5" aria-hidden />}
+        </button>
+        <Link href="/dashboard" aria-label={`${brand.name}: dashboard`} className="flex flex-col items-start gap-0.5 font-semibold leading-none">
           {brand.logoUrl
             ? <BrandLogo src={brand.logoUrl} height={brand.logoHeight} />
             : <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700 text-sm font-bold text-white" aria-hidden>{brand.shortName}</span>}
-          <span className="hidden min-[430px]:inline">{brand.name}</span>
+          <span className="max-w-[14rem] truncate text-[11px] tracking-tight text-ink">{brand.name}</span>
         </Link>
         {quarterLabel ? <span className="hidden rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 sm:inline">{quarterLabel}</span> : null}
         {locks.length > 0 ? (
@@ -147,7 +158,7 @@ export function Shell({ groups, create, brand, user, quarterLabel, locks = [], u
       </header>
 
       <div className="flex">
-        <aside className="sticky top-14 hidden h-[calc(100vh-56px)] w-64 shrink-0 overflow-y-auto border-r border-line bg-panel/90 backdrop-blur lg:block">{renderLinks("d")}</aside>
+        <aside className={clsx("sticky top-14 hidden h-[calc(100vh-56px)] w-64 shrink-0 overflow-y-auto border-r border-line bg-panel/90 backdrop-blur", !sidebarHidden && "lg:block")}>{renderLinks("d")}</aside>
         {open ? (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} aria-hidden />
@@ -157,7 +168,7 @@ export function Shell({ groups, create, brand, user, quarterLabel, locks = [], u
             </aside>
           </div>
         ) : null}
-        <main id="main" className="page-enter min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main id="main" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
       <Palette_ open={paletteOpen} onOpenChange={setPaletteOpen} groups={groups} create={create} onGo={(href) => { setPaletteOpen(false); router.push(href); }} />
     </div>

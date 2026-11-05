@@ -104,7 +104,7 @@ describe("concurrent attendance operations", () => {
     const wk = await rpc(admin, "ensure_reporting_week", "2040-01-09");
     const session = await rpc(admin, "create_governance_session", ids.hr, wk);
     const cs = await Promise.all([conn(), conn(), conn()]);
-    const out = await Promise.all(cs.map((c) => errorOf(rpc(c, "skip_okr_session", ids.hr, session, true, "conc-skip"))));
+    const out = await Promise.all(cs.map((c) => errorOf(rpc(c, "skip_okr_session", ids.hr, session, true, "conc-skip", "Test reason: session not held"))));
     expect(out.every((x) => x === null)).toBe(true); // same key: one executes, the rest replay
     const rows = (await admin.query("select status, count(*)::int n from attendance_records where governance_session_id = $1 group by status", [session])).rows;
     expect(rows).toHaveLength(1);

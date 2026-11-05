@@ -111,13 +111,13 @@ export interface Column { label: string; align?: "left" | "right"; srOnly?: bool
  * The one table layout: a scrollable wrapper (never widens the page), a screen-reader caption, a header row of real column headers,
  * and consistent cell spacing and row dividers. Put plain <tr><td> rows inside; cell padding comes from here, not from each page.
  */
-export function DataTable({ caption, columns, children, className }: { caption: string; columns: Column[]; children: ReactNode; className?: string }) {
+export function DataTable({ caption, columns, children, className, maxHeight = "32rem" }: { caption: string; columns: Column[]; children: ReactNode; className?: string; maxHeight?: string | null }) {
   return (
-    <div className="relative max-w-full min-w-0 overflow-x-auto [contain:inline-size]" tabIndex={0} role="region" aria-label={caption}>
+    <div className="relative max-w-full min-w-0 overflow-auto [contain:inline-size]" style={maxHeight ? { maxHeight } : undefined} tabIndex={0} role="region" aria-label={caption}>
       <table className={clsx("w-full text-left text-sm [&_td]:px-3 [&_td]:py-2 [&_td:first-child]:pl-6 [&_td:last-child]:pr-6 [&_tbody_th]:px-3 [&_tbody_th]:py-2 [&_tbody_th]:font-medium [&_tbody_th:first-child]:pl-6 [&_tbody_tr]:border-b [&_tbody_tr]:border-line [&_tbody_tr:last-child]:border-0 [&_tbody_tr]:align-top", className)}>
         <caption className="sr-only">{caption}</caption>
         <thead>
-          <tr className="border-b border-line text-muted">
+          <tr className="border-b border-line bg-panel text-muted [&>th]:sticky [&>th]:top-0 [&>th]:z-[1] [&>th]:bg-panel">
             {columns.map((c, i) => (
               <th key={i} scope="col" className={clsx("px-3 py-2 font-medium first:pl-6 last:pr-6", c.align === "right" && "text-right")}>
                 {c.srOnly ? <span className="sr-only">{c.label}</span> : c.label}

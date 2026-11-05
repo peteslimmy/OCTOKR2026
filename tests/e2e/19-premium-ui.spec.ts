@@ -17,11 +17,12 @@ test.describe("navigation and quick actions", () => {
     await loginAs(page, "hr@4core.local");
     await page.goto("/dashboard");
     const nav = page.getByRole("navigation", { name: "Primary" });
-    for (const group of ["Overview", "Execution", "Governance", "Finance", "Insights"]) await expect(nav.getByRole("button", { name: group })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Violations" })).toBeVisible();
-    await page.getByRole("button", { name: "Create" }).click();
-    await page.getByRole("menuitem", { name: /Report a violation/ }).click();
-    await expect(page.getByRole("dialog", { name: "Raise a violation" })).toBeVisible();
+    for (const group of ["Overview", "Execution", "Governance", "Insights"]) await expect(nav.getByRole("button", { name: group })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Violations & Funds" })).toBeVisible();
+    await page.keyboard.press("Control+k");                                      // the quick-action palette lists what the person can start
+    await page.getByRole("textbox", { name: "Search" }).fill("Report a violation");
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Report a violation" })).toBeVisible();
   });
 
   test("Ctrl K finds a page and goes to it", async ({ page }) => {
@@ -31,7 +32,7 @@ test.describe("navigation and quick actions", () => {
     await page.getByRole("textbox", { name: "Search" }).fill("violat");
     await expect(page.getByRole("option", { name: /Violations/ }).first()).toBeVisible();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/governance\/violations/);
+    await expect(page).toHaveURL(/\/violations/);
   });
 
   test("an Admin finds units, people, branding and settings as separate pages", async ({ page }) => {
@@ -47,8 +48,8 @@ test.describe("navigation and quick actions", () => {
 test.describe("step forms", () => {
   test("a violation is raised in steps with a review before anything is sent", async ({ page }) => {
     await loginAs(page, "hr@4core.local");
-    await page.goto("/governance/violations?new=violation");
-    const dialog = page.getByRole("dialog", { name: "Raise a violation" });
+    await page.goto("/violations?tab=violations&new=violation");
+    const dialog = page.getByRole("dialog", { name: "Report a violation" });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Next" })).toBeDisabled();           // nothing chosen yet
     await dialog.getByLabel("Staff member").selectOption({ index: 1 });
@@ -64,15 +65,15 @@ test.describe("step forms", () => {
 
   test("a disbursement request needs an amount before it can move on", async ({ page }) => {
     await loginAs(page, "hr@4core.local");
-    await page.goto("/finance?new=disbursement");
-    const dialog = page.getByRole("dialog", { name: "Request a disbursement" });
+    await page.goto("/violations?tab=fund&new=disbursement");
+    const dialog = page.getByRole("dialog", { name: "Request funds" });
     await expect(dialog.getByRole("button", { name: "Next" })).toBeDisabled();
     await dialog.getByLabel("Amount (₦)").fill("1500");
     await dialog.getByRole("button", { name: "Next" }).click();
-    await dialog.getByLabel("Purpose").fill("Team lunch");
+    await dialog.getByLabel("Purpose").selectOption({ index: 1 });
     await dialog.getByLabel("Justification").fill("Quarter close celebration");
     await dialog.getByRole("button", { name: "Next" }).click();
-    await expect(dialog.getByLabel("Request summary")).toContainText("Team lunch");
+    await expect(dialog.getByLabel("Request summary")).toContainText("Quarter close celebration");
   });
 });
 
@@ -82,13 +83,14 @@ test.describe("interactive dashboard", () => {
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
     await expect(page.getByText("Total tasks", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Units by week" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
+    await expect(page.getByText("Total goals", { exact: true })).toBeVisible();
+    await expect(page.getByText("Performance: tasks against goals")).toBeVisible();
+    // the two panels that were removed stay gone
+    await expect(page.getByRole("heading", { name: "Units by week" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Activity" })).toHaveCount(0);
 
-    // the heat map can be read three ways
-    await page.getByRole("radio", { name: "Completion" }).click();
-    await expect(page.getByRole("table", { name: /Completion for each unit in each week/ })).toBeAttached();
-    await page.getByRole("radio", { name: "Score", exact: true }).click();
+    // performance week on week groups by week, month, quarter or year
+    for (const by of ["Month", "Quarter", "Year", "Week"]) await page.getByRole("group", { name: "Group the weeks by" }).getByRole("button", { name: by, exact: true }).click();
 
     // search narrows every panel
     const table = page.getByRole("table", { name: /Business Units and Departments compared/ });
@@ -98,13 +100,6 @@ test.describe("interactive dashboard", () => {
     await expect(table.locator("tbody tr")).toHaveCount(0);
     await page.getByRole("textbox", { name: "Search units" }).fill("");
     await expect(table.locator("tbody tr")).toHaveCount(before);
-
-    // the activity chart switches between its views, and the table behind it opens
-    await page.getByRole("radio", { name: "Scores", exact: true }).click();
-    await page.getByRole("radio", { name: "Reporting" }).click();
-    await page.getByRole("button", { name: "Activity options" }).click();
-    await page.getByRole("menuitem", { name: "View as table" }).click();
-    await expect(page.getByRole("table", { name: "Weekly figures behind the chart" })).toBeVisible();
 
     // Export downloads a CSV
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export" }).click()]);
@@ -116,30 +111,15 @@ test.describe("interactive dashboard", () => {
     await expectNoA11yViolations(page, "interactive dashboard");
   });
 
-  test("the 3D explorer draws, or says plainly that this browser cannot", async ({ page }) => {
+  test("the week dropdown chooses one week or the whole quarter", async ({ page }) => {
     await loginAs(page, "exec@4core.local");
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
-    const section = page.getByRole("heading", { name: "Explore in 3D" });
-    await section.scrollIntoViewIfNeeded();
-    const threeD = page.getByRole("img", { name: /3D stacked columns/ });
-    const noWebgl = page.getByText("3D view is not available in this browser").first();
-    const empty = page.getByText(/Nothing to draw yet|No tasks recorded for this selection yet/).first();
-    await expect(threeD.or(noWebgl).or(empty)).toBeVisible({ timeout: 20_000 });
-  });
-
-  test("the week slider narrows the range and says which weeks are shown", async ({ page }) => {
-    await loginAs(page, "exec@4core.local");
-    await page.goto("/dashboard");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: /W\d+ – W\d+/ }).click();
-    const group = page.getByRole("group", { name: "Weeks" });
-    await expect(group).toBeVisible();
-    const last = group.getByRole("slider", { name: "Weeks: last" });
-    if (Number(await last.getAttribute("max")) > 0) {
-      await last.focus();
-      await page.keyboard.press("ArrowLeft");
-      await expect(group).toContainText("–");
-    }
+    const week = page.getByRole("combobox", { name: "Week" });
+    await expect(week).toBeVisible();
+    await week.selectOption({ index: 0 });
+    await expect(page.getByText("Total tasks", { exact: true })).toBeVisible();
+    await week.selectOption("all");
+    await expect(page.getByText(/Whole quarter/).first()).toBeVisible();
   });
 });

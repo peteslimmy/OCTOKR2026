@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
+import { describeFailure, FailurePanel, type Failure } from "@/components/import-feedback";
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Input, Label, NativeSelect, Select, DataTable } from "@/components/ui/primitives";
 import { ENTITIES, applyMappingFor, mappingProblemsFor, type EntityId, type Mapping } from "@/lib/import/entities";
 import { errorReportCsv, type Policy, type RowResult, type ValidationSummary } from "@/lib/import/employees";
@@ -41,7 +42,7 @@ export function ImportWizard({ entity }: { entity: EntityId }) {
   const cfg = ENTITIES[entity];
   const [step, setStep] = useState<Step>("upload");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [mapping, setMapping] = useState<Mapping | null>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
@@ -56,7 +57,7 @@ export function ImportWizard({ entity }: { entity: EntityId }) {
   const seq = useRef(0);
   const status = useRef<HTMLParagraphElement>(null);
 
-  const fail = (e: unknown) => setError(e instanceof ApiFailure ? e.message : "Something went wrong. Nothing was changed.");
+  const fail = (e: unknown) => setError(describeFailure(e, "The import"));
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -138,7 +139,7 @@ export function ImportWizard({ entity }: { entity: EntityId }) {
       </nav>
 
       <p ref={status} tabIndex={-1} className="sr-only" role="status">{busy ? "Working…" : validation ? `${validation.summary.blocked} rows blocked, ${validation.summary.total - validation.summary.blocked} ready.` : ""}</p>
-      {error ? <div role="alert" className="rounded-lg border border-[var(--critical-fg)] bg-[var(--critical-bg)] px-4 py-3 text-sm text-[var(--critical-fg)]">{error}</div> : null}
+      {error ? <FailurePanel f={error} /> : null}
 
       {step === "upload" ? (
         <Card>

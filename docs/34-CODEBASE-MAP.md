@@ -489,3 +489,16 @@ For a change to be done, the matching lane must exist and pass, plus `typecheck`
 
 Lint baseline: 0 errors, 9 warnings (unused locals, one `exhaustive-deps` in `shell.tsx`). Treat
 those warnings as pre-existing, not as something your change introduced.
+
+## OKR Session Notes module map (added with ADR-089 to ADR-093)
+
+| Concern | Where |
+|---|---|
+| Migrations | `supabase/migrations/20261105000001_session_notes_core.sql` (types, sessions, notes, versions, links, timeline, permissions, RLS), `…0002_session_registers.sql` (decisions, actions, risks, carry-forward, reminders), `…0003_session_minutes_search_dashboard.sql` (attachments, minutes, exports record, read models) |
+| Pure logic (tested) | `src/lib/session-notes/`: `markdown.ts` (the only place note text becomes HTML), `editor-ops.ts`, `autosave.ts`, `minutes.ts`, `registers-report.ts`, `ai-summary.ts`, `constants.ts`, `types.ts`, `schemas.ts`; `minutes-pdf.ts` (server only) |
+| Read models | `src/lib/data/session-notes.ts` (every call runs as the signed-in person) |
+| API | `src/app/api/v1/okr-sessions`, `okr-notes`, `okr-decisions`, `okr-actions`, `okr-risks`, `okr-links`, `okr-minutes`, `okr-attachments`, `okr-exports`, `okr-session-dashboard`, `okr-link-options`, `okr-people`, `okr-session-types` |
+| Pages | `src/app/(app)/session-notes/` (library, `[sessionId]`, `registers`, `types`); Presentation mode card in `src/app/(app)/presentation/session-notes-launcher.tsx` |
+| Components | `src/components/session-notes/` (`workspace`, `notes-panel`, `note-editor`, `registers-panels`, `action-card`, `minutes-panel`, `misc-panels`, `link-picker`, `forms`, `common`) |
+| Tests | `tests/db/session_notes.test.ts`, `src/lib/session-notes/__tests__`, `tests/api/session-notes.api.test.ts`, `tests/e2e/25-session-notes.spec.ts` |
+| Request flow | the standard one (browser → `api()` wrapper → `ctx.rpc` → definer function) for every write; every read through `userClient()` and row-level security |

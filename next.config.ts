@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   // Fully dynamic, authenticated application: no prerendered/cached shells.
   cacheComponents: false,
   poweredByHeader: false,
+  // pages already visited in the last 30 seconds open instantly from the browser's cache; saving a change refreshes them
+  experimental: { staleTimes: { dynamic: 30, static: 180 } },
   // the container image (Dockerfile) builds a self-contained server; a normal build and `next start` are unchanged
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   // report exports: these load data files / native streams at runtime and must not be bundled

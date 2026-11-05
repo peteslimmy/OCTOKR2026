@@ -4,6 +4,7 @@ import { wat } from "@/components/status";
 import { Badge, Card, CardHeader, DataTable, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
 import { userClient } from "@/lib/supabase/server";
+import { RollbackCard } from "../rollback-card";
 import { HistoryWizard } from "./history-wizard";
 
 export const metadata: Metadata = { title: "Import historical reports" };
@@ -28,13 +29,14 @@ export default async function Page() {
               {batches.map((b) => (
                 <tr key={b.id}>
                   <td className="whitespace-nowrap">{wat(b.created_at)}</td><td className="break-all">{b.file_name}</td><td className="tabular-nums">{b.rows}</td>
-                  <td><Badge tone={b.status === "COMMITTED" ? "done" : "undefined"}>{b.status === "COMMITTED" ? "Imported" : b.status === "STAGED" ? "Checked, not imported" : "Not finished"}</Badge></td>
+                  <td><Badge tone={b.status === "COMMITTED" ? "done" : "undefined"}>{b.status === "COMMITTED" ? "Imported" : b.status === "STAGED" ? "Checked, not imported" : b.status === "VOIDED" ? "Rolled back" : "Not finished"}</Badge></td>
                   <td className="tabular-nums">{b.reports ?? "—"}</td><td className="tabular-nums">{b.goals ?? "—"}</td><td className="tabular-nums">{b.tasks ?? "—"}</td>
                 </tr>
               ))}
             </DataTable>
           )}
         </Card>
+        <RollbackCard kind="history" />
       </div>
     </>
   );

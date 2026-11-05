@@ -1,30 +1,54 @@
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { api, fail } from "@/lib/api/handler";
 import { adminClient } from "@/lib/supabase/admin";
 
 // Roles are data (ADR-069): the shape is checked here, whether the role exists and may be granted is checked by the database.
+/** A first-login password that passes the password policy: 14 characters, no look-alikes (0/O, 1/l/I), at least one of each class. */
+function initialPassword(): string {
+  const sets = ["ABCDEFGHJKLMNPQRSTUVWXYZ", "abcdefghijkmnopqrstuvwxyz", "23456789"];
+  const all = sets.join("");
+  const chars = [...sets.map((s) => s[randomInt(s.length)]), ...Array.from({ length: 11 }, () => all[randomInt(all.length)])];
+  for (let i = chars.length - 1; i > 0; i--) { const j = randomInt(i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+  return chars.join("");
+}
+
 const ROLE_CODE = z.string().regex(/^[A-Z][A-Z0-9_]{1,29}$/);
 
 /**
  * Creates the auth identity and the application user. The domain function validates the actor's
  * right to grant each role BEFORE we keep the identity; on any failure the auth user is removed.
- * A one-time invite link (password recovery) is returned so no password is ever chosen on the user's behalf.
+ * A generated first-login password and a one-time setup link are returned once, for the administrator to pass on; the user is made to change the password when they first sign in.
  */
 export const POST = api(
   {
+    // either a new person (name, email and unit) or an existing employee who has no sign-in yet (employeeId: the person's details are read from the employee record)
     body: z.object({
-      email: z.string().trim().toLowerCase().email().max(200),
-      firstName: z.string().trim().min(1).max(100),
-      lastName: z.string().trim().min(1).max(100),
-      businessUnitId: z.string().uuid(),
+      employeeId: z.string().uuid().optional(),
+      email: z.string().trim().toLowerCase().email().max(200).optional(),
+      firstName: z.string().trim().min(1).max(100).optional(),
+      lastName: z.string().trim().min(1).max(100).optional(),
+      businessUnitId: z.string().uuid().optional(),
       roles: z.array(ROLE_CODE).min(1).max(20),
-    }),
+    }).refine((b) => b.employeeId || (b.email && b.firstName && b.lastName && b.businessUnitId), { message: "Name, email and unit are required." }),
   },
-  async ({ actor, body, correlationId, rpc }) => {
+  async ({ actor, body: input, correlationId, rpc }) => {
     if (!actor.permissions.has("users.manage")) throw fail("PERMISSION_DENIED", 403, "You do not have permission to do this.");
     const admin = adminClient(correlationId);
-    const created = await admin.auth.admin.createUser({ email: body.email, password: randomBytes(24).toString("base64url"), email_confirm: true });
+    let person = { email: input.email ?? "", firstName: input.firstName ?? "", lastName: input.lastName ?? "", businessUnitId: input.businessUnitId ?? "" };
+    if (input.employeeId) {
+      const { data: emp } = await admin.from("employees").select("email, first_name, last_name, business_unit_id, employment_status, users(id)").eq("id", input.employeeId).maybeSingle();
+      if (!emp) throw fail("NOT_FOUND", 404, "That employee was not found.");
+      if (emp.employment_status !== "ACTIVE") throw fail("VALIDATION_ERROR", 422, "Only an active employee can be given a sign-in.");
+      if (Array.isArray(emp.users) ? emp.users.length > 0 : !!emp.users) throw fail("VALIDATION_ERROR", 422, "This person already has a sign-in.");
+      person = { email: String(emp.email).trim().toLowerCase(), firstName: emp.first_name, lastName: emp.last_name, businessUnitId: emp.business_unit_id };
+    }
+    const body = { ...person, roles: input.roles };
+    // only approved email domains may have an account (the Super Admin keeps the approved list)
+    const { data: approved } = await admin.from("allowed_email_domains").select("domain").eq("domain", body.email.split("@")[1] ?? "").maybeSingle();
+    if (!approved) throw fail("VALIDATION_ERROR", 422, `The domain @${body.email.split("@")[1]} is not approved. Ask the Super Admin to approve it under Administration > Settings.`);
+    const password = initialPassword();
+    const created = await admin.auth.admin.createUser({ email: body.email, password, email_confirm: true });
     if (created.error || !created.data.user) throw fail("VALIDATION_ERROR", 422, "That email address cannot be used.");
     const authId = created.data.user.id;
     try {
@@ -35,7 +59,8 @@ export const POST = api(
       await admin.auth.admin.deleteUser(authId);
       throw e;
     }
+    await admin.from("users").update({ must_change_password: true }).eq("id", authId);
     const link = await admin.auth.admin.generateLink({ type: "recovery", email: body.email });
-    return { id: authId, setupLink: link.data?.properties?.action_link ?? null };
+    return { id: authId, initialPassword: password, setupLink: link.data?.properties?.action_link ?? null };
   },
 );

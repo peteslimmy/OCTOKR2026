@@ -32,13 +32,14 @@ const balance = async () => Number((await query<{ b: string }>("select fund_bala
 test.describe.serial("ledger reversal", () => {
   test("only finance-side roles reach the ledger, and only the right ones see the controls, and the ledger page is accessible", async ({ page }) => {
     await loginAs(page, "hr@4core.local");
-    await page.goto("/finance/ledger");
-    await expect(page.getByText("You do not have access to the ledger")).toBeVisible();
+    await page.goto("/violations?tab=fund&view=ledger");
+    await expect(page.getByRole("link", { name: "Ledger", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("table", { name: "Violation fund ledger" })).toHaveCount(0);
     await loginAs(page, "exec@4core.local");
-    await page.goto("/finance/ledger");
-    await expect(page.getByText("You do not have access to the ledger")).toBeVisible();
+    await page.goto("/violations?tab=fund&view=ledger");
+    await expect(page.getByRole("table", { name: "Violation fund ledger" })).toHaveCount(0);
     await loginAs(page, "admin@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await expect(rowFor(page, refA).getByRole("button", { name: /Request reversal/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Emergency reversal/ })).toHaveCount(0);        // Super Admin only
     await expectNoA11yViolations(page, "ledger with reversal controls");
@@ -48,7 +49,7 @@ test.describe.serial("ledger reversal", () => {
     const start = await balance();
     // 1. an Admin asks
     await loginAs(page, "admin@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await rowFor(page, refA).getByRole("button", { name: /Request reversal/ }).click();
     await page.getByRole("dialog").getByLabel("Reason (required)").fill("Recorded against the wrong person");
     await page.getByRole("dialog").getByRole("button", { name: "Send request" }).click();
@@ -62,7 +63,7 @@ test.describe.serial("ledger reversal", () => {
 
     // 2. Finance approves
     await loginAs(page, "finance@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await page.getByRole("button", { name: /^Approve/ }).first().click();
     await page.getByRole("dialog").getByRole("button", { name: "Approve", exact: true }).click();
     await answerStepUpIfAsked(page, "finance@4core.local");
@@ -71,7 +72,7 @@ test.describe.serial("ledger reversal", () => {
 
     // 3. a Super Admin posts it
     await loginAs(page, "superadmin@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await page.getByRole("button", { name: /^Post reversal/ }).first().click();
     await answerStepUpIfAsked(page, "superadmin@4core.local");
     await expect(page.getByText("Reversal posted to the ledger.")).toBeVisible();
@@ -85,7 +86,7 @@ test.describe.serial("ledger reversal", () => {
 
   test("the requester sees that someone else must decide, and a rejection needs a reason", async ({ page }) => {
     await loginAs(page, "finance@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await rowFor(page, refB).getByRole("button", { name: /Request reversal/ }).click();
     await page.getByRole("dialog").getByLabel("Reason (required)").fill("Duplicate entry");
     await page.getByRole("dialog").getByRole("button", { name: "Send request" }).click();
@@ -93,7 +94,7 @@ test.describe.serial("ledger reversal", () => {
     await expect(page.getByText("Reversal requested. A different person must approve it.")).toBeVisible();
     await expect(page.getByRole("list", { name: "Ledger reversal requests" })).toContainText("You made this request, so someone else must decide it.");
     await loginAs(page, "superadmin@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await page.getByRole("button", { name: /^Reject/ }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("button", { name: "Reject request" })).toBeDisabled();
@@ -107,7 +108,7 @@ test.describe.serial("ledger reversal", () => {
   test("a Super Admin can reverse in one step in an emergency, with a full reason, and finance is alerted", async ({ page }) => {
     const start = await balance();
     await loginAs(page, "superadmin@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     await rowFor(page, refB).getByRole("button", { name: /Emergency reversal/ }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/without the usual second person/)).toBeVisible();
@@ -127,7 +128,7 @@ test.describe.serial("ledger reversal", () => {
   test("works on a phone without sideways page scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await loginAs(page, "superadmin@4core.local");
-    await page.goto("/finance/ledger");
+    await page.goto("/violations?tab=fund&view=ledger");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });

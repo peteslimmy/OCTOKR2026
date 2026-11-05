@@ -4,7 +4,7 @@ import { wat } from "@/components/status";
 import { Badge, buttonClass, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
 import { activeWeeks, listBusinessUnits, recentFinalWeeks, type ReportingWeek } from "@/lib/data";
-import { getWeekQuote, listAmendments, listSessionCorrections, listViolations, sessionForWeek } from "@/lib/data/governance";
+import { getWeekQuote, listActiveEmployees, listAmendments, listSessionCorrections, listViolations, sessionForWeek } from "@/lib/data/governance";
 import { CreateSessionButton, QuoteForm, QuoteStepButton } from "./governance-actions";
 import { CorrectionQueue } from "./session-correction-actions";
 import { formatWeekLabel } from "@/lib/domain/week-label";
@@ -27,6 +27,7 @@ export default async function GovernancePage() {
     can(actor, "violation.create") ? listViolations() : Promise.resolve([]),
     listBusinessUnits(),
   ]);
+  const people = can(actor, "quote.record") ? (await listActiveEmployees().catch(() => [])).map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}`, unit: e.business_units?.name ?? "" })) : [];
   const open = violations.filter((v) => v.status === "OPEN");
   const seesCorrections = manage || can(actor, "attendance.session.outcome.request") || can(actor, "attendance.session.outcome.approve");
   const corrections = seesCorrections ? await listSessionCorrections() : [];
@@ -38,7 +39,7 @@ export default async function GovernancePage() {
         actions={<>
           <Link href="/governance/amendments" className={buttonClass("secondary", "sm")}>Amendments{pending.length ? ` (${pending.length} pending)` : ""}</Link>
           {can(actor, "quarter.score.amend") || can(actor, "weekly_report.review") ? <Link href="/governance/late-reports" className={buttonClass("secondary", "sm")}>Late reports</Link> : null}
-          {can(actor, "violation.create") ? <Link href="/governance/violations" className={buttonClass("secondary", "sm")}>Violations{open.length ? ` (${open.length} open)` : ""}</Link> : null}
+          {can(actor, "violation.create") ? <Link href="/violations?tab=violations" className={buttonClass("secondary", "sm")}>Violations{open.length ? ` (${open.length} open)` : ""}</Link> : null}
         </>} />
       <Card>
         <CardHeader title="OKR sessions by reporting week" description="Each session presents the week that final-locks that day." />
@@ -62,7 +63,7 @@ export default async function GovernancePage() {
                   {quote && can(actor, "quote.approve") && quote.status === "submitted" && actor.id !== quote.recorded_by && actor.id !== quote.submitted_by ? <QuoteStepButton quoteId={quote.id} step="approve" /> : null}
                   {quote && can(actor, "quote.approve") && quote.status === "approved" ? <QuoteStepButton quoteId={quote.id} step="publish" /> : null}
                   {quote && can(actor, "quote.approve") && quote.status === "published" ? <QuoteStepButton quoteId={quote.id} step="archive" /> : null}
-                  {can(actor, "quote.record") && !quote && week.reporting_state === "NORMAL" ? <QuoteForm weekId={week.id} bus={bus.filter((b) => b.status === "ACTIVE")} /> : null}
+                  {can(actor, "quote.record") && !quote && week.reporting_state === "NORMAL" ? <QuoteForm weekId={week.id} people={people} /> : null}
                 </div>
               </li>
             ))}

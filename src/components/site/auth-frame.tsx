@@ -23,7 +23,7 @@ export function AuthFrame({ login, brand, images, children, preview = false }: {
   const tone = TONE[panel.tone];
   const img = panel.showImage ? imageUrl(panel.imageSlot, images) : null;
   const logo = (
-    <span className="inline-flex w-fit items-center gap-3 font-semibold tracking-tight">
+    <span className="inline-flex w-fit flex-col items-start gap-2 font-semibold tracking-tight">
       {brand.logoUrl
         ? <BrandLogo src={brand.logoUrl} height={Math.round((brand.logoHeight ?? 32) * 1.25)} onDark={login.panel.tone === "brand"} />
         : <span className={clsx("flex h-10 w-10 items-center justify-center rounded-xl text-lg font-bold", tone.mark)} aria-hidden>{brand.shortName}</span>}

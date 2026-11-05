@@ -10,11 +10,13 @@ export const POST = api(
   { public: true, body: z.object({ email: z.string().trim().toLowerCase().email().max(200), password: z.string().min(1).max(200) }) },
   async ({ body, req, rpc }) => {
     const ip = clientIp(req);
-    if (await rateLimited(`login:ip:${ip}`, 30, 60_000) || await rateLimited(`login:acct:${body.email}`, 10, 60_000)) {
-      throw fail("RATE_LIMITED", 429, "Too many attempts. Please wait a minute and try again.");
-    }
+    // the two limiters and the lock check do not depend on each other: ask all three at once
+    const [ipLimited, acctLimited, locked] = await Promise.all([
+      rateLimited(`login:ip:${ip}`, 30, 60_000), rateLimited(`login:acct:${body.email}`, 10, 60_000), rpc<boolean>("login_lock_status", { p_email: body.email }),
+    ]);
+    if (ipLimited || acctLimited) throw fail("RATE_LIMITED", 429, "Too many attempts. Please wait a minute and try again.");
     // Anti-enumeration: every failure path returns the same message.
-    if (await rpc<boolean>("login_lock_status", { p_email: body.email })) throw fail("AUTHENTICATION_FAILED", 401, GENERIC);
+    if (locked) throw fail("AUTHENTICATION_FAILED", 401, GENERIC);
     const sb = await userClient();
     const { data, error } = await sb.auth.signInWithPassword({ email: body.email, password: body.password });
     if (error || !data.user) {
@@ -22,7 +24,8 @@ export const POST = api(
       throw fail("AUTHENTICATION_FAILED", 401, GENERIC);
     }
     const { data: profile } = await sb.from("users").select("status").eq("id", data.user.id).maybeSingle();
-    if ((profile as { status: string } | null)?.status !== "ACTIVE") {
+    const domainOk = await rpc<boolean>("login_domain_allowed", { p_user: data.user.id });
+    if ((profile as { status: string } | null)?.status !== "ACTIVE" || !domainOk) {
       await sb.auth.signOut();
       await rpc("record_login_failure", { p_email: body.email });
       throw fail("AUTHENTICATION_FAILED", 401, GENERIC);

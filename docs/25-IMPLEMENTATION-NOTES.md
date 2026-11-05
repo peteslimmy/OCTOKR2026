@@ -64,7 +64,7 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 45 | Import: update policy | Existing people can have name, Business Unit and status changed by import, with a Business Unit move shown as a notice. | Confirm that a move should be allowed by import. |
 | 46 | What counts as a closed week | Final-locked, or in a locked quarter: those amendments need a request and a second Admin (ADR-058). | Confirm. |
 | 47 | Ledger reversal roles | Request: Finance, Admin, Super Admin. Approve and post: Finance, Super Admin, never the requester. Emergency: Super Admin only (ADR-059). | **Yes** — confirm the roles and whether the approver may also post. |
-| 48 | Reversing a violation payment | Posts the compensating entry only; the violation stays settled. | **Yes** — should the violation reopen, and may it be paid again? |
+| 48 | Reversing a violation payment | Posts the compensating entry only; the violation stays settled. | **Decided 2026-11-04: no.** A violation is never reopened and never paid twice (ADR-086). |
 | 49 | Reversal and committed money | A payment cannot be reversed if that would take money already committed to approved disbursements. | Confirm. |
 | 50 | Recovery codes | Ten codes of 60 bits for every role; using one removes the authenticator and ends other sessions (ADR-060). | Confirm, and say whether ordinary roles should be offered codes. |
 | 51 | Break-glass | Server script with operator, reason and confirmation; two people present; a second Super Admin is expected. | **Yes** — who is the operator and the witness, and where is the incident log kept? |
@@ -73,10 +73,10 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 54 | Email provider | None chosen. The application supports SMTP and a file transport for development. | **Yes** (ADR-054 #8). |
 | 55 | Business Unit import | Codes upper-cased, 2 to 20 characters; deactivation leaves people assigned. | Confirm. |
 | 56 | Who may correct a session outcome | HR, Admin and Super Admin ask; Admin and Super Admin approve and execute; three different people unless the Super Admin uses the emergency path (ADR-063). | **Yes** — confirm roles. |
-| 57 | Correction blocked by amendments | A skipped session cannot be reopened if attendance amendments already refer to its roster; the earlier roster is archived, never deleted. | **Yes** — say whether amendments should instead be cancelled with it. |
+| 57 | Correction blocked by amendments | A skipped session cannot be reopened if attendance amendments already refer to its roster; the earlier roster is archived, never deleted. | **Decided 2026-11-04: cancel them** with the correction, history kept (ADR-086). |
 | 58 | Who may change strategy in an active quarter | Admin and Super Admin ask; Admin, Super Admin and Executive decide; never the requester (ADR-064). | **Yes** — confirm roles. |
 | 59 | Key-result limit | At most four key results per quarter, retired ones included, so history stays comparable (`KR_LIMIT_EXCEEDED`). | Confirm whether retired ones should free a slot. |
-| 60 | Reversed violation payment | The violation returns to unpaid; the payment row stays immutable and a later payment is a new row (ADR-065). | **Yes** — confirm the default. |
+| 60 | Reversed violation payment | The violation stays settled; the payment row stays immutable and is shown as reversed (ADR-086, supersedes ADR-065). | Decided 2026-11-04. |
 | 61 | Refused-request audit | Permission and scope refusals are audited, at most one per person and route per minute, without request content (ADR-067). | Confirm the throttle and retention. |
 | 62 | Performance budgets | Pages p95 1500 ms, API p95 600 ms at six concurrent requests, measured on a development laptop (docs/27). | **Yes** — set real budgets for the production host. |
 | 63 | Which updates need approval | Governance-critical configuration only: roles and permissions, authenticator requirement, lock times, violation types and fines, penalty rate, reminders and email, Business Unit reporting status, retention. Ordinary administration (users, Business Units, profiles) stays audited and single-step (ADR-068). | Agreed in principle ("all updates must require approval"); say if user and Business Unit changes should also need approval. |
@@ -98,9 +98,9 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 79 | Placeholder strategy for historical quarters | Where a past quarter has no strategy a placeholder objective, key results and Sub-KRs are created, titled "(historical, imported)". | **Yes** — supply real wording, or confirm placeholders. |
 | 80 | Back-dating Business Units | A unit's creation date is moved back to its first week in the file so earlier weeks are not counted against it. | **Yes** — confirm. |
 | 81 | Imported reports' state | Recorded as submitted and reviewed, so they score fully without a review step. | Confirm. |
-| 82 | Weeks without rows | Not scored unless "also score weeks with no rows" is chosen; then a unit with no row is scored as a missed report. | **Yes** — choose the default per quarter. |
+| 82 | Weeks without rows | Not scored unless "also score weeks with no rows" is chosen; then a unit with no row is scored as a missed report. | **Decided 2026-11-04:** scoring is weekly, so the default is to score them as missed reports (ADR-086). |
 | 83 | Lock times of historical weeks | Weeks created by the import use the current lock schedule; they are already closed so nothing depends on the times. | Confirm. |
-| 84 | No rollback after commit | The application never deletes reports, so a committed import is final; protection is the rehearsal and a backup. | **Yes** — confirm, or ask for a compensating "void batch" feature. |
+| 84 | No rollback after commit | The application never deletes reports, so a committed import is final; protection is the rehearsal and a backup. | **Decided 2026-11-04:** a Super Admin-only void inside a rollback window is wanted. **Built for every import (ADR-087, ADR-088)**: employees, Business Units, strategy, sign-ins and history. |
 | 85 | Reserved permissions | A reserved permission may only sit on a role that holds roles.manage (ADR-077). | Confirm the list. |
 | 86 | Roster flag | A person taken off the attendance roster keeps their sign-in; existing rosters are not changed, only new ones (ADR-078). | Confirm. |
 | 87 | Starting violation types | Phone violation (medium) 5,000; Late coming (low) 3,000; Absent (medium) 5,000 NGN, taken from the old fine types. The criticality levels are my choice, the old application had none. | **Yes** — confirm criticality, or edit under Governance. |
@@ -113,6 +113,10 @@ the safest non-destructive behaviour (`00-SOURCE-OF-TRUTH.md` — Rule for ambig
 | 94 | Landing and sign-in content | Applied on save and audited, with no second-person approval (ADR-082); it changes no score, balance or permission. | Yes: confirm, or ask for it to go through the approval engine. |
 | 95 | Landing page copy | The built-in landing page copy (features, steps, trust points) is the previous wording; the figures band, gallery and testimonial are hidden by default so no invented numbers or quotes appear. | Yes: confirm the default wording. |
 
+## C0. Defaults accepted on 2026-11-04
+
+The owner asked for the best option to be chosen on every other open row. Every row marked "Yes" or "Confirm" above is accepted exactly as written, with these choices where a row offered alternatives: #42 any Business Unit the role may view; #54/#72 no provider is provisioned until the owner picks one (SMTP is supported); #79 placeholders for historical strategy; #87 criticality as built (Phone medium, Late coming low, Absent medium), editable under Governance; #89 no approval step on the sign-in import, a fresh authenticator code stays required; #91 and #94 branding and landing content apply immediately and are audited; #62 budgets stay the development-laptop figures until a production host exists. Items that need an outside fact (email provider, hosting, production performance budgets, break-glass operator and witness in row 51, data location) are still open because no default can supply them.
+
 ## C. Not yet built (explicit backlog)
 
 Built since this section was first written: session-outcome correction (ADR-063), ledger reversal (ADR-059), recovery codes (ADR-060), reminders and email outbox (ADR-061), employee, Business Unit, strategy, historical and sign-in imports (ADR-056, ADR-077, ADR-079, ADR-080), per-user notification preferences, and the Playwright + axe gate.
@@ -122,7 +126,7 @@ Still open:
 - one calendar-configuration object (ADR-054 #4),
 - evidence file storage for attendance amendments - the API stores references only (`attendance_amendment_requests.evidence_refs`),
 - dependency and performance review against production hardware,
-- backup-restore rehearsal.
+- backup-restore rehearsal,
 
 ## D. Verification summary (2026-10-20)
 
@@ -133,3 +137,61 @@ Still open:
 - Earlier milestone counts were removed because they no longer matched the suites.
 
 **Resolved defect.** `POST /api/internal/jobs/run` twice answered 500 during end-to-end runs. The cause was the development clock restarting the database REST layer while a request was in flight; the clock script now waits until the API answers again before returning. No data was affected (the jobs are idempotent). It has not recurred since; if it does in a real environment, check the REST layer's logs first.
+
+## OKR Session Notes & Meeting Intelligence (ADR-089 to ADR-093)
+
+Built as an extension of the app (no new identity, unit, calendar, permission, notification, audit or file system). Specification and assessments: `40-SESSION-NOTES.md`.
+
+**Applying it.** Three additive migrations, `20261105000001` to `20261105000003`. They were applied only to the disposable **test stack**; the owner's real database has not been touched. Before applying them to the real database run `npm run db:backup`, then the usual migration step. The three files only add objects, plus two guarded in-place patches (the grant allow-list in `lock_down_function_grants()` and one line in `run_scheduled_jobs()`, each skipped if already applied).
+
+**Known limits**
+1. The editor now has a visual mode (default) and a text mode over the same safe markdown (ADR-091, ADR-094). Pasted rich content becomes plain text; tables are edited in the grid, column count is fixed at insertion.
+2. Mentions work (ADR-094): only people who can read the note are told; there is no `@` autocomplete inside the text, only the Mention menu of the session's participants.
+3. Attachments are checked by allowed type, file signature, size and the scan in ADR-094. Without ClamAV only the built-in inspection runs, which is not an antivirus. A removed attachment is hidden, not erased. Set `CLAMAV_HOST` in production.
+4. Note history keeps every state that settled for 60 seconds or longer plus every amendment, reclassification, archive and restore; keystroke-level states inside a burst are not stored.
+5. No live co-editing or presence: two editors are protected by version checks and a conflict screen.
+6. Search uses PostgreSQL full-text search with the simple configuration (whole words, no stemming or typo tolerance).
+7. The PDF of minutes is plain text (tables appear as lines with `|`); register exports use the Reports module's layout.
+8. Reminders depend on the existing scheduler endpoint being called; in-app notices cannot be switched off per event (the app has no such setting), only email can (existing preference) and the global reminder switch.
+9. Unit scope (`user_unit_scopes`) limits writing about a unit, as elsewhere; it does not hide sessions from readers.
+10. `read_okr_people` lets anyone with a session permission see the names and units of active people (needed to invite and assign).
+11. AI summaries are only as good as the configured provider and model; every proposal is discarded if it invents a reference or a figure.
+
+**Open decisions for the owner**
+1. Should recording and approving a decision be done by different people? Today a Presenter may do both (the facilitator is the authority in the room).
+2. Should the person who reviews minutes differ from the person who drafted or finalises them? Today they may be the same.
+3. Should an Executive or Director, rather than the Presenter, be the only holder of `session_decisions.approve`?
+4. Should BU Leads be allowed to record risks or create actions for their own unit (today: Presenter only)?
+5. Should confidential and management-only notes be covered by the retention settings (today session records are never purged)?
+6. Should the Super Admin have an audited break-glass way to read content (today: none; only by being granted the permissions)?
+7. Should verification be mandatory for high and critical priority actions (today it is chosen per action)?
+
+**Regression.** No existing function, table or screen was changed apart from: three nav entries and one "+ Create" entry (`layout.tsx`, `shell.tsx` icon), a card on the Presentation page, six notification routes, six error codes, two lines of CSS-class block in `globals.css`, and the two guarded patches above.
+
+**Test results (2026-11-04, test stack only).** Unit (`npx vitest run src`): 443 passed (55 are the session-notes tests: XSS, editor operations, autosave rules, minutes, AI guard, register reports). Database (`tests/db/session_notes.test.ts`): 40 passed. HTTP (`tests/api/session-notes.api.test.ts`): 9 passed (the storage service is not part of the test stack, so the upload test proves the clean-failure path). Browser (`tests/e2e/25-session-notes.spec.ts`): 10 passed, including zero axe violations. `tsc --noEmit` and eslint on the new code are clean. The role-matrix fixture `tests/db/fixtures/role-matrix.json` was updated for the new permissions. **Not yet run:** the whole database lane from a reset (`npm run test:db`), which the owner must run in their own terminal; the test database used here was not reset, so some older suites fail there for reasons unrelated to this module (leftover data).
+
+## Executive Oversight, Commentary & Recommendations (ADR-096 to ADR-103)
+Module description and security assessment: `41-EXECUTIVE-OVERSIGHT.md`. Migrations 20261106000001 to 20261106000004.
+
+### Known limits
+0. **Decided 2026-11-05 (owner):** commentary is advice only; no consequence for unanswered or declined items; a Presenter reads every unit (migration 20261106000005; this also lets Presenters read management-only comments); a unit lead cannot hide or share comments; closing is optional; the escalation defaults stay. The "open business decisions" below are settled by this.
+1. **(Superseded by item 0)** Presenters read their own unit's commentary only.
+2. **Compliance reports and attendance screens** do not have their own Executive Commentary button: commentary about compliance is made from Presentation mode, Performance, the weekly report or the historical snapshot, where the compliance status is shown. The `COMPLIANCE` module exists for later screens.
+3. **Author filter** on the registers is "written by me" only; there is no list of authors to pick from.
+4. **Visual editor**: comments use plain text with the safe markdown subset (bold, italic, lists, links), not the Session Notes visual editor.
+5. **Attachments** are checked by type, signature, size and the built-in inspection (ADR-094); without ClamAV the built-in inspection is not an antivirus. A removed file is hidden, not erased.
+6. **Reminders** run with the existing scheduler (hourly granularity of `run_scheduled_jobs`); the Resend/SMTP delivery of the optional emails is the existing outbox.
+7. **No per-comment notification preferences** beyond the ten optional email event types.
+8. **Browser coverage**: the browser suite was run in Chromium on the test stack only.
+
+### Open business decisions
+1. Who is the "relevant management contact" and the "senior authority"? Defaults are the author and the DIRECTOR role; Admin can change them (Oversight settings).
+2. Should a persistently unanswered or declined advisory recommendation ever have a formal consequence? None is implemented (ADR-101); it needs an approved organisational rule.
+3. Should Presenters see commentary on every unit they present?
+4. Should a Director be able to close or withdraw an Executive's recommendation when the author is still active (currently: no; only when the author is no longer active)?
+5. Retention: nothing is deleted; is a retention period wanted for management-only comments of departed staff?
+6. Should the unit's lead be able to hide a SHARED comment from other members of the unit? (Currently every holder of the view permission in the unit reads it.)
+
+### What the owner must run
+- `npm run db:backup`, then apply the four migrations to the real local database (`npx supabase migration up --local`).
+- In your own PowerShell, from the `4core-okr` folder: `npm run test:db` (resets the disposable test stack and runs every database test, including `executive_oversight.test.ts`).

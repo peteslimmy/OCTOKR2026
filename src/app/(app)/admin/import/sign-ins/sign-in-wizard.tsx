@@ -2,11 +2,12 @@
 
 import { Download, UserPlus } from "lucide-react";
 import { useState } from "react";
-import { apiRequest, apiUpload, ApiFailure } from "@/components/ui/client";
+import { apiRequest, apiUpload } from "@/components/ui/client";
+import { describeFailure, FailurePanel, type Failure } from "@/components/import-feedback";
 import { Badge, Button, Card, CardHeader, DataTable, Field, Input } from "@/components/ui/primitives";
 
 interface Person { row: number; email: string; roles: string[]; name: string; unit: string }
-interface Checked { fileName: string; people: Person[]; problems: { row: number; message: string }[]; problemCount: number }
+interface Checked { fileName: string; people: Person[]; problems: { row: number; message: string; fix?: string }[]; problemCount: number }
 interface Result { row: number; email: string; created: boolean; message: string | null; setupLink: string | null }
 interface Done { results: Result[]; created: number }
 
@@ -14,10 +15,10 @@ const csv = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` 
 
 export function SignInWizard() {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [checked, setChecked] = useState<Checked | null>(null);
   const [done, setDone] = useState<Done | null>(null);
-  const fail = (e: unknown) => setError(e instanceof ApiFailure ? e.message : "Something went wrong.");
+  const fail = (e: unknown) => setError(describeFailure(e, "The sign-in import"));
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -42,14 +43,14 @@ export function SignInWizard() {
         <CardHeader title="1. Choose the spreadsheet" description="Two columns: Email and Roles. Roles are role codes or names, separated by commas or semicolons (for example BU_LEAD, or BU Lead; Presenter). The person must already be an active employee without a sign-in." />
         <Field id="si-file" label="Spreadsheet (.xlsx or .csv)"><Input id="si-file" type="file" accept=".xlsx,.csv" disabled={busy || !!done} onChange={(e) => onFile(e.target.files?.[0])} /></Field>
         {busy && !checked ? <p role="status" className="mt-3 text-sm">Reading and checking the file…</p> : null}
-        {error ? <p role="alert" className="mt-3 rounded-lg bg-[var(--critical-bg)] px-3 py-2 text-sm font-medium text-[var(--critical-fg)]">{error}</p> : null}
+        {error ? <FailurePanel f={error} /> : null}
       </Card>
 
       {checked && checked.problemCount > 0 ? (
         <Card>
           <CardHeader title="Some rows cannot be used" description={`${checked.problemCount} problem${checked.problemCount === 1 ? "" : "s"}. Fix the file and choose it again, or continue with the ${checked.people.length} valid row${checked.people.length === 1 ? "" : "s"} below.`} />
-          <DataTable caption="Rows with problems" columns={[{ label: "Spreadsheet row" }, { label: "Problem" }]}>
-            {checked.problems.map((p, i) => <tr key={i}><td className="tabular-nums">{p.row}</td><td>{p.message}</td></tr>)}
+          <DataTable caption="Rows with problems" columns={[{ label: "Spreadsheet row" }, { label: "Problem" }, { label: "What to do" }]}>
+            {checked.problems.map((p, i) => <tr key={i}><td className="tabular-nums">{p.row}</td><td>{p.message}</td><td className="text-sm">{p.fix}</td></tr>)}
           </DataTable>
         </Card>
       ) : null}
