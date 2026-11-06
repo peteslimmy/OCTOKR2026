@@ -198,12 +198,4 @@ describe("session notes over HTTP", () => {
     expect((await lead.request("GET", `/api/v1/okr-attachments/${ok.json.data.id}`)).status).toBe(200);
     expect((await (await loginAs("hr@4core.local")).request("GET", `/api/v1/okr-attachments/${ok.json.data.id}`)).status).toBe(404);
   });
-
-  it("session types are listed for session users and changed only with session_notes.configure (an Admin; covered in the database tests)", async () => {
-    const { presenter, lead } = await setup();
-    const code = `API_${randomUUID().slice(0, 6).toUpperCase()}`;
-    expect((await presenter.request("POST", "/api/v1/okr-session-types", { code, name: "Nope" })).status).toBe(403);
-    expect((await lead.request("POST", "/api/v1/okr-session-types", { code, name: "Nope" })).status).toBe(403);
-    expect((await lead.request("GET", "/api/v1/okr-session-types")).json.data.length).toBeGreaterThan(5);
-  });
 });

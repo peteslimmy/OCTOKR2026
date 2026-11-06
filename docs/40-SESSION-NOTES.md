@@ -66,7 +66,7 @@ Rules beyond the table (all enforced in the database; the UI only mirrors them):
 - **Visibility of a note**: `SHARED` — anyone who sees the session; `MANAGEMENT` — holders of `view_all`, the author and the facilitator; `CONFIDENTIAL` — the author and the facilitator only. Minutes are built only from shared notes (management notes only for management minutes; confidential never).
 - **Who may change a note**: its author, the facilitator, the creator, or a finaliser; always with `session_notes.update`.
 - **Action items**: the assignee, whoever set the action, anyone with `session_actions.assign`, and a BU Lead (with `session_actions.update`) of the responsible unit may report on it. The assignee may always read and report on their own action even without session access. Completion needs remarks (and evidence where the action requires it); an action that needs verification is verified by someone **other than** the person who completed it.
-- **HR, Finance, Admin, Super Admin** hold none of the content permissions. The Super Admin's "every permission" rule (ADR-085) was a one-time grant of the permissions that existed then; these new codes are deliberately **not** granted to it. A Super Admin or Admin can only reach content by being granted the permissions through the governed role/permission process (which is audited, and `view_all` and `approve` are protected: only a holder can delegate them).
+- **HR, Finance, Admin** hold none of the content permissions; **Super Admin holds all** (ADR-112). The Super Admin's "every permission" rule (ADR-085) was a one-time grant of the permissions that existed then; these new codes are deliberately **not** granted to it. A Super Admin or Admin can only reach content by being granted the permissions through the governed role/permission process (which is audited, and `view_all` and `approve` are protected: only a holder can delegate them).
 - **Unit scope** (`user_unit_scopes`) limits writing about a unit as it does elsewhere.
 - **Executives** are read-only: no create/update permission, so every write is refused in the database.
 
@@ -127,3 +127,9 @@ Sessions: `GET/POST okr-sessions`, `GET/PATCH okr-sessions/{id}`, `POST …/tran
 ## 8. Known limits and open decisions
 
 See the report at the end of this module's implementation (`25-IMPLEMENTATION-NOTES.md`, section "OKR Session Notes").
+
+## 9. Note Taker and the weekly quote (ADR-113)
+
+- **Take notes** (`/notes`): choose the weekly session; one organisation-wide rich-text page that saves as you type, with the headings Notes, Recommendations, Actions and Next steps. `POST /api/v1/notes-sessions {weekId}` returns `{session_id, note_id}` and is repeatable.
+- **Weekly quote**: HR's rota, configured under Calendar & holidays; units use `/quote`. API: (`POST /api/v1/quote-turns {weekId, buId}`), the unit's entry (`PUT /api/v1/quote-turns/{id} {quote, speakerId}`), the Presenter's "present" (`POST /api/v1/quote-turns/{id} {action:"present"}`), withdrawal (`DELETE`, reason required) and the unit's team (`GET /api/v1/quote-turns/speakers?bu=`).
+- Permissions: `quote.assign` (HR, Admin, Super Admin), `quote.submit` (BU Lead for the own unit, Super Admin).

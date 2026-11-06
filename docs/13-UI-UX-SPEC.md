@@ -267,7 +267,6 @@ For a SKIPPED physical session, notify all BU Leads and activate a required manu
 - **Discussion notes.** Quick note box (type, Enter) and a full editor; notes are a chronological timeline of cards with category, classification, author and times, links to OKR components (picker of the unit's current theme, quarter, objective, key results, Sub-KRs, BU goals, the week's goals, tasks and report), version history, archive and "propose as decision / create action / record as risk" from a note.
 - **Editor.** Toolbar (headings, bold, italic, lists, checklist, quote, table, link, undo, redo), live preview, Ctrl+B / Ctrl+I / Ctrl+S, save state text with a coloured dot (never colour alone), retry and conflict handling.
 - **/session-notes/registers** (commitments and registers). Action items (with every control), decisions and risks across sessions, filters, "only mine", and export links per register.
-- **/session-notes/types** (Admin, Super Admin). Session types; no access to content.
 - **Presentation mode** gains a *Session notes* card for the unit and week being presented.
 - Design: the existing dark-red and white system and primitives only; every control is real and permission-gated; dialogs are the shared accessible `Modal`; the workspace is responsive (context panel stacks under the content on narrow screens); tabs follow the ARIA tabs pattern with arrow-key support.
 
@@ -276,5 +275,4 @@ For a SKIPPED physical session, notify all BU Leads and activate a required manu
 - **Recommendation page**: a banner stating it is advice; the detail; each addressed unit's card (status, who is waiting, contact, deadline, escalation) with only the actions that person may take; the conversation and the immutable history; files; links.
 - **Comment page and thread**: the original comment apart from chronological replies, "Amended" with every earlier wording, withdrawn state.
 - **Executive Commentary panel** on Performance, Weekly report, Presentation mode, Strategy (objective, key results), dashboard, Management brief, Unit goals, Session workspace, registers and report snapshots: side panel beside the record, with quick actions; no navigation away.
-- **Oversight settings** (Admin, Super Admin): categories and the reminder timeline.
 Design: the existing tokens, cards, tables and dialogs; status never by colour alone; forms keep their text and request key on failure; dialogs are Radix (focus trap, Esc).

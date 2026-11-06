@@ -5,6 +5,7 @@ import { currentQuarter, serverNow, weeksOfQuarter } from "@/lib/data";
 import { listHolidayAmendments, listHolidayRequests } from "@/lib/data/governance";
 import { wat } from "@/components/status";
 import { getLockSchedule } from "@/lib/data/config";
+import { QuoteRota } from "../../quote/quote-rota";
 import { LockScheduleForm } from "../lock-schedule-form";
 import { formatWeekLabel } from "@/lib/domain/week-label";
 import { HolidayAmendmentButton, HolidayForm, HolidayRequests, WeekLockSwitch, WeekOpeningEditor } from "../admin-actions";
@@ -18,7 +19,8 @@ export default async function CalendarPage() {
   const amendHoliday = can(actor, "quarter.score.amend");
   const suspendLocks = can(actor, "reporting.locks.suspend");
   const manageWeeks = can(actor, "reporting.week.manage");
-  if (!manage && !amendHoliday && !suspendLocks && !manageWeeks) return <Card><div className="p-6 text-sm">The calendar is not available for your role.</div></Card>;
+  const quoteRota = can(actor, "quote.assign");
+  if (!manage && !amendHoliday && !suspendLocks && !manageWeeks && !quoteRota) return <Card><div className="p-6 text-sm">The calendar is not available for your role.</div></Card>;
   const schedule = manageWeeks ? await getLockSchedule() : null;
   const weeks = quarter ? await weeksOfQuarter(quarter.id) : [];
   const amendWeeks = weeks;
@@ -29,6 +31,7 @@ export default async function CalendarPage() {
     <>
       <PageHeader title="Calendar & holidays" description="Declare organisation holidays and correct past weeks. A holiday means no report is due and the week is left out of quarterly scores." />
       <div className="space-y-6">
+        {quoteRota ? <QuoteRota actor={actor} /> : null}
         {can(actor, "reporting.period.holiday.manage") ? (
           <Card>
             <CardHeader title="Organization Holiday" description="Declare whole reporting weeks as an organisation-wide closure: no BU report is due, reminders and missing-report penalties are suppressed, and the weeks are excluded from the quarterly score. This is not the same as skipping an OKR session." />

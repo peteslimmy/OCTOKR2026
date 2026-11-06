@@ -83,7 +83,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
           <Link href={href({ category: null, cursor: null })} className={chip(!filter.category)}>All <span className="text-muted">{kpis.total}</span></Link>
           {AUDIT_CATEGORIES.filter((c) => kpis.by_category[c] || filter.category === c).map((c) => (
-            <Link key={c} href={href({ category: c, cursor: null })} aria-pressed={filter.category === c} className={chip(filter.category === c)}>{label(c)} <span className="text-muted">{kpis.by_category[c] ?? 0}</span></Link>
+            <Link key={c} href={href({ category: c, cursor: null })} aria-current={filter.category === c ? "true" : undefined} className={chip(filter.category === c)}>{label(c)} <span className="text-muted">{kpis.by_category[c] ?? 0}</span></Link>
           ))}
         </div>
         <Filters filter={filter} />

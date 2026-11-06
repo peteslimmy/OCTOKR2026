@@ -86,7 +86,6 @@ const GUARDED: Guarded[] = [
   { method: "GET", path: "/api/v1/integrations", any: ["integrations.view"], label: "integrations list" },
   { method: "POST", path: "/api/v1/integrations/request", body: { action: "DELETE", id: fake, reason: "api test" }, any: ["integrations.configure"], label: "ask to change an integration" },
   { method: "POST", path: "/api/v1/integrations/test", body: { id: fake }, any: ["integrations.test"], label: "test an integration" },
-  { method: "POST", path: `/api/v1/late-report-exceptions/${fake}/apply`, body: { reason: "api test", ...k() }, any: ["quarter.score.amend"], label: "apply a late-report amendment" },
 ];
 
 describe("who may call what, from the approved permission matrix", () => {

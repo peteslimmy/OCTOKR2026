@@ -58,8 +58,8 @@ const balance = async () => Number((await admin.query("select fund_balance((sele
 
 describe("concurrent money movement", () => {
   it("two simultaneous approvals that together exceed the fund: exactly one succeeds, the balance never goes negative", async () => {
-    const a = (await rpc(admin, "create_disbursement_request", ids.hr, 80000, "A", "a", "conc-ra")).request_id;
-    const b = (await rpc(admin, "create_disbursement_request", ids.hr, 80000, "B", "b", "conc-rb")).request_id;
+    const a = (await rpc(admin, "create_disbursement_request", ids.hr, 80000, "Others", "a", "conc-ra")).request_id;
+    const b = (await rpc(admin, "create_disbursement_request", ids.hr, 80000, "Others", "b", "conc-rb")).request_id;
     const [c1, c2] = [await conn(), await conn()];
     const results = await Promise.all([
       errorOf(rpc(c1, "decide_disbursement_request", ids.fin1, a, true, null, "conc-d1")),
@@ -76,7 +76,7 @@ describe("concurrent money movement", () => {
   });
 
   it("many simultaneous releases of the same approved request post exactly one DEBIT", async () => {
-    const r = (await rpc(admin, "create_disbursement_request", ids.hr, 5000, "C", "c", "conc-rc")).request_id;
+    const r = (await rpc(admin, "create_disbursement_request", ids.hr, 5000, "Others", "c", "conc-rc")).request_id;
     await rpc(admin, "decide_disbursement_request", ids.fin1, r, true, null, "conc-d3");
     const cs = await Promise.all([conn(), conn(), conn(), conn()]);
     const out = await Promise.all(cs.map((c, i) => errorOf(rpc(c, "record_disbursement", ids.fin2, r, `CONC-BANK-${i}`, `conc-disb-par-${i}`))));

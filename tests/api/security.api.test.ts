@@ -45,7 +45,7 @@ describe("second factor (MFA)", () => {
       const r = await login(s, email);
       expect(r.status).toBe(200);
       expect(r.json.data.mfaRequired, email).toBe(true);
-      expect((await s.request("GET", "/api/v1/late-report-exceptions")).json.error?.code, email).toBe("MFA_REQUIRED");
+      expect((await s.request("GET", "/api/v1/audit")).json.error?.code, email).toBe("MFA_REQUIRED");
       expect((await s.request("GET", "/api/v1/auth/mfa/status")).status).toBe(200);   // the challenge itself stays reachable
     }
   });
@@ -64,7 +64,7 @@ describe("second factor (MFA)", () => {
     await completeMfa(done, "admin@4core.local", r);
     const me = (await done.request("GET", "/api/v1/auth/me")).json.data;
     expect(me.mfa).toMatchObject({ required: true, enrolled: true, aal: "aal2" });
-    expect((await done.request("GET", "/api/v1/late-report-exceptions")).status).toBe(200);
+    expect((await done.request("GET", "/api/v1/audit")).status).toBe(200);
   });
 
   it("ordinary roles are not asked for a second factor, and cannot create one for someone else", async () => {

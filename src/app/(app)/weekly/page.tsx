@@ -4,7 +4,6 @@ import { PhaseBadge, SubmissionBadge, wat } from "@/components/status";
 import { Badge, buttonClass, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { requireActor, can } from "@/lib/auth/actor";
 import { activeWeeks, getReportView, latestQuarterSnapshot, listQuarters, reportIdFor, serverNow } from "@/lib/data";
-import { listLateExceptions } from "@/lib/data/governance";
 import { NavSelect } from "@/components/ui/nav-select";
 import { BuIntelligenceSection } from "@/components/insights/intelligence";
 import { WeeklyTrend } from "@/components/weekly/weekly-trend";
@@ -51,7 +50,6 @@ export default async function WeeklyPage({ searchParams }: PageProps<"/weekly">)
     : liveRows.every(({ week }) => week.reporting_state === "ORGANIZATION_HOLIDAY") ? "This week is an organisation holiday, so no report is due."
     : liveRows.some(({ id, week }) => id && week.reporting_state === "NORMAL") ? "This week's report is already started. Open it below to add goals and tasks."
     : "The open week is locked. An Admin can suspend the locks under Calendar & holidays.";
-  const lateOpen = (await listLateExceptions()).filter((e) => e.business_unit_id === buId && e.status === "AUTHORISED");
 
   return (
     <>
@@ -90,24 +88,6 @@ export default async function WeeklyPage({ searchParams }: PageProps<"/weekly">)
             </ul>
           )}
         </Card>
-
-        {lateOpen.length > 0 ? (
-          <Card>
-            <CardHeader title="Authorised late reports" description="An Admin authorised you to file these missing reports late. They are reviewed before any score is amended." />
-            <ul className="divide-y divide-line">
-              {lateOpen.map((e) => (
-                <li key={e.id} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-                  <div className="space-y-1">
-                    <p className="font-medium">{formatWeekLabel(e)}</p>
-                    <p className="text-sm text-muted">Reason: {e.reason}</p>
-                  </div>
-                  {e.weekly_report_id ? <Link className={buttonClass("primary", "sm")} href={`/weekly/${e.weekly_report_id}`}>Open late report</Link>
-                    : canCreate ? <StartReportButton weekId={e.reporting_week_id} businessUnitId={filesForAny ? buId : undefined} /> : null}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : null}
 
         <WeeklyTimeline cells={quarterCells} nowIso={nowIso} quarterLabel={quarterRow ? `Q${quarterRow.quarter_number} ${quarterRow.year}` : "This quarter"} quarterScore={quarterSnap?.score === null || quarterSnap?.score === undefined ? null : Number(quarterSnap.score)} quarterFinal={quarterSnap?.calculation_status === "FINAL"} />
         <BuIntelligenceSection buId={buId} buName={buName ?? "Your unit"} quarterId={trendQuarter} />

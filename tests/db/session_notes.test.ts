@@ -209,11 +209,11 @@ describe("notes: autosave, versions, concurrency and links", () => {
 });
 
 describe("access: who can see what", () => {
-  it("HR, Finance, Admin and Super Admin hold no session permission and cannot reach content", () => withTx(async (c) => {
+  it("HR, Finance and Admin hold no session permission and cannot reach content (the Super Admin does, ADR-112)", () => withTx(async (c) => {
     const w = await world(c);
     const s = await w.newSession(); await c.rpc("transition_okr_session", w.presenter, s.id, "IN_PROGRESS", null, null, null);
     await note(c, w.presenter, s.id);
-    for (const u of [w.hr, w.finance, w.admin, w.superAdmin]) {
+    for (const u of [w.hr, w.finance, w.admin]) {
       const codes = (await c.q<{ c: string }>("select unnest(actor_permission_codes($1)) c", [u])).map((r) => r.c).filter((x) => x.startsWith("session_"));
       expect(codes.filter((x) => x !== "session_notes.configure")).toEqual([]);
       await c.expectError("PERMISSION_DENIED", () => note(c, u, s.id));
@@ -223,6 +223,24 @@ describe("access: who can see what", () => {
         expect(await c.q("select 1 from okr_session_events")).toHaveLength(0);
       });
     }
+  }));
+
+  it("the Super Admin has no limit: reads every note including confidential ones, and may verify their own completion (ADR-112)", () => withTx(async (c) => {
+    const w = await world(c);
+    const s = await w.newSession(); await c.rpc("transition_okr_session", w.presenter, s.id, "IN_PROGRESS", null, null, null);
+    await note(c, w.presenter, s.id, { title: "shared" });
+    await note(c, w.presenter, s.id, { title: "mgmt", visibility: "MANAGEMENT" });
+    await note(c, w.presenter, s.id, { title: "conf", visibility: "CONFIDENTIAL" });
+    await c.asUser(w.superAdmin, async () => {
+      expect(await c.q("select 1 from okr_sessions")).toHaveLength(1);
+      expect((await c.q<{ title: string }>("select title from okr_session_notes order by title")).map((r) => r.title)).toEqual(["conf", "mgmt", "shared"]);
+    });
+    await note(c, w.superAdmin, s.id, { title: "by the owner" });
+    const d = await c.rpc<{ id: string }>("create_okr_decision", w.superAdmin, s.id, "t", "d", null, null, null, null, [], null, null, null, null, [], null);
+    expect((await c.rpc<{ status: string }>("decide_okr_decision", w.superAdmin, d.id, "APPROVE", null, null, null, null)).status).toBe("APPROVED");
+    const a = await c.rpc<{ id: string }>("create_okr_action", w.superAdmin, s.id, "Do it", w.finLead, null, "LOW", "2031-01-20", null, null, true, false, [], null);
+    await c.rpc("update_okr_action", w.superAdmin, a.id, 1, "COMPLETED", null, null, "Done", null, null, null);
+    expect((await c.rpc<{ verification_status: string }>("verify_okr_action", w.superAdmin, a.id, "VERIFIED", null, 2)).verification_status).toBe("VERIFIED");   // their own completion
   }));
 
   it("a BU Lead sees only their own unit's sessions (read and write), never another unit's", () => withTx(async (c) => {

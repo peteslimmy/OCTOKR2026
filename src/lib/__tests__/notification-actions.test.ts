@@ -8,7 +8,9 @@ describe("notification actions", () => {
     expect(notificationAction("LEDGER_REVERSAL_EMERGENCY")).toMatchObject({ href: "/violations?tab=fund&view=ledger" });
     expect(notificationAction("DISBURSEMENT_REQUESTED")).toMatchObject({ href: "/violations?tab=fund" });
     expect(notificationAction("MFA_RECOVERED")).toMatchObject({ href: "/account/security" });
-    expect(notificationAction("LATE_REPORT_AUTHORISED")).toMatchObject({ href: "/governance/late-reports" });
+  });
+  it("leads a change of unit or roles to the person's journey", () => {
+    expect(notificationAction("LIFECYCLE_CHANGE")).toMatchObject({ href: "/account/journey" });
   });
   it("gives only same-site paths, and nothing for events with nothing to do", () => {
     for (const e of ["REPORT_DUE_REMINDER", "LEDGER_REVERSAL_DECIDED", "BREAK_GLASS", "ORGANIZATION_HOLIDAY"]) expect(notificationAction(e)?.href).toMatch(/^\/[a-z]/);

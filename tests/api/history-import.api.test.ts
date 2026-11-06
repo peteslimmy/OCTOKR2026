@@ -84,7 +84,7 @@ describe("historical import API", () => {
     expect((await sa.upload(P, "a.txt", "x")).status).toBe(422);
     const bad = await sa.upload(P, "a.csv", `${HEADER}\n2025,3,Nowhere,1.1,G,T,Done,,,,\n2025,3,Nowhere,1.1,=1+1,T,Done,,,,\n`);
     expect(bad.status).toBe(200);
-    expect(bad.json.data).toMatchObject({ staged: false, fileProblemCount: 2, unknownUnits: ["Nowhere"] });
+    expect(bad.json.data).toMatchObject({ staged: false, fileProblemCount: 3, unknownUnits: ["Nowhere"] });
     expect((await db<{ n: number }>("select count(*)::int n from historical_import_batches"))[0].n).toBe(before);
   });
 

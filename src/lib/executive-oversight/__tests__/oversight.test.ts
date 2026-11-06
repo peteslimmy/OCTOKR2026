@@ -68,11 +68,6 @@ describe("schemas: an explicit allow-list, never mass assignment", () => {
     expect(S.amendComment.safeParse({ reason: "typo" }).success).toBe(false);          // the version you started from is mandatory
   });
 
-  it("keeps configuration inputs tight", () => {
-    expect(S.rule.safeParse({ stage: "OVERDUE_SENIOR", days: 10, recipientKind: "ROLE", roleCode: "DIRECTOR" }).success).toBe(true);
-    expect(S.rule.safeParse({ stage: "OTHER", days: 10, recipientKind: "AUTHOR" }).success).toBe(false);
-    expect(S.rule.safeParse({ stage: "APPROACHING", days: 91, recipientKind: "AUTHOR" }).success).toBe(false);
-  });
 });
 
 describe("saveArgs: the author is the signed-in person", () => {

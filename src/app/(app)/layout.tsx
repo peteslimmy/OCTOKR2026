@@ -23,6 +23,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const any = (...p: string[]) => p.some((x) => can(actor, x));
 
   // Navigation is grouped by what the person is trying to do. Each entry still shows only when the signed-in role may open it.
+  const noteTakerOnly = actor.roles.length > 0 && actor.roles.every((r) => r === "NOTE_TAKER");   // the simple screen only; the full module stays underneath
   const groups: NavGroup[] = [];
   const add = (label: string, items: (NavItem | false)[]) => { const kept = items.filter((i): i is NavItem => !!i); if (kept.length) groups.push({ label, items: kept }); };
 
@@ -38,12 +39,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     any("attendance.session.manage", "attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance", label: "Sessions & attendance", icon: "governance", hint: "OKR sessions and who attended" },
     any("violation.create", "violation.edit", "violation.payment.record", "finance.fund.view", "disbursement.create", "finance.ledger.view", "dashboard.executive.view") && { href: "/violations", label: "Violations & Funds", icon: "violations", hint: "Violations, payments and the fund" },
     any("attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance/amendments", label: "Attendance amendments", icon: "amendments", hint: "Corrections to attendance" },
-    can(actor, "session_notes.view") && { href: "/session-notes", label: "OKR session notes", icon: "notes", hint: "Discussion, decisions and commitments of OKR reviews", exact: true },
-    any("session_notes.view", "session_actions.update") && { href: "/session-notes/registers", label: "Commitments & registers", icon: "approvals", hint: "Action items, decisions, risks and blockers" },
+    can(actor, "session_notes.create") && { href: "/notes", label: "Take notes", icon: "notes", hint: "Notes, recommendations, actions and next steps for a session" },
+    can(actor, "quote.submit") && !can(actor, "quote.assign") && { href: "/quote", label: "Weekly quote", icon: "presentation", hint: "Which unit gives the quote, and the quote itself" },
     any("executive_oversight.dashboard.view", "executive_comment.view", "executive_recommendation.view") && { href: "/executive-oversight", label: "Executive oversight", icon: "governance", hint: "Executive comments, recommendations and the responses to them", exact: true },
-    can(actor, "executive_oversight.configure") && { href: "/executive-oversight/settings", label: "Oversight settings", icon: "settings", hint: "Comment categories and reminder timeline" },
-    can(actor, "session_notes.configure") && { href: "/session-notes/types", label: "Session types", icon: "settings", hint: "The kinds of OKR session" },
-    any("quarter.score.amend", "weekly_report.review") && { href: "/governance/late-reports", label: "Late reports", icon: "amendments", hint: "Exceptions for missed reports" },
   ]);
   add("Insights", [
     can(actor, "reports.view") && { href: "/reports", label: "Reports", icon: "reports", hint: "Standard reports" },
@@ -61,7 +59,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   ]);
   add("Administration", [
     any("business_units.manage", "users.manage", "reporting.period.holiday.manage", "integrity_penalty.configure", "reporting.week.manage", "branding.manage", "config.approve", "quarter.score.amend") && { href: "/admin", label: "Admin overview", icon: "settings", hint: "Everything to set up", exact: true },
-    any("reporting.period.holiday.manage", "quarter.score.amend", "reporting.locks.suspend") && { href: "/admin/calendar", label: "Calendar & holidays", icon: "calendar", hint: "Organisation holidays and amendments" },
+    any("reporting.period.holiday.manage", "quarter.score.amend", "reporting.locks.suspend", "quote.assign") && { href: "/admin/calendar", label: "Calendar & holidays", icon: "calendar", hint: "Organisation holidays, amendments and the weekly quote allocation" },
     any("integrity_penalty.configure", "reporting.week.manage", "retention.configure", "reminders.configure") && { href: "/admin/settings", label: "Settings", icon: "settings", hint: "Penalty, lock times, reminders, retention" },
     any("config.approve", "config.protected.approve", "violation.edit", "integrity_penalty.configure", "reminders.configure", "business_units.manage") && { href: "/admin/approvals", label: "Approvals", icon: "approvals", hint: "Changes waiting for a decision" },
     can(actor, "branding.manage") && { href: "/admin/branding", label: "Branding", icon: "branding", hint: "Name, logo, favicon, colour" },
@@ -75,7 +73,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     can(actor, "disbursement.create") && { href: "/violations?tab=fund&new=disbursement", label: "Request a disbursement", hint: "From the violation fund" },
     can(actor, "users.manage") && { href: "/admin/people?new=user", label: "Add a user", hint: "Invite a person and give a role" },
     can(actor, "business_units.manage") && { href: "/admin/units?new=unit", label: "Add a Business Unit or Department", hint: "A unit staff belong to" },
-    can(actor, "session_notes.create") && { href: "/session-notes?new=session", label: "Start an OKR session", hint: "Record discussion, decisions and actions" },
     can(actor, "weekly_report.create") && { href: "/weekly", label: "Start a weekly report", hint: "Goals and tasks for this week" },
   ].filter((c): c is CreateItem => !!c);
 

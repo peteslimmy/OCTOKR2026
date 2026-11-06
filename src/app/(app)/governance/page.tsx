@@ -38,7 +38,6 @@ export default async function GovernancePage() {
       <PageHeader title="Governance" description="Weekly OKR sessions, attendance, violations and the weekly quote. Attendance is independent of the reporting locks."
         actions={<>
           <Link href="/governance/amendments" className={buttonClass("secondary", "sm")}>Amendments{pending.length ? ` (${pending.length} pending)` : ""}</Link>
-          {can(actor, "quarter.score.amend") || can(actor, "weekly_report.review") ? <Link href="/governance/late-reports" className={buttonClass("secondary", "sm")}>Late reports</Link> : null}
           {can(actor, "violation.create") ? <Link href="/violations?tab=violations" className={buttonClass("secondary", "sm")}>Violations{open.length ? ` (${open.length} open)` : ""}</Link> : null}
         </>} />
       <Card>

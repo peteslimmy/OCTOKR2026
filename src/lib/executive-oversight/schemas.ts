@@ -41,5 +41,3 @@ export const reassign = z.object({ userId: uuid, reason: reqText(2000) });
 export const linkChange = z.object({ targetType: LINK_TYPE, targetId: uuid, remove: z.boolean().default(false) });
 export const removeFile = z.object({ reason: reqText(1000) });
 
-export const category = z.object({ id: uuid.nullish(), code: z.string().max(40).nullish(), name: reqText(100), description: optText(500), sortOrder: z.number().int().min(0).max(10000).nullish(), active: z.boolean().nullish() });
-export const rule = z.object({ stage: z.enum(["APPROACHING", "OVERDUE_REMINDER", "OVERDUE_MANAGEMENT", "OVERDUE_SENIOR"]), days: z.number().int().min(0).max(90), recipientKind: z.enum(["BU_LEAD", "RESPONSIBLE", "AUTHOR", "ROLE"]), roleCode: z.string().max(40).nullish(), active: z.boolean().nullish() });

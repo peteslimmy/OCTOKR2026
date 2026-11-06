@@ -15,7 +15,7 @@ test.describe("ranking filters and drill-down", () => {
     await expect(page.getByText(/Business Units shown/)).toContainText(`of ${all}`);
     await expect(page.locator("output[for=rank-below]")).toHaveText("5.0%");
     expect(await rows(page).count()).toBeLessThanOrEqual(all);
-    await page.getByLabel("Show").selectOption("MISSING");
+    await page.locator("#rank-show").selectOption("MISSING");
     const missing = await rows(page).count();
     expect(missing).toBeLessThanOrEqual(all);
     await page.getByRole("button", { name: "Reset filters" }).click();
@@ -29,7 +29,7 @@ test.describe("ranking filters and drill-down", () => {
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");   // the page is interactive once its scripts have loaded
     const opener = rows(page).first().getByRole("button");
-    const name = (await opener.innerText()).split("\n")[0].trim();
+    const name = (await opener.innerText()).split("\n")[0].split(" — ")[0].trim();   // the button also carries a screen-reader suffix
     await opener.focus();
     await page.keyboard.press("Enter");
     const drawer = page.getByRole("dialog", { name: new RegExp(`${name}: week by week`) });

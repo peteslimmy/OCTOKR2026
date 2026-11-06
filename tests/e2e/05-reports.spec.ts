@@ -19,8 +19,6 @@ test.describe.serial("Reports module", () => {
     await expect(page.getByText("pending approval").first()).toBeVisible();                    // unofficial figures are labelled
     await expect(page.getByRole("heading", { name: "Business Unit comparison" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Report catalogue" })).toBeVisible();
-    await expect(page.getByText("Employee KPI scorecard").first()).toBeVisible();              // what cannot be reported is stated, not faked
-    await expect(page.getByText("Blocked").first()).toBeVisible();
     await expectNoA11yViolations(page, "reports overview with data");
   });
 

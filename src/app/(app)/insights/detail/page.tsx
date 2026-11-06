@@ -181,7 +181,7 @@ function Governance({ b }: { b: ManagementBrief }) {
       <CardHeader title="Governance snapshot" description="Attendance, open violations and what is waiting for a decision." />
       {b.queues ? (
         <div className="grid gap-3 px-5 py-4 sm:grid-cols-2 xl:grid-cols-4">
-          {([["Attendance amendments", b.queues.attendanceAmendments], ["Fund requests", b.queues.disbursements], ["Configuration changes", b.queues.configChanges], ["Late-report exceptions", b.queues.lateReportExceptions]] as const).map(([label, x]) => (
+          {([["Attendance amendments", b.queues.attendanceAmendments], ["Fund requests", b.queues.disbursements], ["Configuration changes", b.queues.configChanges]] as const).map(([label, x]) => (
             <div key={label} className="rounded-lg bg-surface px-3 py-2"><p className="text-xs text-muted">{label}</p><p className="text-lg font-semibold tabular-nums">{x.waiting} waiting</p><p className="text-xs text-muted">{x.waiting ? `oldest ${x.oldestDays} day${x.oldestDays === 1 ? "" : "s"}` : "nothing pending"}</p></div>
           ))}
         </div>

@@ -13,7 +13,7 @@ const ROUTES: Record<string, string[]> = {
   "exec@4core.local": ["/dashboard", "/insights", "/insights/detail", "/performance", "/reports", "/reports/org-performance-summary", "/reports/bu-scorecard", "/reports/performance-trends", "/reports/quarter-forecast",
     "/reports/weekly-compliance", "/reports/reporting-register", "/reports/late-report-register", "/reports/okr-health", "/reports/governance-outstanding", "/reports/integrity-corrections",
     "/reports/holiday-impact", "/reports/data-quality", "/reports/insights", "/reports/metrics", "/reports/saved", "/reports/builder"],
-  "admin@4core.local": ["/dashboard", "/admin", "/admin/units", "/admin/people", "/admin/calendar", "/admin/settings", "/admin/branding", "/audit", "/governance", "/governance/late-reports", "/account/security", "/strategy"],
+  "admin@4core.local": ["/dashboard", "/admin", "/admin/units", "/admin/people", "/admin/calendar", "/admin/settings", "/admin/branding", "/audit", "/governance", "/account/security", "/strategy"],
 };
 
 test.beforeAll(async () => {

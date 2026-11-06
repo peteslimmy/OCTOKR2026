@@ -246,12 +246,12 @@ export async function listBusinessUnits() {
   return unwrap(await sb.from("business_units").select("id, code, name, status, reports_weekly, unit_type, parent_unit_id, description, location").order("name"), "business units");
 }
 
-export interface EmployeeRow { id: string; email: string; first_name: string; last_name: string; employment_status: string; on_attendance_roster: boolean; business_units: { name: string } | null; users: { id: string } | null }
+export interface EmployeeRow { id: string; email: string; first_name: string; last_name: string; employment_status: string; on_attendance_roster: boolean; business_unit_id: string; business_units: { name: string } | null; users: { id: string } | null }
 export async function listEmployees(): Promise<EmployeeRow[]> {
   const sb = await userClient();
   const out: EmployeeRow[] = [];
   for (let from = 0; from < 50_000; from += 1000) {   // paged past the 1000-row API default
-    const page = unwrap(await sb.from("employees").select("id, email, first_name, last_name, employment_status, on_attendance_roster, business_units(name), users(id)").order("last_name").range(from, from + 999), "employees") as unknown as EmployeeRow[];
+    const page = unwrap(await sb.from("employees").select("id, email, first_name, last_name, employment_status, on_attendance_roster, business_unit_id, business_units(name), users(id)").order("last_name").range(from, from + 999), "employees") as unknown as EmployeeRow[];
     out.push(...page);
     if (page.length < 1000) break;
   }
@@ -262,9 +262,9 @@ export async function listEmployees(): Promise<EmployeeRow[]> {
 export async function listUsers(viewerIsSuperAdmin = false) {
   const sb = await userClient();
   const rows = unwrap(
-    await sb.from("users").select("id, email, status, last_login_at, employees(first_name, last_name, business_unit_id, business_units(name)), user_roles!user_roles_user_id_fkey(roles(code))").order("email"),
+    await sb.from("users").select("id, email, status, last_login_at, employee_id, employees(first_name, last_name, business_unit_id, business_units(name)), user_roles!user_roles_user_id_fkey(roles(code))").order("email"),
     "users",
-  ) as unknown as { id: string; email: string; status: string; last_login_at: string | null; employees: { first_name: string; last_name: string; business_unit_id: string; business_units: { name: string } | null } | null; user_roles: { roles: { code: string } | null }[] }[];
+  ) as unknown as { id: string; email: string; status: string; last_login_at: string | null; employee_id: string; employees: { first_name: string; last_name: string; business_unit_id: string; business_units: { name: string } | null } | null; user_roles: { roles: { code: string } | null }[] }[];
   return viewerIsSuperAdmin ? rows : rows.filter((u) => !u.user_roles.some((r) => r.roles?.code === "SUPER_ADMIN"));
 }
 

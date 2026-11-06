@@ -52,6 +52,7 @@ const BLIND_2XX_OK = new Set([
   "/api/v1/notifications/[id]/read POST",
   "/api/v1/weekly-reports/[id]/edit-session DELETE",
   "/api/v1/site/images/[slot] DELETE",
+  "/api/v1/audit/verify POST",   // read-only integrity check of the audit chain; it changes nothing
 ]);
 
 const mutating = (m: string) => m !== "GET";

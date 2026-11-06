@@ -237,7 +237,7 @@ A permission marked **reserved** (`permissions.reserved`) can only be held by a 
 
 ## OKR Session Notes permissions (module `Session notes & meetings`; ADR-089 to ADR-093)
 
-Mapped to roles by migration `20261105000001` and changeable only through the ordinary role-management process. **HR, Finance, Admin and Super Admin hold none of the content permissions**; Admin and Super Admin hold only `session_notes.configure` (the list of session types).
+Mapped to roles by migration `20261105000001` and changeable only through the ordinary role-management process. **HR, Finance and Admin hold none of the content permissions** (Admin holds only `session_notes.configure`, the list of session types). **The Super Admin holds all of them** (ADR-112, owner decision), with no content limit (ADR-112): it also reads others' CONFIDENTIAL notes and may verify its own completions. Audit and immutable history still apply.
 
 | Permission | Risk | BU Lead | Presenter | Executive | Director | Admin | Super Admin | HR | Finance |
 |---|---|---|---|---|---|---|---|---|---|

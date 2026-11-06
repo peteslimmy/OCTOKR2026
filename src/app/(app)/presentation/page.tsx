@@ -5,9 +5,10 @@ import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/primitives"
 import { can, requireActor } from "@/lib/auth/actor";
 import { activeWeeks, getReportView, getWeekOverview, recentFinalWeeks } from "@/lib/data";
 import { getPublishedQuote } from "@/lib/data/governance";
+import { getQuoteTurnsForWeek } from "@/lib/data/quote-rota";
+import { QuoteReview } from "./quote-review";
 import { BuIntelligenceSection } from "@/components/insights/intelligence";
 import { LastWeekHint } from "./last-week-hint";
-import { SessionNotesLauncher } from "./session-notes-launcher";
 import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
 import { PresenterView } from "./presenter-view";
 import { QuotePresenter } from "./quote-presenter";
@@ -26,7 +27,7 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
   const week = unique.find((w) => w.id === sp.week) ?? unique.find((w) => w.phase === "CONTENT_LOCKED" || w.status === "FINAL_LOCKED") ?? unique[0];
   if (!week) return <Card><EmptyState title="No reporting week yet">Weeks appear once a quarter is activated.</EmptyState></Card>;
 
-  const overview = await getWeekOverview(week.id);
+  const [overview, turns] = await Promise.all([getWeekOverview(week.id), getQuoteTurnsForWeek(week.id).catch(() => [])]);
   // the week's quote, with the speakers of the sessions either side of it
   const ordered = [...unique].sort((a, b) => a.week_start_at.localeCompare(b.week_start_at));
   const at = ordered.findIndex((w) => w.id === week.id);
@@ -49,10 +50,11 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
           <p className="mt-1 text-sm text-muted">{`${formatWeekLabel(week)} · final lock ${wat(week.final_lock_at)}`}</p>
         </div>
         <WeekStrip currentId={week.id} weeks={unique.map((w) => ({ id: w.id, label: formatWeekLabel(w), holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" }))} />
-        {quote ? <QuotePresenter quote={quote.quote} speaker={quote.speaker_name} businessUnit={quote.business_unit} session={`Week ${week.week_number} · ${month}`}
+        {quote && turns.length === 0 ? <QuotePresenter quote={quote.quote} speaker={quote.speaker_name} businessUnit={quote.business_unit} session={`Week ${week.week_number} · ${month}`}
           previous={neighbour(ordered[at - 1], quoteBefore)} next={neighbour(ordered[at + 1], quoteAfter)} /> : null}
         <Link href="/dashboard" className="shrink-0 rounded-lg border border-line bg-panel px-4 py-2 text-sm">Exit presentation</Link>
       </div>
+      {turns.length > 0 || can(actor, "quote.assign") ? <div className="mb-4"><QuoteReview turns={turns} weekLabel={formatWeekLabel(week)} session={`Week ${week.week_number} · ${month}`} canAssign={can(actor, "quote.assign")} /></div> : null}
       {week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Card><EmptyState title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No BU reports are due for this week.</EmptyState></Card> : (
         <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <Card>
@@ -80,7 +82,6 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
             ) : <Card><EmptyState title="No business units" /></Card>}
             {current ? <Card data-testid="presentation-executive-commentary"><CardHeader title="Executive commentary" description={`Observations and recommendations about ${current.business_unit.name} this week. Commenting changes nothing in the report.`}
               action={<ExecutiveCommentary module="PRESENTATION" subjectType="BUSINESS_UNIT" subjectId={current.business_unit.id} subjectLabel={`${current.business_unit.name} · ${formatWeekLabel(week)}`} businessUnitId={current.business_unit.id} quarterId={week.quarter_id} reportingWeekId={week.id} />} /></Card> : null}
-            {current && can(actor, "session_notes.view") ? <SessionNotesLauncher buId={current.business_unit.id} buName={current.business_unit.name} weekId={week.id} canCreate={can(actor, "session_notes.create")} /> : null}
           </div>
         </div>
       )}

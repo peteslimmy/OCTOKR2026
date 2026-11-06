@@ -35,7 +35,7 @@ function initialDraft(note: NoteRow): Draft | null {
  * an optimistic-concurrency check on every save, a local copy of unsent text that survives a refresh or a lost connection, and a guard on leaving the page.
  * In a completed session saving is deliberate (an amendment with a reason) rather than automatic.
  */
-export function NoteEditor({ note, amend, onClose, mentionable = [] }: { note: NoteRow; amend: boolean; onClose: (changed: boolean) => void; mentionable?: Mentionable[] }) {
+export function NoteEditor({ note, amend, onClose, mentionable = [], simple = false }: { note: NoteRow; amend: boolean; onClose: (changed: boolean) => void; mentionable?: Mentionable[]; simple?: boolean }) {
   const [title, setTitle] = useState(note.title ?? "");
   const [category, setCategory] = useState<string>(note.category);
   const [visibility, setVisibility] = useState<string>(note.visibility);
@@ -190,17 +190,17 @@ export function NoteEditor({ note, amend, onClose, mentionable = [] }: { note: N
         </div>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_12rem_12rem]">
+      {simple ? null : <div className="grid gap-2 sm:grid-cols-[1fr_12rem_12rem]">
         <Input aria-label="Note title (optional)" placeholder="Title (optional)" value={title} maxLength={200} disabled={dis} onChange={(e) => setTitle(e.target.value)} />
         <NativeSelect aria-label="Category" value={category} disabled={dis} onChange={(e) => setCategory(e.target.value)}>{NOTE_CATEGORIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</NativeSelect>
         <NativeSelect aria-label="Who can read this note" value={visibility} disabled={dis} onChange={(e) => setVisibility(e.target.value)}>{NOTE_VISIBILITY.map((v) => <option key={v.code} value={v.code}>{v.label.split(" with")[0]}</option>)}</NativeSelect>
-      </div>
+      </div>}
 
-      <div role="group" aria-label="Editor mode" className="inline-flex rounded-md border border-line p-0.5 text-xs">
+      {simple ? null : <div role="group" aria-label="Editor mode" className="inline-flex rounded-md border border-line p-0.5 text-xs">
         <button type="button" aria-pressed={mode === "visual"} className={`rounded px-2 py-1 ${mode === "visual" ? "bg-brand-100 font-semibold" : ""}`} onClick={() => chooseMode("visual")}>Visual</button>
         <button type="button" aria-pressed={mode === "markdown"} className={`rounded px-2 py-1 ${mode === "markdown" ? "bg-brand-100 font-semibold" : ""}`} onClick={() => chooseMode("markdown")}>Text (markdown)</button>
-      </div>
-      {mode === "visual" ? <VisualEditor value={content} onChange={setContent} disabled={dis} mentionable={mentionable} /> : (
+      </div>}
+      {simple || mode === "visual" ? <VisualEditor value={content} onChange={setContent} disabled={dis} mentionable={mentionable} /> : (
         <>
         <div role="toolbar" aria-label="Formatting" className="flex flex-wrap items-center gap-1">
           {TOOLS.map((t) => <button key={t.label} type="button" title={t.label} aria-label={t.label} className={`${btn} ${t.cls ?? ""}`} onClick={() => apply(t.op)} disabled={dis}>{t.text}</button>)}

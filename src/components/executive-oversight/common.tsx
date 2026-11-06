@@ -36,7 +36,7 @@ export function Links({ links }: { links: EoLink[] }) {
 
 /** Where a linked record can be opened, if it has a page (the destination checks access itself). */
 export function linkHref(t: string, id: string): string | null {
-  if (t === "SESSION") return `/session-notes/${id}`;
+  if (t === "SESSION") return `/notes/${id}`;
   return null;
 }
 
