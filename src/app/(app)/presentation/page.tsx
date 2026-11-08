@@ -48,7 +48,7 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
 
   return (
     <>
-      <div className="mb-6 flex items-end gap-4">
+      <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="shrink-0">
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Presentation mode</h1>
           <p className="mt-1 text-sm text-muted">{`${formatWeekLabel(week)} · final lock ${wat(week.final_lock_at)}`}</p>

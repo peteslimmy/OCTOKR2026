@@ -97,6 +97,9 @@ async function main() {
   const hr = await bu("HR", "Human Resources");
   const eng = await bu("ENG", "Engineering");
   const sales = await bu("SALES", "Sales");
+  // The seed units are treated as having existed since the start of the year. Reports only include a unit that existed before the week ended,
+  // and the development calendar is frozen in October, so units stamped with the real (later) time would drop out of every week.
+  await sb.from("business_units").update({ created_at: "2026-01-01T00:00:00Z" }).in("code", ["HQ", "FIN", "HR", "ENG", "SALES"]);
 
   // accounts exist only on approved email domains: the seed people use this one
   must(await sb.from("allowed_email_domains").upsert({ domain: "4core.local" }), "approve the seed domain");

@@ -22,18 +22,17 @@ test.describe.serial("Reports module", () => {
     await expectNoA11yViolations(page, "reports overview with data");
   });
 
-  test("the trends agree with the earlier lifecycle: Engineering finished week 2 at 50 and Sales was amended from 0 to 100", async ({ page }) => {
+  test("the trends agree with the earlier lifecycle: Engineering finished week 2 at 50, and the registers open", async ({ page }) => {
     await loginAs(page, "exec@4core.local");
     await page.goto("/reports/performance-trends");
     const eng = page.locator("tr").filter({ hasText: "Engineering" }).filter({ hasText: "Scored" }).filter({ hasText: "50" });
     await expect(eng.first()).toBeVisible();
-    const salesRows = page.locator("tr").filter({ hasText: "Sales" });
-    await expect(salesRows.filter({ hasText: "100" }).first()).toBeVisible();                 // the amended week shows its latest score version
+    // the late-report amendment screens were removed with the unused modules, so no week is amended here; the registers must still open
     await page.goto("/reports/reporting-register");
-    const amended = page.locator("tr").filter({ hasText: "Sales" }).filter({ hasText: "APPLIED" });
-    await expect(amended.first()).toContainText("Non-compliant");                             // an accepted late report does not become compliant
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator("tr").filter({ hasText: "Engineering" }).first()).toBeVisible();
     await page.goto("/reports/late-report-register");
-    await expect(page.getByRole("cell", { name: "Score amended" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("filters change every figure consistently and can be reset", async ({ page }) => {

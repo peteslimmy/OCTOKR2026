@@ -12,7 +12,7 @@ export function WeekStrip({ weeks, currentId, view }: { weeks: StripWeek[]; curr
   const step = (dir: -1 | 1) => row.current?.scrollBy({ left: dir * Math.max(240, (row.current?.clientWidth ?? 600) * 0.7), behavior: "smooth" });
   const arrow = "shrink-0 rounded-full border border-line bg-panel px-2.5 py-1 text-sm hover:bg-surface";
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-w-[min(100%,16rem)] flex-1 items-center gap-2">
       <button type="button" className={arrow} onClick={() => step(-1)} aria-label="Scroll to newer weeks">‹</button>
       <div ref={row} role="navigation" aria-label="Reporting weeks" className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1.5">
         {weeks.map((w) => (
