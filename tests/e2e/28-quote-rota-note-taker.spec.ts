@@ -55,6 +55,10 @@ test("the unit's lead enters the quote and picks who in the team said it", async
 test("the Presenter sees it in Quote review, shows it on screen, and marks it presented", async ({ page }) => {
   await loginAs(page, "presenter@4core.local");
   await page.goto(`/presentation?week=${weekId}`);
+  // the quote is on its own tab, not on top of the business units' reports
+  await expect(page.getByTestId("quote-review")).toHaveCount(0);
+  await page.getByTestId("presentation-tab-quote").click();
+  await ex(page).toHaveURL(/view=quote/);
   const review = page.getByTestId("quote-review");
   await ex(review).toBeVisible({ timeout: 90_000 });
   await ex(review.getByText(quote)).toBeVisible();

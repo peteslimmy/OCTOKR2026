@@ -7,6 +7,7 @@ import { activeWeeks, getReportView, getWeekOverview, recentFinalWeeks } from "@
 import { getPublishedQuote } from "@/lib/data/governance";
 import { getQuoteTurnsForWeek } from "@/lib/data/quote-rota";
 import { QuoteReview } from "./quote-review";
+import { PresentationTabs } from "./presentation-tabs";
 import { BuIntelligenceSection } from "@/components/insights/intelligence";
 import { LastWeekHint } from "./last-week-hint";
 import { ExecutiveCommentary } from "@/components/executive-oversight/commentary";
@@ -41,6 +42,9 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
   const base = `/presentation?week=${week.id}`;
   const prev = overview[(idx - 1 + overview.length) % overview.length];
   const next = overview[(idx + 1) % overview.length];
+  // the quote has its own tab; it is offered only when there is a quote turn to review or the person can assign one
+  const hasQuoteTab = turns.length > 0 || can(actor, "quote.assign");
+  const tab = hasQuoteTab && sp.view === "quote" ? "quote" : "units";
 
   return (
     <>
@@ -49,13 +53,14 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Presentation mode</h1>
           <p className="mt-1 text-sm text-muted">{`${formatWeekLabel(week)} · final lock ${wat(week.final_lock_at)}`}</p>
         </div>
-        <WeekStrip currentId={week.id} weeks={unique.map((w) => ({ id: w.id, label: formatWeekLabel(w), holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" }))} />
+        <WeekStrip currentId={week.id} view={tab === "quote" ? "quote" : undefined} weeks={unique.map((w) => ({ id: w.id, label: formatWeekLabel(w), holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" }))} />
         {quote && turns.length === 0 ? <QuotePresenter quote={quote.quote} speaker={quote.speaker_name} businessUnit={quote.business_unit} session={`Week ${week.week_number} · ${month}`}
           previous={neighbour(ordered[at - 1], quoteBefore)} next={neighbour(ordered[at + 1], quoteAfter)} /> : null}
         <Link href="/dashboard" className="shrink-0 rounded-lg border border-line bg-panel px-4 py-2 text-sm">Exit presentation</Link>
       </div>
-      {turns.length > 0 || can(actor, "quote.assign") ? <div className="mb-4"><QuoteReview turns={turns} weekLabel={formatWeekLabel(week)} session={`Week ${week.week_number} · ${month}`} canAssign={can(actor, "quote.assign")} /></div> : null}
-      {week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Card><EmptyState title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No BU reports are due for this week.</EmptyState></Card> : (
+      <PresentationTabs weekId={week.id} active={tab} showQuote={hasQuoteTab} />
+      {tab === "quote" ? <QuoteReview turns={turns} weekLabel={formatWeekLabel(week)} session={`Week ${week.week_number} · ${month}`} canAssign={can(actor, "quote.assign")} />
+      : week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Card><EmptyState title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No BU reports are due for this week.</EmptyState></Card> : (
         <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <Card>
             <nav aria-label="Business units" className="max-h-[calc(100vh-13rem)] overflow-y-auto"><ul className="divide-y divide-line">
