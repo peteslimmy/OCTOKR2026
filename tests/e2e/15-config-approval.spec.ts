@@ -7,7 +7,7 @@ const code = `E2E${Date.now().toString(36).toUpperCase().slice(-6)}`;
 test.describe.serial("configuration approval", () => {
   test("HR asks for a violation type; nothing exists until an Admin approves; HR cannot decide and the requester can only withdraw", async ({ page }) => {
     await loginAs(page, "hr@4core.local");
-    await page.goto("/governance/violations");
+    await page.goto("/violations?tab=settings");      // violation types are kept on the Settings tab of Violations & Funds
     await page.getByRole("button", { name: "Add violation type" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Code").fill(code);

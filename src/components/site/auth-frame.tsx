@@ -33,9 +33,10 @@ export function AuthFrame({ login, brand, images, children, preview = false }: {
   const content = (
     <div className={clsx("relative z-10 flex h-full flex-col justify-between gap-10 p-10", tone.text)}>
       {panel.showLogo ? (preview ? logo : <Link href="/" className="w-fit rounded-lg">{logo}</Link>) : <span />}
-      <div className="max-w-md space-y-6">
-        {panel.showArt && !img ? <DashboardArt className="w-full max-w-sm rounded-2xl opacity-95 shadow-2xl" /> : null}
-        {panel.headline ? <p className="text-3xl leading-tight font-semibold tracking-tight text-balance">{panel.headline}</p> : null}
+      {/* the picture, headline and points sit in the middle of the panel; the points stay left-aligned inside that block so each one reads cleanly */}
+      <div className="mx-auto w-full max-w-md space-y-6">
+        {panel.showArt && !img ? <DashboardArt className="mx-auto w-full max-w-sm rounded-2xl opacity-95 shadow-2xl" /> : null}
+        {panel.headline ? <p className="text-center text-3xl leading-tight font-semibold tracking-tight text-balance">{panel.headline}</p> : null}
         {panel.points.length > 0 ? (
           <ul className="space-y-4">
             {panel.points.map((p, n) => {
@@ -45,7 +46,7 @@ export function AuthFrame({ login, brand, images, children, preview = false }: {
           </ul>
         ) : null}
       </div>
-      <p className={clsx("text-xs", tone.sub)}>{panel.footerText}</p>
+      <p className={clsx("text-center text-xs", tone.sub)}>{panel.footerText}</p>
     </div>
   );
   const backdrop = (

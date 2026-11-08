@@ -29,6 +29,8 @@ test.describe.serial("session outcome", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText(label);      // creating the session opens it
     sessionPath = new URL(page.url()).pathname;
     await page.getByRole("button", { name: "Skip OKR for this week" }).click();
+    // a reason is required (at least 5 characters): every BU Lead is shown it
+    await page.getByRole("dialog").getByLabel("Why is the session being skipped?").fill("The physical session will not take place this week.");
     await page.getByRole("dialog").getByRole("button", { name: "Skip OKR for this week" }).click();
     await expect(page.getByText("OKR session skipped. All BU Leads were notified.")).toBeVisible();
 
@@ -88,6 +90,8 @@ test.describe.serial("session outcome", () => {
     await loginAs(page, "hr@4core.local");
     await page.goto(sessionPath);
     await page.getByRole("button", { name: "Skip OKR for this week" }).click();
+    // a reason is required (at least 5 characters): every BU Lead is shown it
+    await page.getByRole("dialog").getByLabel("Why is the session being skipped?").fill("The physical session will not take place this week.");
     await page.getByRole("dialog").getByRole("button", { name: "Skip OKR for this week" }).click();
     await expect(page.getByText("OKR session skipped. All BU Leads were notified.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Emergency outcome correction" })).toHaveCount(0);       // HR does not have it

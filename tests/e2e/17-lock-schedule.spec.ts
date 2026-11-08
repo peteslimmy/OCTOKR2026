@@ -5,7 +5,7 @@ import { answerStepUpIfAsked, expectNoA11yViolations, loginAs, query } from "./h
 async function propose(page: Page, v: { cDay: string; cTime: string; fDay: string; fTime: string; fOff: string; reason: string }) {
   await loginAs(page, "admin@4core.local");
   await page.goto("/admin/settings");
-  const card = page.locator("div.rounded-xl").filter({ has: page.getByRole("heading", { name: "Lock times" }) });
+  const card = page.locator("div.rounded-xl").filter({ has: page.getByRole("heading", { name: "Reporting window and locks" }) });
   await card.getByRole("group", { name: "Content lock" }).getByLabel("Day").selectOption({ label: v.cDay });
   await card.getByRole("group", { name: "Content lock" }).getByLabel("Time (HH:MM)").fill(v.cTime);
   await card.getByRole("group", { name: "Final lock" }).getByLabel("Day").selectOption({ label: v.fDay });
@@ -29,7 +29,7 @@ test.describe.serial("lock schedule", () => {
   test("the screen shows the schedule in force and says what a change would do", async ({ page }) => {
     await loginAs(page, "admin@4core.local");
     await page.goto("/admin/settings");
-    const card = page.locator("div.rounded-xl").filter({ has: page.getByRole("heading", { name: "Lock times" }) });
+    const card = page.locator("div.rounded-xl").filter({ has: page.getByRole("heading", { name: "Reporting window and locks" }) });
     await expect(card).toContainText("Tuesday 18:00 WAT");
     await expect(card).toContainText("the following Tuesday 11:00 WAT");
     await expect(card).toContainText("weeks already generated keep the times they have");
@@ -57,7 +57,7 @@ test.describe.serial("lock schedule", () => {
     expect((await query("select 1 from reporting_weeks where schedule_version_id = (select id from reporting_schedule_versions where version = 2)"))).toHaveLength(0);
     await loginAs(page, "admin@4core.local");
     await page.goto("/admin/settings");
-    const card = page.locator("div.rounded-xl").filter({ has: page.getByRole("heading", { name: "Lock times" }) });
+    const card = page.locator("div.rounded-xl").filter({ has: page.getByRole("heading", { name: "Reporting window and locks" }) });
     await expect(card).toContainText("Wednesday 17:30 WAT");
     await card.getByText(/^History \(2 versions\)/).click();                                                // the history is folded away until asked for
     await expect(card.getByRole("list", { name: "Lock schedule history" })).toContainText("v1");

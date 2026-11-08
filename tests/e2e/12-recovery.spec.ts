@@ -88,7 +88,7 @@ test.describe.serial("recovery codes", () => {
       await page.getByRole("button", { name: "Use recovery code" }).click();
       await expect(page.locator("main [role=alert]")).toHaveText("That recovery code is not valid.");
     }
-    await page.getByRole("button", { name: "Back to the authenticator code" }).click();
+    await page.getByRole("button", { name: "Back to your code" }).click();   // the screen's wording since emailed codes became a second factor
     await expect(page.getByLabel("Authenticator code")).toBeVisible();
     // leave the account as found: no authenticator
     const secretNow = secret;

@@ -95,13 +95,14 @@ test.describe.serial("weekly reporting lifecycle (Engineering)", () => {
   test("a Presenter reviews the finalised report; the Executive sees the ranking", async ({ page }) => {
     await loginAs(page, "presenter@4core.local");
     await page.goto(reportUrl);
-    await page.getByRole("button", { name: "Mark reviewed" }).click();
+    await page.getByRole("button", { name: "Review", exact: true }).click();   // the button's tooltip reads "Mark this finalised report as reviewed"
     await page.getByRole("dialog").getByRole("button", { name: "Confirm" }).click();
     await expect(page.getByText("Report reviewed.")).toBeVisible();
     await expect(page.getByText("Reviewed", { exact: true })).toBeVisible();
 
     await loginAs(page, "exec@4core.local");
-    await expect(page.getByText("Engineering").first()).toBeVisible();
+    // the unit filter is a dropdown whose hidden <option>s also say "Engineering": look only at what a person can see
+    await expect(page.getByText("Engineering").filter({ visible: true }).first()).toBeVisible();
     await page.waitForLoadState("networkidle");
     await expectNoA11yViolations(page, "executive dashboard with data");
   });

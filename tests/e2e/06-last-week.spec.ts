@@ -40,6 +40,8 @@ test.describe.serial("Last Week hint", () => {
   test("the L shortcut opens it, Escape closes it, and typing L in a field does not", async ({ page }) => {
     await loginAs(page, "presenter@4core.local");
     await page.goto("/presentation");
+    await expect(page.getByRole("button", { name: "Last Week — Outstanding Tasks" })).toBeVisible();
+    await page.waitForLoadState("networkidle");   // the keyboard shortcut works once the page's scripts have loaded
     await page.keyboard.press("l");
     const dialog = page.getByRole("dialog", { name: "Last week's outstanding tasks" });
     await expect(dialog).toBeVisible();
