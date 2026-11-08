@@ -46,9 +46,10 @@ test("accessibility: dialogs", async ({ page }) => {
   await loginAs(page, "lead.eng@4core.local");
   await page.goto("/weekly");
   await page.getByRole("button", { name: "Start report" }).first().click();
-  await expect(page).toHaveURL(/\/weekly\/[0-9a-f-]+/);
-  await page.getByRole("button", { name: "Add goal" }).first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  // the first visit to the report editor compiles it on demand in the dev server, which can take longer than the default wait
+  await expect(page).toHaveURL(/\/weekly\/[0-9a-f-]+/, { timeout: 90_000 });
+  await page.getByRole("button", { name: "Add goal" }).first().click({ timeout: 60_000 });
+  await expect(page.getByRole("dialog")).toBeVisible({ timeout: 30_000 });
   await expectNoA11yViolations(page, "goal dialog");
 });
 
