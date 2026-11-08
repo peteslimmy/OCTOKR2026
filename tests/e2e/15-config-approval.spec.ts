@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { deriveViolationTypeCode } from "../../src/lib/violations/type-code";
 import { answerStepUpIfAsked, expectNoA11yViolations, loginAs, query } from "./helpers";
 
 /** Changes to governance settings are asked for by one person and approved by a different one (ADR-068). */
-const code = `E2E${Date.now().toString(36).toUpperCase().slice(-6)}`;
+const typeName = `E2E check-in ${Date.now().toString(36)}`;
+const code = deriveViolationTypeCode(typeName).toUpperCase();   // the code is made from the name; the form has no Code box
 
 test.describe.serial("configuration approval", () => {
   test("HR asks for a violation type; nothing exists until an Admin approves; HR cannot decide and the requester can only withdraw", async ({ page }) => {
@@ -10,8 +12,7 @@ test.describe.serial("configuration approval", () => {
     await page.goto("/violations?tab=settings");      // violation types are kept on the Settings tab of Violations & Funds
     await page.getByRole("button", { name: "Add violation type" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Code").fill(code);
-    await dialog.getByLabel("Name").fill("Late to the weekly check-in");
+    await dialog.getByLabel("Name").fill(typeName);
     await dialog.getByLabel("Default fine (₦)").fill("1500");
     await dialog.getByLabel("Reason for the approver").fill("Agreed by management on 14 October");
     await dialog.getByRole("button", { name: "Send for approval" }).click();
