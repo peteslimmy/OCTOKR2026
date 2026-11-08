@@ -245,7 +245,7 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 [auth.email.template.recovery]
-subject = "Reset your 4CORE-OKR password"
+subject = "Reset your 4Core Weekly OKR password"
 content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
@@ -256,7 +256,7 @@ content_path = "./supabase/templates/recovery.html"
 # Uncomment to customize notification email template
 [auth.email.notification.password_changed]
 enabled = true
-subject = "Your 4CORE-OKR password has been changed"
+subject = "Your 4Core Weekly OKR password has been changed"
 content_path = "./supabase/templates/password_changed_notification.html"
 
 [auth.sms]

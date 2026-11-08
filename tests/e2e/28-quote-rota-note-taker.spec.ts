@@ -63,7 +63,8 @@ test("the Presenter sees it in Quote review, shows it on screen, and marks it pr
   await ex(review).toBeVisible({ timeout: 90_000 });
   await ex(review.getByText(quote)).toBeVisible();
   await review.getByRole("button", { name: /Show quote/ }).click();
-  await ex(page.getByRole("dialog").getByText(quote)).toBeVisible();
+  // the dialog carries the quote twice (the visible text and a screen-reader description), so check the dialog as a whole
+  await ex(page.getByRole("dialog")).toContainText(quote);
   await page.keyboard.press("Escape");
   await review.getByRole("button", { name: "Mark presented" }).click();
   await ex.poll(async () => (await query("select status from quote_turns where reporting_week_id = $1 and status <> 'CANCELLED'", [weekId]))[0]?.status).toBe("PRESENTED");
