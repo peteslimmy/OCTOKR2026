@@ -23,6 +23,12 @@ describe("composeMail", () => {
     expect(m.text).not.toMatch(/<[a-z]/i);
     expect(composeMail(row(1)).text).not.toContain("Open the application");              // no address configured: no link
   });
+  it("is signed by 4Core BizOps and names the product 4Core Weekly OKR", () => {
+    const text = composeMail(row(1)).text;
+    expect(text).toContain("Regards,\n4Core BizOps");
+    expect(text).toContain("4Core Weekly OKR.");
+    expect(text.indexOf("4Core BizOps")).toBeGreaterThan(text.indexOf("Body 1"));      // the signature follows the message
+  });
   it("refuses anything that is not one plain address", () => {
     expect(() => composeMail(row(1, { to_email: "a@b.test\r\nBcc: x@y.test" }))).toThrow();
     expect(() => composeMail(row(1, { to_email: "a@b.test,c@d.test" }))).toThrow();

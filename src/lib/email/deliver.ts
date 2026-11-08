@@ -27,7 +27,7 @@ export function composeMail(row: OutboxRow, appUrl?: string): Mail {
   return {
     to: row.to_email,
     subject: row.subject.replace(/[\r\n]+/g, " ").slice(0, 200),                // a header must never contain a line break
-    text: `${row.body}${link}\n\n—\n4CORE-OKR. This message was sent because of an event on your account. You can turn non-security emails off under Notifications.`,
+    text: `${row.body}${link}\n\nRegards,\n4Core BizOps\n\n—\n4Core Weekly OKR. This message was sent because of an event on your account. You can turn non-security emails off under Notifications.`,
   };
 }
 

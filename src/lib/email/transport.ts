@@ -15,7 +15,7 @@ import type { Mail, Transport } from "./deliver";
  */
 export function configuredTransport(): Transport | null {
   const kind = process.env.EMAIL_TRANSPORT;
-  const from = process.env.EMAIL_FROM || "4CORE-OKR <no-reply@localhost>";
+  const from = process.env.EMAIL_FROM || "4Core Weekly OKR <no-reply@localhost>";
   if (kind === "smtp" && process.env.SMTP_URL) {
     const t = nodemailer.createTransport(process.env.SMTP_URL);
     return { name: "smtp", send: async (m: Mail) => { await t.sendMail({ from, to: m.to, subject: m.subject, text: m.text }); } };
