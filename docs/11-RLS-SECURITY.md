@@ -118,6 +118,8 @@ Presenter can read all BU reports but cannot edit Goal content.
 - `config_change_topics`, `permission_conflicts`, `reporting_schedule_versions`: readable by every signed-in person (they are rules, not secrets). `config_change_requests`: readable by people who handle configuration (the requesters' and approvers' permissions). `retention_settings`: readable by `retention.configure`, `config.approve` and `audit.read`. `job_heartbeats`, `rate_limit_hits`: no policy and no grant, so invisible to every browser session.
 - Refused requests by a signed-in person are written to the audit log (`ACCESS_DENIED`), without identifiers or request content.
 
+Changing a unit's type is a separate guarded function (`change_business_unit_type`, `business_units.change_type`, Super Admin only); `update_business_unit` also refuses a type change without that permission, so the approval path cannot be used to bypass it (ADR-114).
+
 ## Tables added after ADR-072 (branding, integrations, imports, unit type)
 
 - **Public-before-sign-in reads.** `app_branding`, `app_branding_assets`, `site_content` and `site_images` grant `select` to `anon` and `authenticated` with a `using (true)` policy, because the sign-in page and landing content render before a session exists. They are read-only to browsers: writes go through service-role functions requiring `branding.manage` (`set_branding*`, `set_site_content`, `set_site_image`, `delete_site_image`, `prune_site_images`), and image bytes/settings are audited without the bytes. No public storage bucket is involved.

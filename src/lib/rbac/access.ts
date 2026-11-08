@@ -38,6 +38,7 @@ export const CAPABILITIES: Capability[] = [
   { id: "admin.roles.ask", label: "Ask for a role to be created or changed", module: "Administration & security", path: "/admin/roles", all: ["roles.request"] },
   { id: "admin.roles.manage", label: "Manage roles and give direct permissions", module: "Administration & security", path: "/admin/access", all: ["roles.manage"] },
   { id: "admin.units", label: "Manage business units", module: "Administration & security", path: "/admin/units", all: ["business_units.manage"] },
+  { id: "admin.units.type", label: "Change a unit between Business Unit and Department", module: "Administration & security", path: "/admin/units", all: ["business_units.change_type"] },
   { id: "admin.approve", label: "Approve configuration changes", module: "Administration & security", path: "/admin/approvals", all: ["config.approve"] },
   { id: "admin.audit", label: "Read the audit log", module: "Administration & security", path: "/audit", all: ["audit.read"] },
 ];

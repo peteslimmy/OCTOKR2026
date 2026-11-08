@@ -22,6 +22,7 @@ export const PATCH = api(
     const sb = await (await import("@/lib/supabase/server")).userClient();
     const { data: cur } = await sb.from("business_units").select("status, reports_weekly, unit_type, parent_unit_id, description, location").eq("id", ctx.params.id).maybeSingle();
     if (!cur) throw fail("NOT_FOUND", 404, "Business Unit not found.");
+    if (unitType && unitType !== cur.unit_type) throw fail("USE_TYPE_CHANGE", 422, "The type is changed from the unit's own \"Change type\" action, which only the Super Admin can use.");
     if (cur.status === status && cur.reports_weekly === reportsWeekly && cur.unit_type === unitType && cur.parent_unit_id === parentUnitId && cur.description === description && cur.location === location) {
       return ctx.rpc("update_business_unit", { p_actor: ctx.actor.id, p_id: ctx.params.id, p_name: name, p_status: status, p_reports_weekly: reportsWeekly, p_unit_type: unitType ?? null, p_set_hierarchy: true, p_parent_unit_id: parentUnitId ?? null, p_description: description ?? null, p_location: location ?? null });
     }

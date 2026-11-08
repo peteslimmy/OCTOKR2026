@@ -304,6 +304,7 @@ Privileged operations should use controlled functions/services for:
 | 20261023000001 | `permissions.reserved` and reserved-permission guard; `historical_import_batches`, `historical_import_rows`; `history_*` stage/check/rehearse/commit functions; the `app.historical_import` session flag suppresses notifications and snapshots during an import |
 | 20261024000001 | `business_units.unit_type` (BUSINESS_UNIT / DEPARTMENT) with defaulting trigger |
 | 20261024000002 | `create_business_unit` accepts the unit type; the unit import accepts an optional `unitType` column |
+| 20261109000002 | `change_business_unit_type(actor, id, type, reason)` (Super Admin, permission `business_units.change_type`); `update_business_unit` refuses a different type without that permission; audit action `BU_TYPE_CHANGED` |
 | 20261025000001 | `employees.on_attendance_roster`; `set_employee_roster`; roster and virtual-session creation honour the flag |
 | 20261026000001 | `strategy_import_batches`; `strategy_import_issues`, `strategy_import_commit` (empty, non-active quarters only) |
 | 20261027000001 | `delete_business_unit`, `delete_user`, `delete_weekly_report` (draft reports only), all service-role only and audited |
