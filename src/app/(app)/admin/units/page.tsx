@@ -3,13 +3,15 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { Badge, Card, CardHeader, EmptyState, PageHeader, buttonClass } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
-import { BuReportingToggle, CreateBu, DeleteBu, BulkDeleteBu } from "../admin-actions";
+import { BuReportingToggle, ChangeUnitType, CreateBu, DeleteBu, BulkDeleteBu } from "../admin-actions";
 
 export const metadata: Metadata = { title: "Business Units & Departments" };
 
 export default async function UnitsPage() {
   const actor = await requireActor();
   if (!can(actor, "business_units.manage")) return <Card><EmptyState title="Units are not available for your role" /></Card>;
+
+  const canChangeType = can(actor, "business_units.change_type");
 
   // Fetch BUs with dependent counts
   const sb = await (await import("@/lib/supabase/server")).userClient();
@@ -84,6 +86,7 @@ export default async function UnitsPage() {
             {b.description && <span className="text-xs text-muted truncate max-w-xs" title={b.description}>{b.description}</span>}
             {b.location && <span className="text-xs text-muted">📍 {b.location}</span>}
             <BuReportingToggle id={b.id} name={b.name} status={b.status} reportsWeekly={b.reports_weekly} />
+            {canChangeType && <ChangeUnitType id={b.id} name={b.name} unitType={b.unit_type} childUnits={children.length} employees={empCountMap.get(b.id) || 0} reportsWeekly={b.reports_weekly} />}
             <DeleteBu id={b.id} name={b.name} code={b.code} hasEmployees={b.hasEmployees} hasReports={b.hasReports} />
           </span>
         </li>

@@ -63,6 +63,33 @@ export function BuReportingToggle({ id, name, status, reportsWeekly }: { id: str
   );
 }
 
+/** Super Admin only (the page renders it only for business_units.change_type; the API and database enforce it again). */
+export function ChangeUnitType({ id, name, unitType, childUnits, employees, reportsWeekly }: { id: string; name: string; unitType: string; childUnits: number; employees: number; reportsWeekly: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const { run, pending } = useAction();
+  const toDept = unitType === "BUSINESS_UNIT";
+  const label = toDept ? "Make a Department" : "Make a Business Unit";
+  return (
+    <>
+      <Button size="sm" variant="secondary" aria-label={`${label}: ${name}`} onClick={() => setOpen(true)}>{label}</Button>
+      <Modal open={open} onOpenChange={setOpen} title={`${name}: ${toDept ? "change to a Department" : "change to a Business Unit"}?`}
+        description={`The unit moves to the ${toDept ? "Departments" : "Business Units"} list. Only the type changes: ${reportsWeekly ? "it keeps reporting weekly" : "it keeps not reporting weekly"}, and its scores, reports, ${employees} ${employees === 1 ? "person" : "people"}${childUnits > 0 ? ` and ${childUnits} child ${childUnits === 1 ? "unit" : "units"}` : ""} are untouched. Use the reporting control to change whether it files weekly reports. The change is recorded in the audit log.`}>
+        <div className="space-y-3">
+          <Field id={`bu-type-reason-${id}`} label="Reason (required, audited)"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => { setOpen(false); setReason(""); }}>Cancel</Button>
+            <Button disabled={pending || !reason.trim()} onClick={async () => {
+              const ok = await run(() => apiRequest("POST", `business-units/${id}/type`, { unitType: toDept ? "DEPARTMENT" : "BUSINESS_UNIT", reason }), { success: toDept ? `${name} is now a Department.` : `${name} is now a Business Unit.` });
+              if (ok) { setOpen(false); setReason(""); }
+            }}>Change type</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 export function CreateUserButton({ bus, grantPrivileged, roleOptions }: { bus: { id: string; name: string }[]; grantPrivileged: boolean; roleOptions: RoleOption[] }) {
   const [open, setOpen] = useState(useOpenOnNew("user"));
   const [f, setF] = useState({ email: "", firstName: "", lastName: "", businessUnitId: "", roles: [] as string[] });

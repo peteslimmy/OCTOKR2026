@@ -22,6 +22,7 @@ Do not expose unrestricted generic CRUD for critical operations.
 - `POST /api/v1/business-units`
 - `PATCH /api/v1/business-units/{id}` — name, status and weekly reporting; a change to status or weekly reporting takes a reason and becomes a config request (ADR-068).
 - `DELETE /api/v1/business-units/{id}` — `business_units.manage`; refused while the unit still has employees or reports.
+- `POST /api/v1/business-units/{id}/type` — `{unitType: BUSINESS_UNIT|DEPARTMENT, reason}`; step-up; `business_units.change_type` (Super Admin only). Refuses an unchanged type, a blank reason or an unknown unit; audited as `BU_TYPE_CHANGED`. `PATCH` refuses a changed `unitType` with `USE_TYPE_CHANGE`.
 - `POST /api/v1/business-units/bulk-delete` — `{ids, reason?}`; step-up; each id is attempted separately and returns successes and failures.
 - `GET /api/v1/employees`
 - `POST /api/v1/employees`

@@ -222,6 +222,7 @@
     "audit.rules.configure",
     "branding.manage",
     "bu_goals.manage",
+    "business_units.change_type",
     "business_units.manage",
     "config.approve",
     "config.emergency",
