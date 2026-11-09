@@ -41,7 +41,7 @@ test.describe.serial("employee import wizard", () => {
     await page.locator("#import-file").setInputFiles({ name: "people.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
     await expect(page.getByRole("heading", { name: "Match your columns" })).toBeVisible();
     await expect(page.getByLabel("Email (required)")).toHaveValue("0");
-    await expect(page.getByLabel("Business Unit (required)")).toHaveValue("3");
+    await expect(page.getByLabel("Business Unit (optional)")).toHaveValue("3");
     await expect(page.getByLabel("Status (optional)")).toHaveValue("4");
     await expectNoA11yViolations(page, "import: match columns");
     await page.getByLabel("Status (optional)").selectOption("");
