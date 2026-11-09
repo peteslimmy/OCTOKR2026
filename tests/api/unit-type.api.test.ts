@@ -16,7 +16,7 @@ describe("POST /api/v1/business-units/[id]/type", () => {
     expect(r.status).toBe(401);
   });
 
-  it.each(["admin@4core.local", "hr@4core.local", "lead.eng@4core.local", "director@4core.local", "exec@4core.local"])("%s is refused (403 PERMISSION_DENIED), even for a real unit", async (email) => {
+  it.each(["hr@4core.local", "lead.eng@4core.local", "director@4core.local", "exec@4core.local"])("%s is refused (403 PERMISSION_DENIED), even for a real unit", async (email) => {
     const s = await loginAs(email);
     const units = (await s.request("GET", "/api/v1/business-units")).json.data as Unit[] | undefined;
     const r = await s.request("POST", `/api/v1/business-units/${units?.[0]?.id ?? FAKE}/type`, body);
@@ -24,7 +24,7 @@ describe("POST /api/v1/business-units/[id]/type", () => {
     expect(r.json.error?.code).toBe("PERMISSION_DENIED");
   });
 
-  it("Admin cannot change the type through the general PATCH either", async () => {
+  it("the general PATCH never changes the type; it points to the dedicated change", async () => {
     const s = await loginAs("admin@4core.local");
     const u = ((await s.request("GET", "/api/v1/business-units")).json.data as Unit[])[0];
     const other = u.unit_type === "DEPARTMENT" ? "BUSINESS_UNIT" : "DEPARTMENT";

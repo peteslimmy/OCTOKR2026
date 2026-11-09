@@ -20,7 +20,7 @@ export async function ImportPage({ entity }: { entity: EntityId }) {
   const sb = await userClient();
   const { data } = await sb.rpc("read_import_batches");
   const batches = ((data ?? []) as BatchView[]).filter((b) => b.entity === DB_ENTITY[entity]).slice(0, 10);
-  const canVoid = can(actor, "history.import");   // Super Admin tier; the database checks it again
+  const canVoid = can(actor, "history.import");   // Super Admin, or an Admin for their own batch; the database checks it again
   return (
     <>
       <PageHeader title={cfg.title} description={cfg.intro} actions={<span className="flex gap-4 text-sm">{can(actor, "history.import") ? <Link href="/admin/import/history" className="text-brand-700 underline">Historical reports</Link> : null}{can(actor, "users.manage") ? <Link href="/admin/import/sign-ins" className="text-brand-700 underline">Sign-ins and roles</Link> : null}{can(actor, "strategy.import") ? <Link href="/admin/import/strategy" className="text-brand-700 underline">Strategy</Link> : null}<Link href="/admin" className="text-brand-700 underline">Back to Administration</Link></span>} />

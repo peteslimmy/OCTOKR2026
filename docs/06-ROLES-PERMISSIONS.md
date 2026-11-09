@@ -82,7 +82,7 @@ Permission checks must be performed against the authenticated requester/reviewer
 - `users.manage`
 - `roles.manage`
 - `business_units.manage`
-- `business_units.change_type` — change a unit between Business Unit and Department (promote or demote). **Super Admin only** (protected; not given to Admin, not available through a config request). Changes the label only (ADR-114).
+- `business_units.change_type` — change a unit between Business Unit and Department (promote or demote). **Super Admin and Admin** (protected; not available through a config request). Changes the label only (ADR-114).
 - `audit.read` (summary of the audit log: Admin and Super Admin)
 - `audit.read_detail` (the technical detail of audit entries: address, location, device, raw values, integrity chain; protected, Super Admin only, ADR-121)
 - `report_email.manage` / `report_email.send` / `report_email.history` — automated report emails: set up schedules, preview and test; send now and retry; see the delivery history. Admin and Super Admin (ADR-115).
@@ -231,7 +231,7 @@ The approved permission matrix of the shipped roles is `tests/db/fixtures/role-m
 |---|---|---|
 | `integrations.view` | Admin, Super Admin | See which integrations are configured and how their last test went (never a secret) |
 | `integrations.configure` | Admin, Super Admin (protected) | Ask for an integration to be added, changed, switched on or off, or removed; a Super Admin approves |
-| `history.import` | Super Admin (protected, **reserved**) | Upload, rehearse and commit historical weekly reports; no second approver (ADR-077) |
+| `history.import` | Super Admin, Admin (protected) | Upload, rehearse and commit historical weekly reports; no second approver; Super Admins are told of every Admin commit; an Admin undoes only their own batch (ADR-077, ADR-122) |
 | `integrations.test` | Admin, Super Admin | Test an integration: a message to yourself, a fixed sentence to an AI provider, a test event to a webhook |
 
 ## Reserved permissions (ADR-077)

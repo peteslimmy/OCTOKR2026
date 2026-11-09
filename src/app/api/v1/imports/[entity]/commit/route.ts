@@ -22,6 +22,7 @@ export const POST = api({ stepUp: true }, async ({ actor, req, params, rpc }) =>
     throw fail("IMPORT_INVALID", 422, "The import contains rows that are not valid. Nothing was changed.", problems);
   }
   return explaining("The import", () => rpc(entity.rpc, {
-    p_actor: actor.id, p_rows: body.rows, p_policy: body.policy, p_idempotency_key: body.idempotencyKey, p_file_name: body.fileName, p_file_sha256: body.fileSha256,
+    // an employee row with a Department is placed in that Department (the database reads one unit per person)
+    p_actor: actor.id, p_rows: entity.id === "employees" ? body.rows.map((r) => ({ ...r, businessUnit: String((r as Record<string, string>).department ?? "").trim() || (r as Record<string, string>).businessUnit })) : body.rows, p_policy: body.policy, p_idempotency_key: body.idempotencyKey, p_file_name: body.fileName, p_file_sha256: body.fileSha256,
   }));
 });

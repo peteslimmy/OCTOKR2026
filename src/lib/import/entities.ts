@@ -58,6 +58,7 @@ const EMPLOYEE_SYNONYMS: Record<string, string[]> = {
   firstName: ["firstname", "first", "givenname", "forename"],
   lastName: ["lastname", "last", "surname", "familyname"],
   businessUnit: ["businessunit", "bu", "bucode", "unit", "businessunitcode"],
+  department: ["department", "dept", "departmentcode", "departmentname"],
   status: ["status", "employmentstatus"],
 };
 
@@ -67,10 +68,10 @@ export const ENTITIES: Record<EntityId, EntityUi> = {
     intro: "Add or update many employee records from a spreadsheet. You see exactly what will happen before anything is saved.",
     fields: FIELDS.map((k) => ({ key: k, label: FIELD_LABEL[k], required: REQUIRED_FIELDS.includes(k), synonyms: EMPLOYEE_SYNONYMS[k] })),
     labels: FIELD_LABEL, idField: "email", policies: POLICY_LABEL,
-    template: "email,first_name,last_name,business_unit,status\r\nada@example.com,Ada,Lovelace,ENG,Active\r\n",
-    columnsHint: "Columns: email, first name, last name, Business Unit (its code or name), status (Active or Inactive; empty means Active).",
+    template: "email,first_name,last_name,business_unit,department,status\r\nada@example.com,Ada,Lovelace,ENG,,Active\r\nbayo@example.com,Bayo,Adeyemi,ENG,ENG-QA,Active\r\n",
+    columnsHint: "Columns: email, first name, last name, Business Unit (its code or name), Department (its code or name), status (Active or Inactive; empty means Active). Fill the Business Unit, the Department, or both: a person is placed in the Department when one is given, otherwise in the Business Unit.",
     confirmNote: "This changes employee records only. Login accounts, roles and reports are not touched. The import is recorded in the audit log, and you may be asked for a fresh authenticator code.",
-    describe: (v) => ({ title: v.email || "(no email)", subtitle: [[v.firstName, v.lastName].filter(Boolean).join(" ") || "(no name)", v.businessUnit].filter(Boolean).join(" · ") }),
+    describe: (v) => ({ title: v.email || "(no email)", subtitle: [[v.firstName, v.lastName].filter(Boolean).join(" ") || "(no name)", v.businessUnit, v.department].filter(Boolean).join(" · ") }),
   },
   "business-units": {
     id: "business-units", title: "Import Business Units", noun: { one: "unit", many: "units" },

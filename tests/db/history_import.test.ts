@@ -27,15 +27,15 @@ async function stage(c: Ctx, actor: string, data: Row[]) {
 }
 
 describe("historical import (ADR-077)", () => {
-  it("only the Super Admin tier holds history.import, and no other role can be given it", async () => {
+  it("Super Admin and Admin hold history.import (ADR-122); no other role does, and it stays a protected permission", async () => {
     await withTx(async (c) => {
       const w = await world(c);
-      await c.expectError("PERMISSION_DENIED", () => c.rpc("history_create_batch", w.admin, "a.xlsx", sha(), 1));
       await c.expectError("PERMISSION_DENIED", () => c.rpc("history_create_batch", w.hr, "a.xlsx", sha(), 1));
-      const holders = await c.q<{ code: string }>("select r.code from roles r join role_permissions rp on rp.role_id = r.id join permissions p on p.id = rp.permission_id where p.code = 'history.import'");
-      expect(holders.map((h) => h.code)).toEqual(["SUPER_ADMIN"]);
-      const reserved = await c.q<{ code: string }>("select code from permissions where reserved order by code");
-      expect(reserved.map((r) => r.code)).toContain("history.import");
+      await c.rpc("history_create_batch", w.admin, "a.xlsx", sha(), 1);
+      const holders = await c.q<{ code: string }>("select r.code from roles r join role_permissions rp on rp.role_id = r.id join permissions p on p.id = rp.permission_id where p.code = 'history.import' order by 1");
+      expect(holders.map((h) => h.code)).toEqual(["ADMIN", "SUPER_ADMIN"]);
+      const [flags] = await c.q<{ protected: boolean; reserved: boolean }>("select protected, reserved from permissions where code = 'history.import'");
+      expect(flags).toEqual({ protected: true, reserved: false });
     });
   });
 
@@ -114,6 +114,58 @@ describe("historical import (ADR-077)", () => {
       expect(out.quarterly_scores.length).toBe(8);                                               // 4 units x 2 quarters
       expect(out.quarterly_scores.every((s) => s.score !== null)).toBe(true);
       expect(secs).toBeLessThan(60);
+    });
+  });
+});
+
+describe("historical import by an Admin (ADR-122)", () => {
+  it("an Admin stages, rehearses and commits like a Super Admin, and the Super Admins are told", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const { id, f } = await stage(c, w.admin, rows(w.bu));
+      expect(f.count).toBe(0);
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("history_commit", w.admin, id, false, "yes"));         // the typed confirmation still applies
+      const done = await c.rpc<{ reports: number }>("history_commit", w.admin, id, false, "IMPORT HISTORY");
+      expect(done.reports).toBe(2);
+      const told = await c.q<{ user_id: string; title: string; message: string }>("select user_id, title, message from notifications where event_type = 'HISTORY_IMPORT_COMMITTED'");
+      expect(told.map((t) => t.user_id)).toContain(w.sa);
+      expect(told.map((t) => t.user_id)).not.toContain(w.admin);
+      expect(told[0].message).toContain("sample.xlsx");
+      expect((await c.q("select 1 from audit_logs where action = 'HISTORICAL_IMPORT_COMMITTED' and actor_user_id = $1", [w.admin])).length).toBe(1);
+    });
+  });
+
+  it("a Super Admin's own commit does not notify the Super Admins", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const { id } = await stage(c, w.sa, rows(w.bu));
+      await c.rpc("history_commit", w.sa, id, false, "IMPORT HISTORY");
+      expect((await c.q("select 1 from notifications where event_type = 'HISTORY_IMPORT_COMMITTED'")).length).toBe(0);
+    });
+  });
+
+  it("an Admin may undo only a batch they loaded; a Super Admin may undo any", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const other = await c.user(["ADMIN"], w.bu, "admin2");
+      const { id } = await stage(c, w.admin, rows(w.bu));
+      await c.rpc("history_commit", w.admin, id, false, "IMPORT HISTORY");
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("history_void", other, id, "loaded by somebody else", "VOID IMPORT"));
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("history_void", w.hr, id, "not an importer at all", "VOID IMPORT"));
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("history_void", w.admin, id, "I loaded this by mistake", "yes"));
+      await c.rpc("history_void", w.admin, id, "I loaded this by mistake", "VOID IMPORT");
+      expect((await c.q("select 1 from weekly_reports")).length).toBe(0);
+      expect((await c.q<{ status: string }>("select status from historical_import_batches where id = $1", [id]))[0].status).toBe("VOIDED");
+    });
+  });
+
+  it("a Super Admin can undo an Admin's batch", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const { id } = await stage(c, w.admin, rows(w.bu));
+      await c.rpc("history_commit", w.admin, id, false, "IMPORT HISTORY");
+      await c.rpc("history_void", w.sa, id, "undoing the Admin's import", "VOID IMPORT");
+      expect((await c.q<{ status: string }>("select status from historical_import_batches where id = $1", [id]))[0].status).toBe("VOIDED");
     });
   });
 });

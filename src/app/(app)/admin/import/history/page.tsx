@@ -12,7 +12,7 @@ interface Batch { id: string; file_name: string; rows: number; status: string; i
 
 export default async function Page() {
   const actor = await requireActor();
-  if (!can(actor, "history.import")) return <Card><EmptyState title="Only a Super Admin can load historical reports" /></Card>;
+  if (!can(actor, "history.import")) return <Card><EmptyState title="You do not have permission to load historical reports" /></Card>;
   const sb = await userClient();
   const { data } = await sb.rpc("read_history_batches");
   const batches = (data ?? []) as Batch[];

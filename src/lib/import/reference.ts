@@ -18,7 +18,7 @@ interface ServerEntity {
 
 async function employeeReference(): Promise<Reference> {
   const sb = await userClient();
-  const bus = await sb.from("business_units").select("id, code, name, status");
+  const bus = await sb.from("business_units").select("id, code, name, status, unit_type, parent_unit_id");
   if (bus.error) throw dbError(bus.error, "import reference: business units");
   const employees: Reference["employees"] = [];
   for (let from = 0; from < 50_000; from += 1000) {   // paged past the 1000-row API default
@@ -27,7 +27,7 @@ async function employeeReference(): Promise<Reference> {
     for (const e of page.data) employees.push({ email: String(e.email), firstName: e.first_name, lastName: e.last_name, businessUnitId: e.business_unit_id, status: e.employment_status });
     if (page.data.length < 1000) break;
   }
-  return { businessUnits: bus.data, employees };
+  return { businessUnits: bus.data.map((b) => ({ id: b.id, code: b.code, name: b.name, status: b.status, unitType: b.unit_type, parentUnitId: b.parent_unit_id })), employees };
 }
 
 async function buReference(): Promise<BuReference> {

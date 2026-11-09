@@ -63,7 +63,7 @@ export function BuReportingToggle({ id, name, status, reportsWeekly }: { id: str
   );
 }
 
-/** Super Admin only (the page renders it only for business_units.change_type; the API and database enforce it again). */
+/** Super Admin and Admin (the page renders it only for business_units.change_type; the API and database enforce it again). */
 export function ChangeUnitType({ id, name, unitType, childUnits, employees, reportsWeekly }: { id: string; name: string; unitType: string; childUnits: number; employees: number; reportsWeekly: boolean }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");

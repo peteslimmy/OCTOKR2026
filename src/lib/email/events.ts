@@ -42,6 +42,7 @@ const COPY: Record<string, Copy> = {
   SESSION_MINUTES_REVIEW: { prefix: A, lead: "Session minutes were submitted and are waiting for your review.", button: "View details", path: "/notifications", footer: "operational" },
   SESSION_MINUTES_FINAL: { prefix: U, lead: "The minutes of an OKR session have been finalised.", button: "View details", path: "/notifications", footer: "operational" },
   SESSION_MENTION: { prefix: U, lead: "You were mentioned in the notes of an OKR session.", button: "View details", path: "/notifications", footer: "operational" },
+  HISTORY_IMPORT_COMMITTED: { prefix: I, lead: "An Admin loaded historical reports into closed quarters. The import can be rolled back inside the rollback window if it was not expected.", button: "Review the import", path: "/admin/import/history", footer: "operational" },
   EO_COMMENT_NEW: { prefix: U, lead: "An executive posted a comment about your Business Unit.", button: "Open Executive Oversight", path: "/executive-oversight", footer: "operational" },
   EO_COMMENT_REPLY: { prefix: U, lead: "Someone replied in a conversation you take part in.", button: "Open Executive Oversight", path: "/executive-oversight", footer: "operational" },
   EO_REC_NEW: { prefix: A, lead: "A recommendation was addressed to your Business Unit. Please respond before the deadline.", button: "Open Executive Oversight", path: "/executive-oversight", footer: "operational" },

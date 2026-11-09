@@ -10,12 +10,11 @@ const change = (c: Ctx, actor: string, id: string, type: string | null, reason: 
 const row = async (c: Ctx, id: string) => (await c.q<{ unit_type: string; reports_weekly: boolean; status: string; parent_unit_id: string | null }>("select unit_type, reports_weekly, status, parent_unit_id from business_units where id = $1", [id]))[0];
 
 describe("changing a unit between Business Unit and Department (ADR-114)", () => {
-  it("only the Super Admin holds the permission", async () => {
+  it("only the Super Admin and the Admin hold the permission (ADR-122)", async () => {
     await withTx(async (c) => {
       const w = await world(c);
       const who = async (code: string) => (await c.q<{ code: string }>("select r.code from roles r join role_permissions rp on rp.role_id = r.id join permissions p on p.id = rp.permission_id where p.code = $1 order by 1", [code])).map((x) => x.code);
-      expect(await who("business_units.change_type")).toEqual(["SUPER_ADMIN"]);
-      await c.expectError("PERMISSION_DENIED", () => change(c, w.admin, w.bu, "DEPARTMENT"));
+      expect(await who("business_units.change_type")).toEqual(["ADMIN", "SUPER_ADMIN"]);
       await c.expectError("PERMISSION_DENIED", () => change(c, w.lead, w.bu, "DEPARTMENT"));
       expect((await row(c, w.bu)).unit_type).toBe("BUSINESS_UNIT");
     });
@@ -63,7 +62,7 @@ describe("changing a unit between Business Unit and Department (ADR-114)", () =>
   it("the general unit update can no longer change the type for anyone without the permission", async () => {
     await withTx(async (c) => {
       const w = await world(c);
-      await c.expectError("PERMISSION_DENIED", () => c.rpc("update_business_unit", w.admin, w.bu, "Base", "ACTIVE", true, "DEPARTMENT"));
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("update_business_unit", w.lead, w.bu, "Base", "ACTIVE", true, "DEPARTMENT"));
       await c.rpc("update_business_unit", w.admin, w.bu, "Base renamed", "ACTIVE", true, "BUSINESS_UNIT");   // same type: still allowed
       await c.rpc("update_business_unit", w.root, w.bu, "Base renamed", "ACTIVE", true, "DEPARTMENT");
       expect((await row(c, w.bu)).unit_type).toBe("DEPARTMENT");
