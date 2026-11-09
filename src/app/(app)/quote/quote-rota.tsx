@@ -2,6 +2,7 @@ import { Card, CardHeader, DataTable } from "@/components/ui/primitives";
 import { can, type Actor } from "@/lib/auth/actor";
 import { listBusinessUnits } from "@/lib/data";
 import { getQuoteRota } from "@/lib/data/quote-rota";
+import { sessionLabel } from "@/lib/quote/session-label";
 import { AssignUnit, QuoteEntry } from "./quote-client";
 import { turnBadge } from "./quote-badge";
 
@@ -19,7 +20,7 @@ export async function QuoteRota({ actor }: { actor: Actor }) {
         {rota.map((r) => (
           <tr key={r.week_id}>
             <td className="whitespace-nowrap">{`Week ${r.week_number} · ${when(r.week_start_at)}`}</td>
-            <td>{r.reporting_state !== "NORMAL" ? "Holiday" : r.session_outcome === "SKIPPED" ? "Skipped" : r.session_outcome === "HELD" ? "Held" : "Coming"}</td>
+            <td>{sessionLabel(r)}</td>
             <td>{r.turn?.business_unit_name ?? "—"}</td>
             <td>{turnBadge(r.turn)}</td>
             <td>{r.reporting_state === "NORMAL" && r.turn?.status !== "PRESENTED" ? <AssignUnit weekId={r.week_id} current={r.turn?.business_unit_id ?? null} units={active} /> : null}</td>

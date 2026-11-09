@@ -3,6 +3,7 @@ import { DateTime } from "luxon";
 import { isPlainRecipient } from "@/lib/email/deliver";
 import { resolveEmail } from "@/lib/integrations/runtime";
 import { emailBrand } from "@/lib/email/enrich";
+import { hiddenFrom } from "@/lib/auth/shield";
 import { adminClient } from "@/lib/supabase/admin";
 import { BUSINESS_ZONE } from "@/lib/domain/time";
 import { duePeriods, latestCompletedPeriod, periodFromKey, previousPeriod, trendWindow, type Frequency, type Period } from "./periods";
@@ -143,12 +144,26 @@ export async function runDueEmailReports(now: DateTime = DateTime.now().setZone(
 
 export interface Person { id: string; name: string; email: string }
 /** Everyone who could be chosen as a recipient: active people with an account. */
-export async function listPeople(): Promise<Person[]> {
+export async function listPeople(viewer?: { roles: readonly string[] }): Promise<Person[]> {
+  const hidden = viewer ? await hiddenFrom(viewer) : { users: new Set<string>(), emails: new Set<string>() };
   const { data, error } = await adminClient().from("users").select("id, email, status, employees(first_name, last_name)").eq("status", "ACTIVE").order("email");
   if (error) throw new Error(error.message);
   type Row = { id: string; email: string; employees: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null };
   return ((data ?? []) as unknown as Row[]).map((u) => {
     const emp = Array.isArray(u.employees) ? u.employees[0] : u.employees;
     return { id: u.id, email: String(u.email), name: emp ? `${emp.first_name} ${emp.last_name}`.trim() : String(u.email) };
-  });
+  }).filter((p) => !hidden.users.has(p.id) && !hidden.emails.has(p.email.toLowerCase()));
+}
+
+/** A schedule as a person who may not see Super Admins reads it: the hidden accounts are not among the recipients. */
+export async function shieldSchedules<T extends { recipient_ids: string[] }>(rows: T[], viewer: { roles: readonly string[] }): Promise<T[]> {
+  const hidden = await hiddenFrom(viewer);
+  return hidden.users.size ? rows.map((s) => ({ ...s, recipient_ids: s.recipient_ids.filter((id) => !hidden.users.has(id)) })) : rows;
+}
+
+/** Delivery history as such a person reads it: the hidden accounts' deliveries are not shown. */
+export async function shieldRuns<T extends { report_email_deliveries?: { email?: string | null; user_id?: string | null }[] | null }>(rows: T[], viewer: { roles: readonly string[] }): Promise<T[]> {
+  const hidden = await hiddenFrom(viewer);
+  if (!hidden.users.size) return rows;
+  return rows.map((r) => ({ ...r, report_email_deliveries: (r.report_email_deliveries ?? []).filter((d) => !(d.user_id && hidden.users.has(d.user_id)) && !(d.email && hidden.emails.has(String(d.email).toLowerCase()))) }));
 }

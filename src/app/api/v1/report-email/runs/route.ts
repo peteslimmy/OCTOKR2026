@@ -1,5 +1,6 @@
 import { api, fail } from "@/lib/api/handler";
 import { adminClient } from "@/lib/supabase/admin";
+import { shieldRuns } from "@/lib/report-email/service";
 
 /** Delivery history: the latest runs with the outcome for each recipient. Error text is the transport's own and holds no report data. */
 export const GET = api({}, async ({ actor }) => {
@@ -8,5 +9,5 @@ export const GET = api({}, async ({ actor }) => {
     .select("id, schedule_id, period_key, period_start, period_end, trigger, status, subject, created_at, completed_at, report_email_schedules(name), report_email_deliveries(id, email, status, error, attempts, sent_at)")
     .order("created_at", { ascending: false }).limit(50);
   if (error) throw new Error(error.message);
-  return data;
+  return shieldRuns(data ?? [], actor);
 });

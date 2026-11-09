@@ -5,7 +5,7 @@ import { Card, EmptyState, PageHeader, buttonClass } from "@/components/ui/primi
 import { requireActor } from "@/lib/auth/actor";
 import { BUSINESS_ZONE } from "@/lib/domain/time";
 import { nextDueAt, type Frequency } from "@/lib/report-email/periods";
-import { listPeople, loadSchedules } from "@/lib/report-email/service";
+import { listPeople, loadSchedules, shieldRuns, shieldSchedules } from "@/lib/report-email/service";
 import { adminClient } from "@/lib/supabase/admin";
 import { EmailReports, type RunView, type ScheduleView } from "./email-reports";
 
@@ -18,12 +18,12 @@ export default async function EmailReportsPage() {
   if (!manage && !history) return <Card><EmptyState title="Automated email reports are not available for your role" /></Card>;
   const now = DateTime.now().setZone(BUSINESS_ZONE);
   const [schedules, people, runs] = await Promise.all([
-    loadSchedules(),
-    manage ? listPeople() : Promise.resolve([]),
+    loadSchedules().then((rows) => shieldSchedules(rows, actor)),
+    manage ? listPeople(actor) : Promise.resolve([]),
     history
       ? adminClient().from("report_email_runs")
           .select("id, schedule_id, period_key, trigger, status, subject, created_at, report_email_schedules(name), report_email_deliveries(id, email, status, error, attempts)")
-          .order("created_at", { ascending: false }).limit(30).then((r) => (r.data ?? []) as unknown as RunView[])
+          .order("created_at", { ascending: false }).limit(30).then(async (r) => (await shieldRuns((r.data ?? []) as unknown as (RunView & { report_email_deliveries: { email: string }[] })[], actor)) as unknown as RunView[])
       : Promise.resolve([] as RunView[]),
   ]);
   const view: ScheduleView[] = schedules.map((s) => ({

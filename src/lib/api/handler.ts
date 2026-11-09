@@ -7,6 +7,7 @@ import type { z } from "zod";
 import { getActor, type Actor } from "@/lib/auth/actor";
 import { hasRecentSecondFactor } from "@/lib/auth/mfa";
 import { adminClient } from "@/lib/supabase/admin";
+import { hiddenFrom, mentionsHidden, namedIn } from "@/lib/auth/shield";
 import { auditHeaders, buildAuditContext, sessionReference } from "@/lib/audit/context";
 import { toDomainError, type DomainError } from "@/lib/domain/errors";
 import { httpRequestDuration, httpRequestsTotal } from "@/lib/observability/metrics";
@@ -126,6 +127,12 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
       const raw = await routeCtx.params;
       const params: Record<string, string> = {};
       for (const [k, v] of Object.entries(raw ?? {})) params[k] = Array.isArray(v) ? v.join("/") : v;
+
+      // a request that names a Super Admin's account, employee record or address is answered "not found" for everyone who is not a Super Admin (ADR-118)
+      if (actor && !opts.public) {
+        const named = namedIn([params, body, Object.fromEntries(new URL(req.url).searchParams)]);
+        if (named.size && mentionsHidden(named, await hiddenFrom(actor))) throw fail("NOT_FOUND", 404, "That record was not found.");
+      }
 
       const rpc = async <T,>(fn: string, args: Record<string, unknown>): Promise<T> => {
         const { data, error } = await (await auditAs()).rpc(fn, args);
