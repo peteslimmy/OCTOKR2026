@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { api, fail } from "@/lib/api/handler";
 import { adminClient } from "@/lib/supabase/admin";
+import { sendInvitation } from "@/lib/email/send-invite";
 
 // Roles are data (ADR-069): the shape is checked here, whether the role exists and may be granted is checked by the database.
 /** A first-login password that passes the password policy: 14 characters, no look-alikes (0/O, 1/l/I), at least one of each class. */
@@ -32,7 +33,7 @@ export const POST = api(
       roles: z.array(ROLE_CODE).min(1).max(20),
     }).refine((b) => b.employeeId || (b.email && b.firstName && b.lastName && b.businessUnitId), { message: "Name, email and unit are required." }),
   },
-  async ({ actor, body: input, correlationId, rpc }) => {
+  async ({ actor, body: input, correlationId, rpc, req }) => {
     if (!actor.permissions.has("users.manage")) throw fail("PERMISSION_DENIED", 403, "You do not have permission to do this.");
     const admin = adminClient(correlationId);
     let person = { email: input.email ?? "", firstName: input.firstName ?? "", lastName: input.lastName ?? "", businessUnitId: input.businessUnitId ?? "" };
@@ -48,7 +49,7 @@ export const POST = api(
     const { data: approved } = await admin.from("allowed_email_domains").select("domain").eq("domain", body.email.split("@")[1] ?? "").maybeSingle();
     if (!approved) throw fail("VALIDATION_ERROR", 422, `The domain @${body.email.split("@")[1]} is not approved. Ask the Super Admin to approve it under Administration > Settings.`);
     const password = initialPassword();
-    const created = await admin.auth.admin.createUser({ email: body.email, password, email_confirm: true });
+    const created = await admin.auth.admin.createUser({ email: body.email, password, email_confirm: true, user_metadata: { first_name: body.firstName } });
     if (created.error || !created.data.user) throw fail("VALIDATION_ERROR", 422, "That email address cannot be used.");
     const authId = created.data.user.id;
     try {
@@ -60,7 +61,8 @@ export const POST = api(
       throw e;
     }
     await admin.from("users").update({ must_change_password: true }).eq("id", authId);
-    const link = await admin.auth.admin.generateLink({ type: "recovery", email: body.email });
-    return { id: authId, initialPassword: password, setupLink: link.data?.properties?.action_link ?? null };
+    // the person is emailed their invitation with a one-time set-up link; the same link is also returned for the administrator, so a missing or failing mail provider leaves nobody locked out
+    const inv = await sendInvitation({ actorId: actor.id, userId: authId, email: body.email, firstName: body.firstName, invitedBy: actor.name, fallbackAppUrl: new URL(req.url).origin, correlationId });
+    return { id: authId, initialPassword: password, setupLink: inv.setupLink, invitation: { outcome: inv.outcome, message: inv.message } };
   },
 );

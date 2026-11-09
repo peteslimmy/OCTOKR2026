@@ -12,7 +12,7 @@ export const SECTIONS: { key: Section; label: string }[] = [
 ];
 export const ALL_SECTIONS = SECTIONS.map((s) => s.key);
 
-export interface RenderOptions { sections: Section[]; scheduleName: string; appUrl?: string; testNotice?: boolean }
+export interface RenderOptions { sections: Section[]; scheduleName: string; appUrl?: string; testNotice?: boolean; /** The organisation logo as an absolute address, shown above the title band. */ logoUrl?: string | null; logoHeight?: number | null }
 export interface Rendered { subject: string; html: string; text: string }
 
 const KIND: Record<Summary["frequency"], string> = { WEEKLY: "Weekly", MONTHLY: "Monthly", QUARTERLY: "Quarterly", ANNUAL: "Annual" };
@@ -109,7 +109,8 @@ export function renderEmail(s: Summary, o: RenderOptions): Rendered {
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(subjectFor(s))}</title></head>`
     + `<body style="margin:0;padding:0;background:#f1f5f9"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:20px 8px">`
     + `<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;background:#ffffff;border:1px solid ${LINE};border-radius:12px">`
-    + `<tr><td style="background:${BRAND};padding:22px 28px;border-radius:12px 12px 0 0;${FONT}color:#ffffff"><div style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.85">4CORE OKR · ${e(KIND[s.frequency])} summary</div><div style="font-size:22px;font-weight:700;padding-top:4px">${e(s.periodLabel)}</div></td></tr>`
+    + (/^https?:\/\/[^\s"'<>]+$/i.test(o.logoUrl ?? "") ? `<tr><td style="padding:18px 28px;border-radius:12px 12px 0 0;background:#ffffff"><img src="${e(o.logoUrl!)}" alt="4CORE OKR" height="${Math.min(56, Math.max(24, Math.round(o.logoHeight ?? 36)))}" style="display:block;height:${Math.min(56, Math.max(24, Math.round(o.logoHeight ?? 36)))}px;width:auto;border:0"></td></tr>` : "")
+    + `<tr><td style="background:${BRAND};padding:22px 28px;border-radius:${/^https?:/i.test(o.logoUrl ?? "") ? "0" : "12px 12px 0 0"};${FONT}color:#ffffff"><div style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.85">4CORE OKR · ${e(KIND[s.frequency])} summary</div><div style="font-size:22px;font-weight:700;padding-top:4px">${e(s.periodLabel)}</div></td></tr>`
     + (o.testNotice ? `<tr><td style="background:#fef3c7;padding:8px 28px;${FONT}font-size:13px;color:#92400e">Test email: sent to you only, to show how this summary looks.</td></tr>` : "")
     + parts.join("")
     + `<tr><td style="padding:20px 28px;border-top:1px solid ${LINE};${FONT}font-size:12px;color:${MUTED}">You receive this because you are a recipient of “${e(o.scheduleName)}”. Figures are at Business Unit level and come from the scores already published in 4CORE OKR.</td></tr>`

@@ -65,3 +65,4 @@ deploy/.env.production
 
 # local database backups contain real records; never commit them
 /backups/
+.email-preview/

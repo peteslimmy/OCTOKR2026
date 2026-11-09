@@ -46,7 +46,7 @@ describe("configuredTransport", () => {
     expect(m.subject).toBe("Weekly report due in about 6 hours");
     expect(m.text).toContain("Engineering has not submitted its report.");
     expect(m.text).toContain("https://okr.example.test/notifications");
-    expect(m.html).toBeFalsy();                                                           // plain text only
+    expect(String(m.html)).toContain("Engineering has not submitted its report.");        // an HTML version beside the plain text
   });
 
   it("cannot be made to add recipients or headers through a subject or an address", async () => {

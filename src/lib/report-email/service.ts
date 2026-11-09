@@ -2,6 +2,7 @@ import "server-only";
 import { DateTime } from "luxon";
 import { isPlainRecipient } from "@/lib/email/deliver";
 import { resolveEmail } from "@/lib/integrations/runtime";
+import { emailBrand } from "@/lib/email/enrich";
 import { adminClient } from "@/lib/supabase/admin";
 import { BUSINESS_ZONE } from "@/lib/domain/time";
 import { duePeriods, latestCompletedPeriod, periodFromKey, previousPeriod, trendWindow, type Frequency, type Period } from "./periods";
@@ -73,7 +74,9 @@ export function resolvePeriod(frequency: Frequency, key: string | undefined, now
 
 export async function renderFor(summary: Summary, schedule: Pick<ScheduleRow, "name" | "sections">, extra: { testNotice?: boolean } = {}): Promise<Rendered> {
   const mail = await resolveEmail().catch(() => null);
-  return renderEmail(summary, { sections: schedule.sections, scheduleName: schedule.name, appUrl: mail?.appUrl ?? process.env.APP_BASE_URL, testNotice: extra.testNotice });
+  const appUrl = mail?.appUrl ?? process.env.APP_BASE_URL;
+  const brand = await emailBrand(appUrl);
+  return renderEmail(summary, { sections: schedule.sections, scheduleName: schedule.name, appUrl, testNotice: extra.testNotice, logoUrl: brand.logoUrl, logoHeight: brand.logoHeight });
 }
 
 /** Sends one rendered email to one address. */
@@ -94,7 +97,9 @@ export async function dispatchRun(runId: string, rpc: Rpc = jobRpc): Promise<{ s
   const { data: queued } = await sb.from("report_email_deliveries").select("id, email").eq("run_id", runId).eq("status", "QUEUED");
   let sent = 0, failed = 0;
   if (queued?.length) {
-    const rendered = renderEmail(run.summary as Summary, { sections: schedule?.sections ?? [], scheduleName: schedule?.name ?? "Report summary", appUrl: (await resolveEmail().catch(() => null))?.appUrl ?? process.env.APP_BASE_URL });
+    const appUrl = (await resolveEmail().catch(() => null))?.appUrl ?? process.env.APP_BASE_URL;
+    const brand = await emailBrand(appUrl);
+    const rendered = renderEmail(run.summary as Summary, { sections: schedule?.sections ?? [], scheduleName: schedule?.name ?? "Report summary", appUrl, logoUrl: brand.logoUrl, logoHeight: brand.logoHeight });
     for (const d of queued) {
       const res = await sendOne(String(d.email), rendered);
       await rpc("mark_report_email_delivery", { p_id: d.id, p_ok: res === "SENT", p_error: res === "SENT" ? null : res.error });

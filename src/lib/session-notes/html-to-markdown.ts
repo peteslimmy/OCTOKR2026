@@ -1,3 +1,4 @@
+import { MAX_LIST_DEPTH, isAlignment, isHighlight, isTextColour } from "./format";
 import { safeUrl } from "./markdown";
 
 /**
@@ -24,7 +25,8 @@ const attr = (n: NodeLike, a: string) => n.getAttribute?.(a) ?? null;
 const clean = (s: string) => s.replace(/[  ]+/g, " ").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f​-‏‪-‮⁦-⁩﻿]/g, "");
 
 /** A person's words made literal: the characters the renderer treats as markup are escaped (the renderer honours a backslash). */
-const esc = (s: string) => s.replace(/[\\*_`\[\]]/g, (m) => `\\${m}`);
+const esc = (s: string) => s.replace(/[\\*_`\[\]]/g, (m) => `\\${m}`)
+  .replace(/\+\+/g, "\\+\\+").replace(/~~/g, "\\~\\~").replace(/\{(?=(?:[ch]:|\/[ch]\}|center\}|right\}|justify\}))/g, "\\{");
 /** Plus the line starts that would turn plain text into a list, heading, quote or table. */
 const escLineStart = (line: string) => line.replace(/^(\s*)(#{1,3} |- |> |\d+\. )/, (_m, sp: string, tok: string) => `${sp}\\${tok}`).replace(/^(\s*)\|/, "$1\\|").replace(/^(-{3,}|\*{3,})\s*$/, "\\$1");
 
@@ -46,6 +48,13 @@ function inlineOf(n: NodeLike, state = { code: false }): string {
   const inner = () => kids(n).map((c) => inlineOf(c, state)).join("");
   if (tag === "B" || tag === "STRONG") return wrap(inner(), "**");
   if (tag === "I" || tag === "EM") return wrap(inner(), "_");
+  if (tag === "U") return wrap(inner(), "++");
+  if (tag === "S" || tag === "STRIKE" || tag === "DEL") return wrap(inner(), "~~");
+  if (tag === "SPAN") {
+    const c = attr(n, "data-c"), h = attr(n, "data-h");
+    if (isTextColour(c)) return wrap(inner(), `{c:${c}}`, "{/c}");
+    if (isHighlight(h)) return wrap(inner(), `{h:${h}}`, "{/h}");
+  }
   if (tag === "CODE") {
     const raw = clean(n.textContent ?? "");
     return raw && !raw.includes("`") ? `\`${raw}\`` : esc(raw);
@@ -60,26 +69,42 @@ function inlineOf(n: NodeLike, state = { code: false }): string {
 }
 
 /** Marks wrap the words, not the spaces around them (the renderer needs a non-space next to each marker). */
-function wrap(inner: string, mark: string): string {
+function wrap(inner: string, mark: string, close = mark): string {
   const core = inner.trim();
   if (!core) return inner;
   const lead = inner.match(/^\s*/)![0], trail = inner.match(/\s*$/)![0];
-  return `${lead}${mark}${core}${mark}${trail}`;
+  return `${lead}${mark}${core}${close}${trail}`;
 }
 
-const para = (n: NodeLike) => kids(n).map((c) => inlineOf(c)).join("").split("\n").map((l) => escLineStart(l.trim())).filter((l, i, a) => l !== "" || (i > 0 && i < a.length - 1)).join("\n").trim();
+/** The alignment a block carries, as the marker the renderer reads; only the three known names are ever written. */
+const alignOf = (n: NodeLike) => { const a = attr(n, "data-align"); return isAlignment(a) ? `{${a}}` : ""; };
 
-function listItems(list: NodeLike, ordered: boolean, out: string[], counter = { n: 0 }) {
+const para = (n: NodeLike) => kids(n).map((c) => inlineOf(c)).join("").split("\n").map((l) => escLineStart(l.trim())).filter((l, i, a) => l !== "" || (i > 0 && i < a.length - 1)).join("\n").trim();
+/** A paragraph-like block with its alignment marker in front of its first line. */
+const alignedPara = (n: NodeLike) => { const t = para(n); return t ? alignOf(n) + t : ""; };
+
+const isList = (c: NodeLike) => c.nodeType === 1 && (name(c) === "UL" || name(c) === "OL");
+const findTask = (li: NodeLike): NodeLike | undefined => {
+  for (const c of kids(li)) {
+    if (c.nodeType !== 1) continue;
+    if (name(c) === "SPAN" && attr(c, "data-task")) return c;
+    if (name(c) === "P" || name(c) === "DIV") { const t = findTask(c); if (t) return t; }
+  }
+  return undefined;
+};
+
+function listItems(list: NodeLike, ordered: boolean, out: string[], depth = 0, counter = { n: 0 }) {
+  const indent = "  ".repeat(Math.min(depth, MAX_LIST_DEPTH - 1));
   for (const li of kids(list)) {
     if (li.nodeType !== 1) continue;
-    if (name(li) === "UL" || name(li) === "OL") { listItems(li, name(li) === "OL", out, { n: 0 }); continue; }
+    if (isList(li)) { listItems(li, name(li) === "OL", out, depth + 1, { n: 0 }); continue; }
     if (name(li) !== "LI") continue;
     counter.n += 1;
-    const task = kids(li).find((c) => c.nodeType === 1 && name(c) === "SPAN" && attr(c, "data-task"));
-    const text = kids(li).filter((c) => !(c.nodeType === 1 && (name(c) === "UL" || name(c) === "OL"))).map((c) => inlineOf(c)).join("").replace(/\n+/g, " ").trim();
+    const task = findTask(li);
+    const text = kids(li).filter((c) => !isList(c)).map((c) => inlineOf(c) + (c.nodeType === 1 && name(c) === "P" ? " " : "")).join("").replace(/\n+/g, " ").replace(/ {2,}/g, " ").trim();
     const mark = task ? (attr(task, "data-task") === "done" ? "- [x] " : "- [ ] ") : ordered ? `${counter.n}. ` : "- ";
-    if (text || task) out.push(mark + text);
-    for (const sub of kids(li)) if (sub.nodeType === 1 && (name(sub) === "UL" || name(sub) === "OL")) listItems(sub, name(sub) === "OL", out, { n: 0 });
+    if (text || task) out.push(indent + mark + text);
+    for (const sub of kids(li)) if (isList(sub)) listItems(sub, name(sub) === "OL", out, depth + 1, { n: 0 });
   }
 }
 
@@ -88,7 +113,7 @@ function table(t: NodeLike): string {
   const walk = (n: NodeLike) => {
     for (const c of kids(n)) {
       if (c.nodeType !== 1) continue;
-      if (name(c) === "TR") rows.push(kids(c).filter((x) => x.nodeType === 1 && (name(x) === "TD" || name(x) === "TH")).map((x) => kids(x).map((y) => inlineOf(y)).join("").replace(/\s*\n+\s*/g, " ").replace(/\|/g, "¦").trim()));
+      if (name(c) === "TR") rows.push(kids(c).filter((x) => x.nodeType === 1 && (name(x) === "TD" || name(x) === "TH")).map((x) => kids(x).map((y) => inlineOf(y) + (y.nodeType === 1 && name(y) === "P" ? " " : "")).join("").replace(/\s*\n+\s*/g, " ").replace(/\|/g, "¦").trim()));
       else if (["THEAD", "TBODY", "TFOOT"].includes(name(c))) walk(c);
     }
   };
@@ -115,13 +140,13 @@ function blocks(parent: NodeLike, out: string[]) {
     if (!BLOCKS.has(tag)) { run.push(c); continue; }
     flush();
     if (tag === "UL" || tag === "OL") { const items: string[] = []; listItems(c, tag === "OL", items); if (items.length) out.push(items.join("\n")); }
-    else if (/^H[1-6]$/.test(tag)) { const level = tag === "H1" || tag === "H2" || tag === "H3" ? 1 : tag === "H4" ? 2 : 3; const t = para(c).replace(/\n/g, " "); if (t) out.push(`${"#".repeat(level)} ${t}`); }
-    else if (tag === "BLOCKQUOTE") { const t = para(c); if (t) out.push(t.split("\n").map((l) => `> ${l}`).join("\n")); }
+    else if (/^H[1-6]$/.test(tag)) { const level = tag === "H1" || tag === "H2" || tag === "H3" ? 1 : tag === "H4" ? 2 : 3; const t = para(c).replace(/\n/g, " "); if (t) out.push(`${"#".repeat(level)} ${alignOf(c)}${t}`); }
+    else if (tag === "BLOCKQUOTE") { const t = alignedPara(c); if (t) out.push(t.split("\n").map((l) => `> ${l}`).join("\n")); }
     else if (tag === "HR") out.push("---");
     else if (tag === "TABLE") { const t = table(c); if (t) out.push(t); }
     else if (tag === "LI") { const items: string[] = []; listItems({ nodeType: 1, nodeName: "UL", textContent: null, childNodes: [c] }, false, items); if (items.length) out.push(items.join("\n")); }
     else if (kids(c).some((x) => x.nodeType === 1 && BLOCKS.has(name(x)))) blocks(c, out);
-    else { const t = para(c); if (t) out.push(t); }
+    else { const t = alignedPara(c); if (t) out.push(t); }
   }
   flush();
 }

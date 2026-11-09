@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jobsSecretMatches } from "@/lib/jobs-secret";
 import { deliverPending, type OutboxRow } from "@/lib/email/deliver";
+import { emailBrand, enrichOutbox } from "@/lib/email/enrich";
 import { sendWebhook } from "@/lib/integrations/adapters";
 import { decryptSecret } from "@/lib/integrations/crypto";
 import { resolveEmail } from "@/lib/integrations/runtime";
@@ -29,12 +30,13 @@ export async function POST(req: Request) {
       claim: async (limit) => {
         const r = await sb.rpc("claim_email_batch", { p_limit: limit });
         if (r.error) throw new Error(r.error.message);
-        return (r.data as OutboxRow[]) ?? [];
+        return enrichOutbox(sb, (r.data as OutboxRow[]) ?? []);
       },
       mark: async (id, ok, err) => { const r = await sb.rpc("mark_email_result", { p_id: id, p_ok: ok, p_error: err ?? null }); if (r.error) throw new Error(r.error.message); },
       skip: async (id, reason) => { const r = await sb.rpc("skip_email", { p_id: id, p_reason: reason }); if (r.error) throw new Error(r.error.message); },
       transport: mail.transport,
       appUrl: mail.appUrl,
+      brand: await emailBrand(mail.appUrl),
     });
   } catch (e) {
     console.error("email delivery failed", e instanceof Error ? e.message : e);

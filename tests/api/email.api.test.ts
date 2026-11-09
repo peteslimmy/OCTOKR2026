@@ -119,7 +119,7 @@ describe("scheduler run", () => {
     const target = (await db<{ id: string; email: string }>("select id, email::text from users where email = 'exec@4core.local'"))[0];
     const marker = `api-test-${randomUUID().slice(0, 8)}`;
     const before = new Set(await readdir(MAIL_DIR).catch(() => [] as string[]));
-    const r = await sb.rpc("notify_users", { p_user_ids: [target.id], p_event: "PASSWORD_CHANGED", p_entity_type: "user", p_entity_id: target.id, p_title: `Your password was changed (${marker})`, p_message: `Test message ${marker}`, p_dedupe: marker });
+    const r = await sb.rpc("notify_users", { p_user_ids: [target.id], p_event: "LEDGER_REVERSAL_EMERGENCY", p_entity_type: "user", p_entity_id: target.id, p_title: `Your password was changed (${marker})`, p_message: `Test message ${marker}`, p_dedupe: marker });
     expect(r.error).toBeNull();
     expect((await db<{ status: string }>("select status from email_outbox where subject like $1", [`%${marker}%`]))[0].status).toBe("PENDING");
 

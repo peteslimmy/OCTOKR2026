@@ -26,7 +26,7 @@ describe("composeMail", () => {
   it("is signed by 4Core BizOps and names the product 4Core Weekly OKR", () => {
     const text = composeMail(row(1)).text;
     expect(text).toContain("Regards,\n4Core BizOps");
-    expect(text).toContain("4Core Weekly OKR.");
+    expect(text).toContain("4Core Weekly OKR •");
     expect(text.indexOf("4Core BizOps")).toBeGreaterThan(text.indexOf("Body 1"));      // the signature follows the message
   });
   it("refuses anything that is not one plain address", () => {

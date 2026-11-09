@@ -30,42 +30,42 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   add("Overview", [{ href: "/dashboard", label: "Dashboard", icon: "dashboard", hint: "Scores, tasks and what needs attention" }]);
   add("Execution", [
     { href: "/strategy", label: "Strategy & OKRs", icon: "strategy", hint: "Objective, key results, sub-KRs" },
-    can(actor, "bu_goals.manage") && { href: "/bu-goals", label: "Business Unit goals", icon: "bugoals", hint: "Your unit's goals for the quarter" },
-    can(actor, "weekly_report.view_own_bu") && { href: "/weekly", label: "Weekly reports", icon: "weekly", hint: "Goals and tasks for the week" },
+    can(actor, "bu_goals.manage") && { href: "/bu-goals", label: "Business Unit Goals", icon: "bugoals", hint: "Your unit's goals for the quarter" },
+    can(actor, "weekly_report.view_own_bu") && { href: "/weekly", label: "Weekly Reports", icon: "weekly", hint: "Goals and tasks for the week" },
     any("weekly_report.view_all", "weekly_report.view_own_bu") && { href: "/performance", label: "Performance", icon: "performance", hint: "Scores by week" },
     can(actor, "presentation.view") && { href: "/presentation", label: "Presentation", icon: "presentation", hint: "Present the week to leadership" },
   ]);
   add("Governance", [
-    any("attendance.session.manage", "attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance", label: "Sessions & attendance", icon: "governance", hint: "OKR sessions and who attended" },
+    any("attendance.session.manage", "attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance", label: "Sessions & Attendance", icon: "governance", hint: "OKR sessions and who attended" },
     any("violation.create", "violation.edit", "violation.payment.record", "finance.fund.view", "disbursement.create", "finance.ledger.view", "dashboard.executive.view") && { href: "/violations", label: "Violations & Funds", icon: "violations", hint: "Violations, payments and the fund" },
-    any("attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance/amendments", label: "Attendance amendments", icon: "amendments", hint: "Corrections to attendance" },
-    can(actor, "session_notes.create") && { href: "/notes", label: "Take notes", icon: "notes", hint: "Notes, recommendations, actions and next steps for a session" },
+    any("attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance/amendments", label: "Attendance Amendments", icon: "amendments", hint: "Corrections to attendance" },
+    can(actor, "session_notes.create") && { href: "/notes", label: "Take Notes", icon: "notes", hint: "Notes, recommendations, actions and next steps for a session" },
     can(actor, "quote.submit") && !can(actor, "quote.assign") && { href: "/quote", label: "Weekly quote", icon: "presentation", hint: "Which unit gives the quote, and the quote itself" },
     any("executive_oversight.dashboard.view", "executive_comment.view", "executive_recommendation.view") && { href: "/executive-oversight", label: "Executive oversight", icon: "governance", hint: "Executive comments, recommendations and the responses to them", exact: true },
   ]);
   add("Insights", [
     can(actor, "reports.view") && { href: "/reports", label: "Reports", icon: "reports", hint: "Standard reports" },
-    can(actor, "dashboard.executive.view") && { href: "/insights", label: "Management brief", icon: "insights", hint: "Where we stand, why, what to do, what to decide" },
+    can(actor, "dashboard.executive.view") && { href: "/insights", label: "Management Brief", icon: "insights", hint: "Where we stand, why, what to do, what to decide" },
     can(actor, "reports.view") && { href: "/reports/insights", label: "Insights", icon: "insights", hint: "What the data suggests" },
-    can(actor, "reports.build") && { href: "/reports/builder", label: "Report builder", icon: "builder", hint: "Build and save your own" },
-    can(actor, "reports.view") && { href: "/reports/saved", label: "Saved & snapshots", icon: "saved", hint: "Saved reports and frozen snapshots" },
-    (can(actor, "report_email.manage") || can(actor, "report_email.history")) && { href: "/reports/email", label: "Email reports", icon: "saved", hint: "Scheduled summaries by email" },
+    can(actor, "reports.build") && { href: "/reports/builder", label: "Report Builder", icon: "builder", hint: "Build and save your own" },
+    can(actor, "reports.view") && { href: "/reports/saved", label: "Saved & Snapshots", icon: "saved", hint: "Saved reports and frozen snapshots" },
+    (can(actor, "report_email.manage") || can(actor, "report_email.history")) && { href: "/reports/email", label: "Email Reports", icon: "saved", hint: "Scheduled summaries by email" },
   ]);
-  add("People & organisation", [
+  add("People & Organisation", [
     any("business_units.manage") && { href: "/admin/units", label: "Business Units & Departments", icon: "units", hint: "Create and manage units" },
     any("users.manage") && { href: "/admin/people", label: "People", icon: "people", hint: "Add and manage users" },
-    any("roles.request", "users.manage", "roles.manage") && { href: "/admin/access", label: "Access & permissions", icon: "roles", hint: "Who can do what, and why" },
-    any("roles.request", "users.manage", "roles.manage") && { href: "/admin/roles", label: "Roles & permissions", icon: "roles", hint: "Who can do what" },
+    any("roles.request", "users.manage", "roles.manage") && { href: "/admin/access", label: "Access & Permissions", icon: "roles", hint: "Who can do what, and why" },
+    any("roles.request", "users.manage", "roles.manage") && { href: "/admin/roles", label: "Roles & Permissions", icon: "roles", hint: "Who can do what" },
     any("users.manage", "business_units.manage") && { href: "/admin/import", label: "Import", icon: "import", hint: "Bulk import employees and units" },
   ]);
   add("Administration", [
-    any("business_units.manage", "users.manage", "reporting.period.holiday.manage", "integrity_penalty.configure", "reporting.week.manage", "branding.manage", "config.approve", "quarter.score.amend") && { href: "/admin", label: "Admin overview", icon: "settings", hint: "Everything to set up", exact: true },
-    any("reporting.period.holiday.manage", "quarter.score.amend", "reporting.locks.suspend", "quote.assign") && { href: "/admin/calendar", label: "Calendar & holidays", icon: "calendar", hint: "Organisation holidays, amendments and the weekly quote allocation" },
+    any("business_units.manage", "users.manage", "reporting.period.holiday.manage", "integrity_penalty.configure", "reporting.week.manage", "branding.manage", "config.approve", "quarter.score.amend") && { href: "/admin", label: "Admin Overview", icon: "settings", hint: "Everything to set up", exact: true },
+    any("reporting.period.holiday.manage", "quarter.score.amend", "reporting.locks.suspend", "quote.assign") && { href: "/admin/calendar", label: "Calendar & Holidays", icon: "calendar", hint: "Organisation holidays, amendments and the weekly quote allocation" },
     any("integrity_penalty.configure", "reporting.week.manage", "retention.configure", "reminders.configure") && { href: "/admin/settings", label: "Settings", icon: "settings", hint: "Penalty, lock times, reminders, retention" },
     any("config.approve", "config.protected.approve", "violation.edit", "integrity_penalty.configure", "reminders.configure", "business_units.manage") && { href: "/admin/approvals", label: "Approvals", icon: "approvals", hint: "Changes waiting for a decision" },
     can(actor, "branding.manage") && { href: "/admin/branding", label: "Branding", icon: "branding", hint: "Name, logo, favicon, colour" },
-    can(actor, "branding.manage") && { href: "/admin/site", label: "Landing & sign-in", icon: "site", hint: "Edit the public page and the sign-in screens" },
-    can(actor, "audit.read") && { href: "/audit", label: "Audit log", icon: "audit", hint: "Who did what, and when" },
+    can(actor, "branding.manage") && { href: "/admin/site", label: "Landing & Sign-in", icon: "site", hint: "Edit the public page and the sign-in screens" },
+    can(actor, "audit.read") && { href: "/audit", label: "Audit Log", icon: "audit", hint: "Who did what, and when" },
   ]);
 
   // The "+ Create" menu: the most common actions, one click from anywhere. Each opens its dialog on arrival.

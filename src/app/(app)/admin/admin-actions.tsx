@@ -90,21 +90,32 @@ export function ChangeUnitType({ id, name, unitType, childUnits, employees, repo
   );
 }
 
+/** What happened to the invitation email of a new person, in plain words, for the administrator who created them. */
+export type InvitationInfo = { outcome: "SENT" | "NO_PROVIDER" | "FAILED" | string; message: string | null } | null;
+function InvitationNote({ info, email }: { info: InvitationInfo; email: string }) {
+  if (!info) return null;
+  return info.outcome === "SENT"
+    ? <Banner tone="done" title="Invitation emailed">We emailed {email} an invitation with a button to choose their password. The link works for 24 hours; you can resend it from the People page.</Banner>
+    : <Banner tone="warn" title="Invitation not emailed">{info.message ?? "The invitation email could not be sent."}</Banner>;
+}
+
 export function CreateUserButton({ bus, grantPrivileged, roleOptions }: { bus: { id: string; name: string }[]; grantPrivileged: boolean; roleOptions: RoleOption[] }) {
   const [open, setOpen] = useState(useOpenOnNew("user"));
   const [f, setF] = useState({ email: "", firstName: "", lastName: "", businessUnitId: "", roles: [] as string[] });
   const [link, setLink] = useState<string | null>(null);
   const [pw, setPw] = useState<string | null>(null);
+  const [inv, setInv] = useState<InvitationInfo>(null);
   const [err, setErr] = useState<string | null>(null);
   const { pending, run } = useAction();
   const roles = roleOptions.filter((r) => grantPrivileged || !r.privileged);
   return (
     <>
-      <Button size="sm" onClick={() => { setOpen(true); setLink(null); setPw(null); setErr(null); }}>Add user</Button>
-      <Modal open={open} onOpenChange={setOpen} title="Add user" description="A first-login password and a setup link are generated for you to pass on.">
+      <Button size="sm" onClick={() => { setOpen(true); setLink(null); setPw(null); setInv(null); setErr(null); }}>Add user</Button>
+      <Modal open={open} onOpenChange={setOpen} title="Add user" description="The person is emailed an invitation to set their password. A first-login password and a setup link are also shown to you, in case you need to pass them on.">
         {link ? (
           <div className="space-y-3">
-            <Banner tone="done" title="User created">Send {f.email} the initial password below. It is shown only now. They will be asked to choose their own password when they first sign in.</Banner>
+            <Banner tone="done" title="User created">The account is ready. The initial password below is shown only now; they will be asked to choose their own password when they first sign in.</Banner>
+            <InvitationNote info={inv} email={f.email} />
             {pw ? <div><Label htmlFor="u-pw">Initial password</Label><div className="flex gap-2"><Input id="u-pw" readOnly value={pw} className="font-mono" onFocus={(e) => e.currentTarget.select()} /><Button variant="secondary" onClick={() => { void navigator.clipboard?.writeText(pw); toast.info("Password copied."); }}>Copy</Button></div></div> : null}
             <div><Label htmlFor="u-link">Or a one-time setup link, where they choose their own password</Label><Input id="u-link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} /></div>
             <div className="flex justify-end"><Button onClick={() => setOpen(false)}>Done</Button></div>
@@ -115,9 +126,9 @@ export function CreateUserButton({ bus, grantPrivileged, roleOptions }: { bus: {
               onSubmit={async () => {
                 setErr(null);
                 const out = await run(async () => {
-                  try { return await apiRequest<{ setupLink: string | null; initialPassword?: string }>("POST", "users", f); } catch (x) { setErr((x as ApiFailure).message); throw x; }
+                  try { return await apiRequest<{ setupLink: string | null; initialPassword?: string; invitation?: InvitationInfo }>("POST", "users", f); } catch (x) { setErr((x as ApiFailure).message); throw x; }
                 }, { success: "User created." });
-                if (out) { setPw(out.value.initialPassword ?? null); setLink(out.value.setupLink ?? "(no link generated — use password recovery)"); }
+                if (out) { setInv(out.value.invitation ?? null); setPw(out.value.initialPassword ?? null); setLink(out.value.setupLink ?? "(no link generated — use password recovery)"); }
               }}
               steps={[
                 { id: "person", title: "Person", valid: !!f.firstName.trim() && !!f.lastName.trim() && !!f.email.trim(), content: (<>
@@ -177,7 +188,7 @@ export function DesignationsButton({ id, held }: { id: string; held: string[] })
   );
 }
 
-export function UserRowActions({ id, status, roles, grantPrivileged, roleOptions }: { id: string; status: string; roles: string[]; grantPrivileged: boolean; roleOptions: RoleOption[] }) {
+export function UserRowActions({ id, status, roles, grantPrivileged, roleOptions, email = "", neverSignedIn = false }: { id: string; status: string; roles: string[]; grantPrivileged: boolean; roleOptions: RoleOption[]; email?: string; neverSignedIn?: boolean }) {
   const { run } = useAction();
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState(roles);
@@ -192,6 +203,7 @@ export function UserRowActions({ id, status, roles, grantPrivileged, roleOptions
         <div className="mt-4 flex justify-end gap-2"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
           <Button disabled={sel.length === 0} onClick={async () => { const ok = await run(() => apiRequest("PUT", `users/${id}/roles`, { roles: sel }), { success: "Roles updated." }); if (ok) setOpen(false); }}>Save roles</Button></div>
       </Modal>
+      {status === "ACTIVE" && neverSignedIn ? <ResendInvitationButton id={id} email={email} /> : null}
       <MfaResetButton id={id} />
       {status === "ACTIVE"
         ? <ConfirmButton label="Suspend" variant="secondary" disabled={lockedPrivileged} title="Suspend user?" description="They lose all access immediately. Their history is preserved."
@@ -282,6 +294,28 @@ export function HolidayAmendmentButton({ weekId, weekLabel, direction, request }
   );
 }
 
+/** Sends a person who has never signed in their invitation again (a fresh one-time link; the earlier one stops working). */
+function ResendInvitationButton({ id, email }: { id: string; email: string }) {
+  const { run, pending } = useAction();
+  const [link, setLink] = useState<string | null>(null);
+  const [info, setInfo] = useState<InvitationInfo>(null);
+  return (
+    <>
+      <Button size="sm" variant="secondary" disabled={pending} onClick={async () => {
+        const r = await run(() => apiRequest<{ setupLink: string | null; invitation: InvitationInfo }>("POST", `users/${id}/invite`), { refresh: false });
+        if (r) { setInfo(r.value.invitation); setLink(r.value.setupLink); }
+      }}>{pending ? "Sending…" : "Resend invitation"}</Button>
+      <Modal open={!!info} onOpenChange={(o) => { if (!o) { setInfo(null); setLink(null); } }} title="Invitation" description={email}>
+        <div className="space-y-3">
+          <InvitationNote info={info} email={email} />
+          {link ? <div><Label htmlFor={`inv-link-${id}`}>One-time setup link, if you need to pass it on yourself</Label><Input id={`inv-link-${id}`} readOnly value={link} onFocus={(e) => e.currentTarget.select()} /></div> : null}
+          <div className="flex justify-end"><Button onClick={() => { setInfo(null); setLink(null); }}>Done</Button></div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 /** Administrator-assisted recovery for a lost authenticator (needs a fresh authenticator code of the administrator, and a reason). */
 function MfaResetButton({ id }: { id: string }) {
   const { run, pending } = useAction();
@@ -357,7 +391,7 @@ export function HolidayRequests({ requests, me }: { requests: { id: string; stat
 export function GiveSignInButton({ id, name, email, grantPrivileged, roleOptions }: { id: string; name: string; email: string; grantPrivileged: boolean; roleOptions: RoleOption[] }) {
   const [open, setOpen] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
-  const [out, setOut] = useState<{ pw: string | null; link: string | null } | null>(null);
+  const [out, setOut] = useState<{ pw: string | null; link: string | null; inv: InvitationInfo } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const { run, pending } = useAction();
   const options = roleOptions.filter((r) => grantPrivileged || !r.privileged);
@@ -367,7 +401,8 @@ export function GiveSignInButton({ id, name, email, grantPrivileged, roleOptions
       <Modal open={open} onOpenChange={setOpen} title={`Give ${name} a sign-in`} description={`${email} keeps their unit and attendance record. They will sign in with this email.`}>
         {out ? (
           <div className="space-y-3">
-            <Banner tone="done" title="Sign-in created">Send {email} the initial password. It is shown only now. They will be asked to choose their own password when they first sign in.</Banner>
+            <Banner tone="done" title="Sign-in created">The initial password below is shown only now; they will be asked to choose their own password when they first sign in.</Banner>
+            <InvitationNote info={out.inv} email={email} />
             {out.pw ? <div><Label htmlFor={`gs-pw-${id}`}>Initial password</Label><div className="flex gap-2"><Input id={`gs-pw-${id}`} readOnly value={out.pw} className="font-mono" onFocus={(e) => e.currentTarget.select()} /><Button variant="secondary" onClick={() => { void navigator.clipboard?.writeText(out.pw!); toast.info("Password copied."); }}>Copy</Button></div></div> : null}
             {out.link ? <div><Label htmlFor={`gs-link-${id}`}>Or a one-time setup link</Label><Input id={`gs-link-${id}`} readOnly value={out.link} onFocus={(e) => e.currentTarget.select()} /></div> : null}
             <div className="flex justify-end"><Button onClick={() => setOpen(false)}>Done</Button></div>
@@ -375,8 +410,8 @@ export function GiveSignInButton({ id, name, email, grantPrivileged, roleOptions
         ) : (
           <form className="space-y-3" onSubmit={async (e) => {
             e.preventDefault(); setErr(null);
-            const r = await run(async () => { try { return await apiRequest<{ setupLink: string | null; initialPassword?: string }>("POST", "users", { employeeId: id, roles }); } catch (x) { setErr((x as ApiFailure).message); throw x; } }, { success: "Sign-in created." });
-            if (r) setOut({ pw: r.value.initialPassword ?? null, link: r.value.setupLink });
+            const r = await run(async () => { try { return await apiRequest<{ setupLink: string | null; initialPassword?: string; invitation?: InvitationInfo }>("POST", "users", { employeeId: id, roles }); } catch (x) { setErr((x as ApiFailure).message); throw x; } }, { success: "Sign-in created." });
+            if (r) setOut({ pw: r.value.initialPassword ?? null, link: r.value.setupLink, inv: r.value.invitation ?? null });
           }}>
             <fieldset><legend className="mb-1 text-sm font-medium">Roles</legend>
               <div className="grid grid-cols-2 gap-1">{options.map((r) => (

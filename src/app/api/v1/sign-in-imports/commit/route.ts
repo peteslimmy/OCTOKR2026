@@ -3,6 +3,7 @@ import { z } from "zod";
 import { api, ApiError, fail, requirePerm } from "@/lib/api/handler";
 import { checkSignIns } from "@/lib/import/sign-ins-server";
 import { adminClient } from "@/lib/supabase/admin";
+import { sendInvitation, type InvitationOutcome } from "@/lib/email/send-invite";
 
 /**
  * Sign-in import, step 2 (ADR-080): creates each person's sign-in and roles through the same function the Add user screen uses (provision_user), so the same
@@ -10,16 +11,16 @@ import { adminClient } from "@/lib/supabase/admin";
  * reported and the others still go ahead (an identity is created per person, so the batch is not one database transaction). Needs users.manage and a fresh code.
  */
 const body = z.object({ people: z.array(z.object({ row: z.number().int(), email: z.string().email().max(200), roles: z.array(z.string().regex(/^[A-Z][A-Z0-9_]{1,29}$/)).min(1).max(20) }).strict()).min(1).max(500) });
-export const POST = api({ stepUp: true, body }, async ({ actor, body: b, correlationId, rpc }) => {
+export const POST = api({ stepUp: true, body }, async ({ actor, body: b, correlationId, rpc, req }) => {
   requirePerm(actor, "users.manage");
   const { ok, problems } = await checkSignIns(b.people.map((p) => ({ ...p, email: p.email.toLowerCase() })), actor);
   const admin = adminClient(correlationId);
-  const results: { row: number; email: string; created: boolean; message: string | null; setupLink: string | null }[] = problems.map((p) => ({ row: p.row, email: b.people.find((x) => x.row === p.row)?.email ?? "", created: false, message: p.message, setupLink: null }));
+  const results: { row: number; email: string; created: boolean; message: string | null; setupLink: string | null; invitation?: InvitationOutcome }[] = problems.map((p) => ({ row: p.row, email: b.people.find((x) => x.row === p.row)?.email ?? "", created: false, message: p.message, setupLink: null }));
   const made: { userId: string; email: string; roles: string[] }[] = [];
   for (const p of ok) {
     const { data: emp } = await admin.from("employees").select("first_name, last_name, business_unit_id").eq("email", p.email).single();
     if (!emp) { results.push({ row: p.row, email: p.email, created: false, message: "The employee could not be read.", setupLink: null }); continue; }
-    const created = await admin.auth.admin.createUser({ email: p.email, password: randomBytes(24).toString("base64url"), email_confirm: true });
+    const created = await admin.auth.admin.createUser({ email: p.email, password: randomBytes(24).toString("base64url"), email_confirm: true, user_metadata: { first_name: emp.first_name } });
     if (created.error || !created.data.user) { results.push({ row: p.row, email: p.email, created: false, message: "That email address cannot be used for a sign-in.", setupLink: null }); continue; }
     try {
       await rpc("provision_user", { p_actor: actor.id, p_auth_id: created.data.user.id, p_email: p.email, p_first: emp.first_name, p_last: emp.last_name, p_bu: emp.business_unit_id, p_roles: p.roles });
@@ -29,8 +30,9 @@ export const POST = api({ stepUp: true, body }, async ({ actor, body: b, correla
       continue;
     }
     made.push({ userId: created.data.user.id, email: p.email, roles: p.roles });
-    const link = await admin.auth.admin.generateLink({ type: "recovery", email: p.email });
-    results.push({ row: p.row, email: p.email, created: true, message: null, setupLink: link.data?.properties?.action_link ?? null });
+    // each person is emailed their invitation; the link is also kept in the result so the administrator can pass it on if the email could not be sent
+    const inv = await sendInvitation({ actorId: actor.id, userId: created.data.user.id, email: p.email, firstName: emp.first_name, invitedBy: actor.name, fallbackAppUrl: new URL(req.url).origin, correlationId });
+    results.push({ row: p.row, email: p.email, created: true, message: null, setupLink: inv.setupLink, invitation: inv.outcome });
   }
   if (!results.length) throw fail("VALIDATION_ERROR", 422, "Nobody to create.");
   // a record of who this import created, so a Super Admin can roll it back inside the window (ADR-088)

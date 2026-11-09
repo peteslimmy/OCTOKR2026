@@ -200,7 +200,7 @@ export function NoteEditor({ note, amend, onClose, mentionable = [], simple = fa
         <button type="button" aria-pressed={mode === "visual"} className={`rounded px-2 py-1 ${mode === "visual" ? "bg-brand-100 font-semibold" : ""}`} onClick={() => chooseMode("visual")}>Visual</button>
         <button type="button" aria-pressed={mode === "markdown"} className={`rounded px-2 py-1 ${mode === "markdown" ? "bg-brand-100 font-semibold" : ""}`} onClick={() => chooseMode("markdown")}>Text (markdown)</button>
       </div>}
-      {simple || mode === "visual" ? <VisualEditor value={content} onChange={setContent} disabled={dis} mentionable={mentionable} /> : (
+      {simple || mode === "visual" ? <VisualEditor value={content} onChange={setContent} disabled={dis} mentionable={mentionable} sectioned={simple} /> : (
         <>
         <div role="toolbar" aria-label="Formatting" className="flex flex-wrap items-center gap-1">
           {TOOLS.map((t) => <button key={t.label} type="button" title={t.label} aria-label={t.label} className={`${btn} ${t.cls ?? ""}`} onClick={() => apply(t.op)} disabled={dis}>{t.text}</button>)}

@@ -8,7 +8,7 @@ import { Badge, Button, Card, CardHeader, DataTable, Field, Input } from "@/comp
 
 interface Person { row: number; email: string; roles: string[]; name: string; unit: string }
 interface Checked { fileName: string; people: Person[]; problems: { row: number; message: string; fix?: string }[]; problemCount: number }
-interface Result { row: number; email: string; created: boolean; message: string | null; setupLink: string | null }
+interface Result { row: number; email: string; created: boolean; message: string | null; setupLink: string | null; invitation?: string }
 interface Done { results: Result[]; created: number }
 
 const csv = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v);
@@ -32,7 +32,7 @@ export function SignInWizard() {
   }
   function download() {
     if (!done) return;
-    const lines = ["Email,Result,Set-password link", ...done.results.map((r) => [r.email, r.created ? "Created" : (r.message ?? "Not created"), r.setupLink ?? ""].map(csv).join(","))];
+    const lines = ["Email,Result,Invitation email,Set-password link", ...done.results.map((r) => [r.email, r.created ? "Created" : (r.message ?? "Not created"), r.invitation === "SENT" ? "Emailed" : r.created ? "Not emailed" : "", r.setupLink ?? ""].map(csv).join(","))];
     const url = URL.createObjectURL(new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url; a.download = "sign-in-links.csv"; a.click(); URL.revokeObjectURL(url);
   }
@@ -67,7 +67,7 @@ export function SignInWizard() {
 
       {done ? (
         <Card>
-          <CardHeader title={`${done.created} of ${done.results.length} created`} description="The links are shown only now and are not stored. Download them and send each person their own link; each works once." action={<Button variant="secondary" onClick={download}><Download className="h-4 w-4" aria-hidden /> Download links</Button>} />
+          <CardHeader title={`${done.created} of ${done.results.length} created`} description={`${done.results.filter((r) => r.invitation === "SENT").length} invitation emails were sent. ${done.results.some((r) => r.created && r.invitation !== "SENT") ? "Some could not be emailed: download the file and send those people their own link. " : ""}The links are shown only now and are not stored; each works once.`} action={<Button variant="secondary" onClick={download}><Download className="h-4 w-4" aria-hidden /> Download links</Button>} />
           <DataTable caption="Results" columns={[{ label: "Email" }, { label: "Result" }]}>
             {done.results.map((r) => <tr key={r.row}><td>{r.email}</td><td>{r.created ? <Badge tone="done">created</Badge> : <span>{r.message}</span>}</td></tr>)}
           </DataTable>

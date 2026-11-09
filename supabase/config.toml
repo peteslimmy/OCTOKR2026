@@ -231,8 +231,8 @@ secure_password_change = false
 max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# Number of seconds before the email OTP expires. 24 hours, because invitation and reset links share this lifetime (ADR-117).
+otp_expiry = 86400
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -248,15 +248,15 @@ otp_expiry = 3600
 subject = "Reset your 4Core Weekly OKR password"
 content_path = "./supabase/templates/recovery.html"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+[auth.email.template.invite]
+subject = "You've been invited to 4Core Weekly OKR"
+content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template
 [auth.email.notification.password_changed]
-enabled = true
-subject = "Your 4Core Weekly OKR password has been changed"
+# off: the application already emails this (a mandatory security notification), so a second email for the same event would only confuse people (ADR-117)
+enabled = false
+subject = "Your 4Core Weekly OKR password was changed"
 content_path = "./supabase/templates/password_changed_notification.html"
 
 [auth.sms]

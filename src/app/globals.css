@@ -114,3 +114,26 @@ body { background: var(--surface); }
 .session-editor { outline-offset: 2px; }
 .session-editor .task-box { cursor: pointer; user-select: none; margin-right: 0.25em; }
 .session-editor li:has(> .task-box) { list-style: none; margin-left: -1.2rem; }
+
+/* ---- notes editor (ADR-116): colours, highlights and alignment are fixed names, never free styles ---- */
+.session-rich .tc-red { color: #b91c1c; } .session-rich .tc-orange { color: #c2410c; } .session-rich .tc-green { color: #15803d; }
+.session-rich .tc-teal { color: #0f766e; } .session-rich .tc-blue { color: #1d4ed8; } .session-rich .tc-purple { color: #7e22ce; }
+.session-rich .tc-pink { color: #be185d; } .session-rich .tc-brown { color: #78350f; } .session-rich .tc-grey { color: #565d66; }
+.session-rich .hl-yellow { background: #fef08a; } .session-rich .hl-green { background: #bbf7d0; } .session-rich .hl-blue { background: #bfdbfe; }
+.session-rich .hl-pink { background: #fbcfe8; } .session-rich .hl-orange { background: #fed7aa; } .session-rich .hl-grey { background: #e5e7eb; }
+.session-rich .hl-yellow, .session-rich .hl-green, .session-rich .hl-blue, .session-rich .hl-pink, .session-rich .hl-orange, .session-rich .hl-grey { color: #17191c; border-radius: 2px; padding: 0 0.1em; }
+.session-rich [data-align="center"] { text-align: center; } .session-rich [data-align="right"] { text-align: right; } .session-rich [data-align="justify"] { text-align: justify; }
+.session-rich u { text-underline-offset: 2px; }
+.session-rich ul ul { list-style: circle; } .session-rich ul ul ul { list-style: square; }
+.session-rich li > ul, .session-rich li > ol { margin-top: 0.25em; }
+.note-prose { outline: none; min-height: var(--note-min, 9rem); }
+.note-prose > * + * { margin-top: 0.6em; }
+.note-prose p.is-empty:first-child::before { content: none; }
+.note-prose li > p { margin: 0; }
+.note-prose li:has(> p > .task-box) { list-style: none; margin-left: -1.2rem; }
+.note-prose table { display: table; table-layout: fixed; width: 100%; }
+.note-prose tr:first-child > th, .note-prose tr:first-child > td { background: var(--surface); font-weight: 600; }
+.note-prose td > p, .note-prose th > p { margin: 0; }
+.note-prose .selectedCell { background: var(--brand-100); }
+.note-prose .ProseMirror-gapcursor::after { border-top-color: var(--ink); }
+.note-prose h5, .session-rich h5 { font-size: 1rem; color: var(--ink); }

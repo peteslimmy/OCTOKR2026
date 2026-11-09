@@ -1,110 +1,137 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Button, Input, NativeSelect } from "@/components/ui/primitives";
-import { htmlToMarkdown } from "@/lib/session-notes/html-to-markdown";
-import { markdownToHtml, safeUrl } from "@/lib/session-notes/markdown";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Editor } from "@tiptap/react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { Button, Input } from "@/components/ui/primitives";
+import { joinSections, sectionId, splitSections, type Section } from "@/lib/session-notes/format";
+import { markdownToText } from "@/lib/session-notes/markdown";
+import { RichText } from "./common";
+import { Ribbon, type Mentionable } from "./editor/ribbon";
+import { SectionEditor } from "./editor/section-editor";
 
-export interface Mentionable { id: string; name: string }
+export type { Mentionable };
 
-const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const btn = "rounded-md border border-line bg-panel px-2 py-1 text-xs font-medium text-ink hover:bg-surface focus-visible:outline-2 disabled:opacity-50";
+const icon = "inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-panel hover:text-ink focus-visible:outline-2 disabled:opacity-40";
 
 /**
- * The visual (what-you-see) editor. The person edits the rendered note; every change is turned back into the notes' markdown text (src/lib/session-notes/html-to-markdown.ts)
- * and that text is what is saved, versioned and rendered, exactly as with the text editor. The editor's own HTML is never stored and never trusted: it is rebuilt from the text
- * by the safe renderer, and pasted content is inserted as plain text.
+ * The visual (what-you-see) editor: a Word-style ribbon over the note's text. With `sectioned` the note is shown as one card per top-level heading
+ * (Notes, Recommendations, Actions, Next steps, and any the person adds), each with its own editing area; the ribbon works on the card being edited.
+ * What is saved is always the note's one markdown text (src/lib/session-notes/format.ts joins the cards back together); the editor's own HTML is never stored.
  */
-export function VisualEditor({ value, onChange, disabled, mentionable }: { value: string; onChange: (md: string) => void; disabled: boolean; mentionable: Mentionable[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const emitted = useRef<string | null>(null);
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [url, setUrl] = useState("https://");
-  const [linkError, setLinkError] = useState<string | null>(null);
-  const saved = useRef<Range | null>(null);
+export function VisualEditor({ value, onChange, disabled, mentionable, sectioned = false }: { value: string; onChange: (md: string) => void; disabled: boolean; mentionable: Mentionable[]; sectioned?: boolean }) {
+  const [active, setActive] = useState<Editor | null>(null);
+  const [preview, setPreview] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(100);
+  const [sections, setSections] = useState<Section[]>(() => (sectioned ? splitSections(value) : []));
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState<string | null>(null);
+  const secRef = useRef(sections);
+  const emitted = useRef(value);
 
-  // the document is rebuilt from the text only when the text changed from outside (first show, restored draft, their version): never while the person is typing
+  // the cards are rebuilt from the text only when the text changed from outside (restored draft, their version), never while the person is typing
   useEffect(() => {
-    const el = ref.current;
-    if (!el || emitted.current === value) return;
-    el.innerHTML = markdownToHtml(value, { editable: true });
-    emitted.current = value;
-  }, [value]);
+    if (!sectioned || value === emitted.current) return;
+    const next = splitSections(value);
+    secRef.current = next; emitted.current = value;
+    setSections(next);
+  }, [value, sectioned]);
 
-  const sync = () => {
-    const el = ref.current;
-    if (!el) return;
-    const md = htmlToMarkdown(el);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false); };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [fullscreen]);
+
+  const commit = (next: Section[]) => {
+    secRef.current = next;
+    setSections(next);
+    const md = joinSections(next);
     emitted.current = md;
     onChange(md);
   };
-  const exec = (cmd: string, arg?: string) => { ref.current?.focus(); document.execCommand(cmd, false, arg); sync(); };
-  const html = (h: string) => exec("insertHTML", h);
-  const remember = () => { const s = window.getSelection(); if (s && s.rangeCount && ref.current?.contains(s.anchorNode)) saved.current = s.getRangeAt(0).cloneRange(); };
-  const restore = () => { const s = window.getSelection(); if (s && saved.current) { s.removeAllRanges(); s.addRange(saved.current); } };
+  const edit = (id: string, patch: Partial<Section>) => commit(secRef.current.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const move = (i: number, d: -1 | 1) => {
+    const a = [...secRef.current];
+    const j = i + d;
+    if (j < 0 || j >= a.length || (a[i].title === null) || (a[j].title === null)) return;
+    [a[i], a[j]] = [a[j], a[i]];
+    commit(a);
+  };
+  const remove = (s: Section) => {
+    if (secRef.current.length <= 1) return;
+    if (s.md.trim() && !window.confirm(`Delete the section "${s.title ?? "Opening text"}" and everything written in it?`)) return;
+    commit(secRef.current.filter((x) => x.id !== s.id));
+  };
+  const toggle = (id: string) => setCollapsed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  const words = useMemo(() => markdownToText(value).split(/\s+/).filter(Boolean).length, [value]);
+  // the first editor to exist is the one the ribbon works on until the person clicks into another
+  const ready = (e: Editor) => setActive((prev) => (prev && !prev.isDestroyed ? prev : e));
+  const live = active && !active.isDestroyed ? active : null;
+  const view = { preview, onPreview: () => setPreview((p) => !p), fullscreen, onFullscreen: () => setFullscreen((f) => !f), zoom, onZoom: setZoom };
 
   return (
-    <div className="space-y-2" data-testid="visual-editor">
-      <div role="toolbar" aria-label="Formatting (visual editor)" className="flex flex-wrap items-center gap-1">
-        <button type="button" className={btn} disabled={disabled} aria-label="Heading" onClick={() => exec("formatBlock", "H3")}>H1</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Subheading" onClick={() => exec("formatBlock", "H4")}>H2</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Paragraph" onClick={() => exec("formatBlock", "P")}>¶</button>
-        <button type="button" className={`${btn} font-bold`} disabled={disabled} aria-label="Bold" onClick={() => exec("bold")}>B</button>
-        <button type="button" className={`${btn} italic`} disabled={disabled} aria-label="Italic" onClick={() => exec("italic")}>I</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Bulleted list" onClick={() => exec("insertUnorderedList")}>• List</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Numbered list" onClick={() => exec("insertOrderedList")}>1. List</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Checklist" onClick={() => html('<ul><li><span data-task="open" contenteditable="false" class="task-box">☐</span>&nbsp;</li></ul>')}>☑ Checklist</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Quote" onClick={() => exec("formatBlock", "BLOCKQUOTE")}>❝</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Table" onClick={() => html("<table><thead><tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr></thead><tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table><p></p>")}>Table</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Link" onClick={() => { remember(); setLinkError(null); setLinkOpen((o) => !o); }}>Link</button>
-        {mentionable.length ? (
-          <NativeSelect aria-label="Mention a participant" className="!w-auto !py-1 text-xs" disabled={disabled} value="" onFocus={remember}
-            onChange={(e) => {
-              const p = mentionable.find((x) => x.id === e.target.value);
-              if (!p) return;
-              restore();
-              html(`<span class="mention" data-user="${p.id}" contenteditable="false">@${escapeHtml(p.name.replace(/[\]\n]/g, ""))}</span>&nbsp;`);
-            }}>
-            <option value="">@ Mention…</option>
-            {mentionable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </NativeSelect>
-        ) : null}
-        <span className="mx-1 h-5 w-px bg-line" aria-hidden />
-        <button type="button" className={btn} disabled={disabled} aria-label="Undo" onClick={() => exec("undo")}>Undo</button>
-        <button type="button" className={btn} disabled={disabled} aria-label="Redo" onClick={() => exec("redo")}>Redo</button>
+    <div data-testid="visual-editor" className={fullscreen ? "fixed inset-0 z-50 overflow-auto bg-surface p-3 sm:p-6" : "space-y-0"}>
+      <div className={fullscreen ? "mx-auto max-w-5xl space-y-3" : "space-y-3"}>
+        <div className="sticky top-0 z-20 -mx-px">
+          <Ribbon editor={live} sectioned={sectioned} disabled={disabled} mentionable={mentionable} view={view} />
+        </div>
+
+        <div style={{ zoom: zoom / 100 }} className="space-y-3">
+          {sectioned ? (
+            <>
+              {sections.map((s, i) => {
+                const closed = collapsed.has(s.id);
+                return (
+                  <section key={s.id} aria-label={s.title ?? "Opening text"} data-section={s.title ?? ""} className="rounded-lg border border-line bg-panel focus-within:border-brand-600 focus-within:ring-1 focus-within:ring-brand-600/40">
+                    <header className="flex items-center gap-1 rounded-t-lg border-b border-line bg-surface px-2 py-1.5">
+                      <button type="button" className={icon} aria-label={closed ? "Expand section" : "Collapse section"} aria-expanded={!closed} onClick={() => toggle(s.id)}>{closed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}</button>
+                      {s.title === null
+                        ? <span className="flex-1 px-1 text-sm font-semibold text-muted">Opening text</span>
+                        : <input aria-label="Section title" value={s.title} maxLength={120} disabled={disabled} onChange={(e) => edit(s.id, { title: e.target.value })} className="min-w-0 flex-1 rounded bg-transparent px-1 py-0.5 text-sm font-semibold text-ink focus-visible:bg-panel focus-visible:outline-2" />}
+                      <button type="button" className={icon} aria-label="Move section up" disabled={disabled || i === 0 || s.title === null || sections[i - 1].title === null} onClick={() => move(i, -1)}><ArrowUp className="size-4" /></button>
+                      <button type="button" className={icon} aria-label="Move section down" disabled={disabled || i === sections.length - 1 || s.title === null} onClick={() => move(i, 1)}><ArrowDown className="size-4" /></button>
+                      <button type="button" className={icon} aria-label="Delete section" disabled={disabled || sections.length <= 1} onClick={() => remove(s)}><Trash2 className="size-4" /></button>
+                    </header>
+                    <div hidden={closed} className="px-3 py-2">
+                      <SectionEditor md={s.md} label={`${s.title ?? "Opening text"} (visual editor)`} sectioned disabled={disabled} onMd={(md) => edit(s.id, { md })} onActive={setActive} onReady={ready} />
+                    </div>
+                  </section>
+                );
+              })}
+              {adding === null ? (
+                <Button size="sm" variant="secondary" disabled={disabled} onClick={() => setAdding("")}><Plus className="mr-1 inline size-4" aria-hidden />Add section</Button>
+              ) : (
+                <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => {
+                  e.preventDefault();
+                  const t = adding.trim();
+                  if (!t) return;
+                  commit([...secRef.current, { id: sectionId(), title: t, md: "" }]);
+                  setAdding(null);
+                }}>
+                  <Input aria-label="New section title" autoFocus placeholder="Section title, for example Decisions" className="max-w-xs" maxLength={120} value={adding} onChange={(e) => setAdding(e.target.value)} />
+                  <Button size="sm" type="submit" disabled={!adding.trim()}>Add</Button>
+                  <Button size="sm" variant="secondary" type="button" onClick={() => setAdding(null)}>Cancel</Button>
+                </form>
+              )}
+            </>
+          ) : (
+            <div className="rounded-b-lg border border-t-0 border-line bg-panel px-3 py-2 focus-within:ring-1 focus-within:ring-brand-600/40">
+              <SectionEditor md={value} label="Note text (visual editor)" sectioned={false} disabled={disabled} onMd={(md) => { emitted.current = md; onChange(md); }} onActive={setActive} onReady={ready} minHeight="12rem" />
+            </div>
+          )}
+        </div>
+
+        {preview ? <div className="rounded-lg border border-line bg-surface p-3" aria-label="Preview"><RichText md={value || "_Nothing to preview yet._"} /></div> : null}
+
+        <p className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <span>{words} {words === 1 ? "word" : "words"} · pasted text is inserted as plain text</span>
+          <span>Saved as the same formatted text the text editor uses.</span>
+        </p>
       </div>
-
-      {linkOpen ? (
-        <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => {
-          e.preventDefault();
-          const safe = safeUrl(url);
-          if (!safe) { setLinkError("Only http, https and mailto links are accepted."); return; }
-          restore();
-          exec("createLink", safe);
-          setLinkOpen(false); setUrl("https://");
-        }}>
-          <Input aria-label="Link address" className="max-w-sm" value={url} onChange={(e) => setUrl(e.target.value)} />
-          <Button size="sm" type="submit">Add link</Button>
-          {linkError ? <span role="alert" className="text-xs text-[var(--critical-fg)]">{linkError}</span> : <span className="text-xs text-muted">Select the words first.</span>}
-        </form>
-      ) : null}
-
-      <div
-        ref={ref} role="textbox" aria-multiline="true" aria-label="Note text (visual editor)" contentEditable={!disabled} suppressContentEditableWarning spellCheck
-        className="session-rich session-editor min-h-48 rounded-lg border border-line bg-panel px-3 py-2 focus-visible:outline-2"
-        onInput={sync} onBlur={remember}
-        onPaste={(e) => { e.preventDefault(); const t = e.clipboardData.getData("text/plain"); if (t) { document.execCommand("insertText", false, t); sync(); } }}
-        onDrop={(e) => e.preventDefault()}
-        onClick={(e) => {
-          const box = (e.target as HTMLElement).closest?.("[data-task]") as HTMLElement | null;
-          if (!box || disabled) return;
-          const done = box.getAttribute("data-task") === "done";
-          box.setAttribute("data-task", done ? "open" : "done");
-          box.textContent = done ? "☐" : "☑";
-          sync();
-        }}
-      />
-      <p className="text-xs text-muted">Pasted text is inserted as plain text. What you see is saved as the same formatted text the text editor uses.</p>
     </div>
   );
 }

@@ -72,7 +72,7 @@ describe("visual editor: nothing dangerous survives", () => {
     expect(htmlToMarkdown(doc(el("p", {}, el("span", { "data-user": "x\" onmouseover=\"y" }, "@Eve"))))).toBe("@Eve");
   });
   it("turns pasted unknown markup into its plain text", () => {
-    const d = doc(el("p", {}, el("font", { color: "red" }, "red "), el("u", {}, "underlined"), el("marquee", {}, " moving")));
+    const d = doc(el("p", {}, el("font", { color: "red" }, "red "), el("ins", {}, "underlined"), el("marquee", {}, " moving")));
     expect(htmlToMarkdown(d)).toBe("red underlined moving");
   });
   it("the result is always something the safe renderer accepts: round trip stays inside the allowed tags", () => {
