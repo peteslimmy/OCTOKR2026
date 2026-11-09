@@ -2,7 +2,7 @@
  * Hands the email outbox to a transport (ADR-061). Pure of any framework: the database calls and the transport are passed in, so the
  * retry, give-up and "no provider" behaviour can be tested without a mail server.
  */
-export interface Mail { to: string; subject: string; text: string }
+export interface Mail { to: string; subject: string; text: string; /** Optional HTML version; the plain text is always sent beside it. */ html?: string }
 export interface Transport { name: string; send(mail: Mail): Promise<void> }
 export interface OutboxRow { id: string; to_email: string; subject: string; body: string; attempts: number }
 export interface DeliveryDeps {

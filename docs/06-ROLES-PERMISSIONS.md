@@ -84,6 +84,7 @@ Permission checks must be performed against the authenticated requester/reviewer
 - `business_units.manage`
 - `business_units.change_type` — change a unit between Business Unit and Department (promote or demote). **Super Admin only** (protected; not given to Admin, not available through a config request). Changes the label only (ADR-114).
 - `audit.read`
+- `report_email.manage` / `report_email.send` / `report_email.history` — automated report emails: set up schedules, preview and test; send now and retry; see the delivery history. Admin and Super Admin (ADR-115).
 
 ### Bulk import
 

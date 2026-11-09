@@ -5,6 +5,7 @@ import { sendWebhook } from "@/lib/integrations/adapters";
 import { decryptSecret } from "@/lib/integrations/crypto";
 import { resolveEmail } from "@/lib/integrations/runtime";
 import { deliverWebhooks, type WebhookRow } from "@/lib/integrations/webhook-delivery";
+import { runDueEmailReports } from "@/lib/report-email/service";
 import { adminClient } from "@/lib/supabase/admin";
 
 /**
@@ -55,5 +56,12 @@ export async function POST(req: Request) {
     console.error("webhook delivery failed", e instanceof Error ? e.message : e);
     webhooks = { error: "delivery failed" };
   }
-  return NextResponse.json({ data: { ...(data as object), email, webhooks } });
+  let reportEmails: unknown = { error: "not run" };
+  try {
+    reportEmails = await runDueEmailReports();
+  } catch (e) {
+    console.error("report emails failed", e instanceof Error ? e.message : e);
+    reportEmails = { error: "report emails failed" };
+  }
+  return NextResponse.json({ data: { ...(data as object), email, webhooks, reportEmails } });
 }

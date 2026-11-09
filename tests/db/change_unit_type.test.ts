@@ -29,9 +29,9 @@ describe("changing a unit between Business Unit and Department (ADR-114)", () =>
       expect(await row(c, w.bu)).toEqual({ ...before, unit_type: "DEPARTMENT" });
       expect(await change(c, w.root, w.bu, "BUSINESS_UNIT", "Now a full unit")).toMatchObject({ from: "DEPARTMENT", to: "BUSINESS_UNIT" });
       expect(await row(c, w.bu)).toEqual(before);
-      const audit = await c.q<{ reason: string; old_value: { unit_type: string }; new_value: { unit_type: string }; actor_user_id: string }>(
-        "select reason, old_value, new_value, actor_user_id from audit_logs where action = 'BU_TYPE_CHANGED' and entity_id = $1 order by occurred_at, id", [w.bu]);
-      expect(audit.map((a) => [a.reason, a.old_value.unit_type, a.new_value.unit_type])).toEqual([["HR is a department", "BUSINESS_UNIT", "DEPARTMENT"], ["Now a full unit", "DEPARTMENT", "BUSINESS_UNIT"]]);
+      const audit = await c.q<{ reason: string; old_values: { unit_type: string }; new_values: { unit_type: string }; actor_user_id: string }>(
+        "select reason, old_values, new_values, actor_user_id from audit_logs where action = 'BU_TYPE_CHANGED' and entity_id = $1 order by occurred_at, id", [w.bu]);
+      expect(audit.map((a) => [a.reason, a.old_values.unit_type, a.new_values.unit_type])).toEqual([["HR is a department", "BUSINESS_UNIT", "DEPARTMENT"], ["Now a full unit", "DEPARTMENT", "BUSINESS_UNIT"]]);
       expect(audit.every((a) => a.actor_user_id === w.root)).toBe(true);
     });
   });

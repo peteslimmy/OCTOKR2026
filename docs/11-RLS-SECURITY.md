@@ -120,6 +120,8 @@ Presenter can read all BU reports but cannot edit Goal content.
 
 Changing a unit's type is a separate guarded function (`change_business_unit_type`, `business_units.change_type`, Super Admin only); `update_business_unit` also refuses a type change without that permission, so the approval path cannot be used to bypass it (ADR-114).
 
+Automated report emails (ADR-115) keep their schedules, runs and deliveries in three tables that signed-in users and anonymous callers cannot read or write (row-level security on, no grants); the API reads them as the server after its own permission check, and every write is a service-only function that checks the permission and audits. The job reads organisation-wide Business Unit scores through two service-only functions, never through a user session, so the second-factor rule that guards report reads is not bypassed or weakened.
+
 ## Tables added after ADR-072 (branding, integrations, imports, unit type)
 
 - **Public-before-sign-in reads.** `app_branding`, `app_branding_assets`, `site_content` and `site_images` grant `select` to `anon` and `authenticated` with a `using (true)` policy, because the sign-in page and landing content render before a session exists. They are read-only to browsers: writes go through service-role functions requiring `branding.manage` (`set_branding*`, `set_site_content`, `set_site_image`, `delete_site_image`, `prune_site_images`), and image bytes/settings are audited without the bytes. No public storage bucket is involved.

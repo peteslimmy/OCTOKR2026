@@ -43,7 +43,7 @@ export async function resolveEmail(): Promise<EmailRuntime> {
       const password = row.secrets.password ? decryptFields({ password: row.secrets.password }).password : undefined;
       const t = smtpTransportFor(s, password);
       const from = smtpFrom(s);
-      const transport: Transport = { name: `smtp:${s.host}`, send: async (m: Mail) => { await t.sendMail({ from, to: m.to, subject: m.subject, text: m.text }); } };
+      const transport: Transport = { name: `smtp:${s.host}`, send: async (m: Mail) => { await t.sendMail({ from, to: m.to, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}) }); } };
       return { transport, appUrl: s.baseUrl, source: "integration", name: row.name };
     } catch (e) {
       console.error("the email integration cannot be used:", e instanceof Error ? e.message : e);

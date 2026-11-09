@@ -80,6 +80,7 @@ const MAP: Record<string, { status: number; message: string }> = {
   REPORT_NOT_AVAILABLE: { status: 403, message: "You do not have access to this report." },
   EXPORT_TOO_LARGE: { status: 413, message: "This report has too many rows to export. Narrow the period or Business Unit." },
   SNAPSHOT_SCOPE: { status: 409, message: "Official snapshots are organisation-wide. This report cannot be snapshotted for your scope." },
+  REPORT_EMAIL_ALREADY_SENT: { status: 409, message: "That period has already been emailed for this schedule. Use Retry to resend failed deliveries." },
   ALREADY_BOOTSTRAPPED: { status: 409, message: "The organisation has already been set up." },
   ORGANISATION_NOT_CONFIGURED: { status: 409, message: "The organisation has not been set up yet." },
   RATE_LIMITED: { status: 429, message: "Too many attempts. Please wait and try again." },

@@ -49,6 +49,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     can(actor, "reports.view") && { href: "/reports/insights", label: "Insights", icon: "insights", hint: "What the data suggests" },
     can(actor, "reports.build") && { href: "/reports/builder", label: "Report builder", icon: "builder", hint: "Build and save your own" },
     can(actor, "reports.view") && { href: "/reports/saved", label: "Saved & snapshots", icon: "saved", hint: "Saved reports and frozen snapshots" },
+    (can(actor, "report_email.manage") || can(actor, "report_email.history")) && { href: "/reports/email", label: "Email reports", icon: "saved", hint: "Scheduled summaries by email" },
   ]);
   add("People & organisation", [
     any("business_units.manage") && { href: "/admin/units", label: "Business Units & Departments", icon: "units", hint: "Create and manage units" },

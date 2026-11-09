@@ -18,7 +18,7 @@ export function configuredTransport(): Transport | null {
   const from = process.env.EMAIL_FROM || "4Core Weekly OKR <no-reply@localhost>";
   if (kind === "smtp" && process.env.SMTP_URL) {
     const t = nodemailer.createTransport(process.env.SMTP_URL);
-    return { name: "smtp", send: async (m: Mail) => { await t.sendMail({ from, to: m.to, subject: m.subject, text: m.text }); } };
+    return { name: "smtp", send: async (m: Mail) => { await t.sendMail({ from, to: m.to, subject: m.subject, text: m.text, ...(m.html ? { html: m.html } : {}) }); } };
   }
   if (kind === "resend" && process.env.RESEND_API_KEY) {
     return {
@@ -35,6 +35,7 @@ export function configuredTransport(): Transport | null {
             to: m.to,
             subject: m.subject,
             text: m.text,
+            ...(m.html ? { html: m.html } : {}),
           }),
         });
         if (!res.ok) {
