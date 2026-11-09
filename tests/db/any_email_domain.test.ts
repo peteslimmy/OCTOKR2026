@@ -34,13 +34,20 @@ describe("who may add a person on an unapproved address", () => {
     });
   });
 
-  it("a public mail provider still cannot be put on the approved list, and the refusal says why", async () => {
+  it("a Super Admin may approve a public mail provider when it is needed; then an Admin may add people on it, and nobody else may approve it", async () => {
     await withTx(async (c) => {
       const bu = await c.bu("DOMBU3");
       const sa = await c.user(["SUPER_ADMIN"], bu, "sa");
-      await c.expectError("VALIDATION_ERROR", () => c.rpc("save_allowed_domain", sa, "gmail.com", true));
-      const err = await c.q("select 1").then(() => c.rpc("save_allowed_domain", sa, "gmail.com", true)).then(() => null, (e: Error) => e);
-      expect(String((err as { detail?: string } | null)?.detail ?? "")).toContain("any address without approving it");
+      const admin = await c.user(["ADMIN"], bu, "admin");
+      const email = `needed-${Date.now()}@gmail.com`;
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("save_allowed_domain", admin, "gmail.com", true));
+      await c.expectError("VALIDATION_ERROR", () => provision(c, admin, email, bu));          // not approved yet
+      await c.rpc("save_allowed_domain", sa, "gmail.com", true);
+      await provision(c, admin, email, bu);                                                      // approved: an Admin may now
+      expect((await c.q("select 1 from users where email = $1", [email])).length).toBe(1);
+      expect((await c.q("select 1 from audit_logs where action = 'EMAIL_DOMAIN_APPROVED' and entity_id = 'gmail.com'")).length).toBe(1);
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("save_allowed_domain", sa, "gmail.com", true));   // already approved
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("save_allowed_domain", sa, "gmail.com", false));  // cannot be removed while someone active uses it
     });
   });
 });

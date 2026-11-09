@@ -47,8 +47,8 @@ export const POST = api(
     const body = { ...person, roles: input.roles };
     // only approved email domains may have an account (the Super Admin keeps the approved list)
     const { data: approved } = await admin.from("allowed_email_domains").select("domain").eq("domain", body.email.split("@")[1] ?? "").maybeSingle();
-    // a Super Admin may add a person on any address (a public mail provider included) without approving the domain; everyone else needs an approved company domain
-    if (!approved && !actor.roles.includes("SUPER_ADMIN")) throw fail("VALIDATION_ERROR", 422, `Use a company address: @${body.email.split("@")[1]} is not an approved domain, and public mail providers (such as gmail.com) cannot be approved.`);
+    // a Super Admin may add a person on any address without approving the domain; everyone else needs an approved domain (the Super Admin can approve one, a public provider such as gmail.com included, under Settings)
+    if (!approved && !actor.roles.includes("SUPER_ADMIN")) throw fail("VALIDATION_ERROR", 422, `The domain @${body.email.split("@")[1]} is not approved. Ask the Super Admin to approve it under Administration > Settings.`);
     const password = initialPassword();
     const created = await admin.auth.admin.createUser({ email: body.email, password, email_confirm: true, user_metadata: { first_name: body.firstName } });
     if (created.error || !created.data.user) throw fail("VALIDATION_ERROR", 422, "That email address cannot be used.");
