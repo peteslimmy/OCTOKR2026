@@ -162,7 +162,13 @@ export function toDomainError(
         /* keep string */
       }
     }
-    return { code, status: known.status, message: known.message, details };
+    // a plain sentence the database attached on purpose ("using detail = ...") is the real reason: show it, so a person is never left with only "not valid"
+    let message = known.message;
+    if (code === "VALIDATION_ERROR" && typeof details === "string" && details.trim() && !details.startsWith("[") && details.length <= 220) {
+      const why = details.trim().replace(/^./, (c) => c.toUpperCase());
+      message = `${message.replace(/\.$/, "")}: ${why}${/[.!?]$/.test(why) ? "" : "."}`;
+    }
+    return { code, status: known.status, message, details };
   }
   if (err?.code === "23505") return { code: "CONFLICT", status: 409, message: "That record already exists." };
   if (err?.code === "23514" || err?.code === "23502" || err?.code === "22P02") {

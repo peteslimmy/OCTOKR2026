@@ -17,8 +17,9 @@ export function EmailDomains({ domains }: { domains: string[] }) {
               onConfirm={() => run(() => apiRequest("POST", "email-domains", { domain: d, add: false }), { success: "Domain removed." })} />
           </li>
         ))}
-        {domains.length === 0 ? <li className="px-4 py-2 text-muted">No domains approved: nobody but the Super Admin can be added.</li> : null}
+        {domains.length === 0 ? <li className="px-4 py-2 text-muted">No domains approved: only a Super Admin can add people.</li> : null}
       </ul>
+      <p className="max-w-md text-xs text-muted">Approve company domains here so Admins can add people on them. Public mail providers (gmail.com, outlook.com and the like) cannot be approved; a Super Admin can add a person on any address without approving it.</p>
       <form className="flex max-w-md gap-2" onSubmit={async (e) => { e.preventDefault(); const ok = await run(() => apiRequest("POST", "email-domains", { domain: domain.replace(/^@/, ""), add: true }), { success: "Domain approved." }); if (ok) setDomain(""); }}>
         <Input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="example.com" aria-label="Email domain" required />
         <Button type="submit" disabled={pending || !domain.trim()}>Approve domain</Button>
