@@ -40,7 +40,7 @@ function GoalRow({ g, index }: { g: GoalOutlook; index: number }) {
   return (
     <li className="space-y-1.5 px-5 py-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 flex-1 font-medium"><span className="mr-2 text-muted">BU Goal {index + 1}</span>{g.title}</p>
+        <p className="min-w-0 flex-1 font-medium"><span className="mr-2 font-mono text-xs text-muted">{g.code ?? `BU Goal ${index + 1}`}</span>{g.title}</p>
         <Badge tone={o.tone}>{o.label}</Badge>
       </div>
       <div className="flex items-center gap-3">

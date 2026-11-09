@@ -6,10 +6,10 @@ import { useRef, useState } from "react";
 import { apiUpload, ApiFailure, Modal, toast } from "@/components/ui/client";
 import { describeFailure, FailurePanel, type Failure } from "@/components/import-feedback";
 import { Button } from "@/components/ui/primitives";
-import { goalTemplateCsv } from "@/lib/reports/goal-upload";
+import { goalCodesCsv, goalTemplateCsv } from "@/lib/reports/goal-upload";
 
 /** Add many goals, with their tasks, to this report from a .csv or .xlsx. Everything is checked first; if anything is wrong nothing is added. */
-export function BulkGoalsButton({ reportId }: { reportId: string }) {
+export function BulkGoalsButton({ reportId, buGoals = [] }: { reportId: string; buGoals?: { code: string; title: string }[] }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
@@ -22,6 +22,13 @@ export function BulkGoalsButton({ reportId }: { reportId: string }) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([goalTemplateCsv()], { type: "text/csv;charset=utf-8" }));
     a.download = "weekly-goals-template.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  const codes = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([goalCodesCsv(buGoals)], { type: "text/csv;charset=utf-8" }));
+    a.download = "business-unit-goal-codes.csv";
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -48,11 +55,14 @@ export function BulkGoalsButton({ reportId }: { reportId: string }) {
         description="Add many SMART goals with their tasks at once from a .csv or .xlsx file. If any row has a problem, nothing is added and the problems are listed.">
         <div className="space-y-3 text-sm">
           <ul className="list-disc space-y-1 pl-5 text-muted">
-            <li>One row per task. Columns: <strong className="font-medium text-ink">Goal</strong>, <strong className="font-medium text-ink">Sub-KR</strong> (for example KR1.1; blank for a stretch goal), <strong className="font-medium text-ink">BU goal</strong> (the title of one of your unit&apos;s goals; needed once your unit has set its goals) and <strong className="font-medium text-ink">Task</strong>.</li>
+            <li>One row per task. Columns: <strong className="font-medium text-ink">Goal</strong>, <strong className="font-medium text-ink">Sub-KR</strong> (for example KR1.1; blank for a stretch goal), <strong className="font-medium text-ink">BU goal ID</strong> (the code of one of your unit&apos;s goals, for example BG-1; needed once your unit has set its goals) and <strong className="font-medium text-ink">Task</strong>.</li>
             <li>A row with a Goal starts a new goal. Leave Goal blank to add another task to the goal above.</li>
             <li>Goals are added to this report as drafts. You can edit them until the content lock.</li>
           </ul>
-          <button type="button" onClick={template} className="text-brand-700 underline">Download the template (.csv)</button>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <button type="button" onClick={template} className="text-brand-700 underline">Download the template (.csv)</button>
+            {buGoals.length ? <button type="button" onClick={codes} className="text-brand-700 underline">Download your unit&apos;s goal codes (.csv)</button> : null}
+          </div>
           <div>
             <label htmlFor="bulk-file" className="mb-1 block font-medium">File</label>
             <input id="bulk-file" ref={input} type="file" accept=".csv,.xlsx" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setProblems([]); setFailure(null); }}

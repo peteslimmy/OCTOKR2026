@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goalTemplateCsv, parseGoalUpload } from "../goal-upload";
+import { goalCodesCsv, goalTemplateCsv, normaliseGoalCode, parseGoalUpload } from "../goal-upload";
 
 const subs = new Map([["KR1.1", "sub-1"], ["KR2.1", "sub-2"]]);
 const H = ["Goal", "Sub-KR", "Description", "Task"];
@@ -45,7 +45,7 @@ describe("parseGoalUpload", () => {
   it("offers a template that parses cleanly", () => {
     const split = (l: string) => (l.match(/("([^"]|"")*"|[^,]*)(,|$)/g) ?? []).map((c) => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')).slice(0, 4);
     const lines = goalTemplateCsv().trim().split(/\r?\n/).map(split);
-    const out = parseGoalUpload(lines[0], lines.slice(1), subs, new Map([["grow partner revenue by 20%", "bu-1"]]));
+    const out = parseGoalUpload(lines[0], lines.slice(1), subs, new Map([["bg-1", "bu-1"]]));
     expect(out.errors).toEqual([]);
     expect(out.goals).toHaveLength(2);
     expect(out.goals.map((g) => g.tasks.length)).toEqual([2, 2]);
@@ -53,10 +53,22 @@ describe("parseGoalUpload", () => {
   });
 
   describe("BU goals", () => {
-    const HB = ["Goal", "Sub-KR", "BU goal", "Task"];
-    const bu = new Map([["grow partner revenue", "bu-1"]]);
+    const HB = ["Goal", "Sub-KR", "BU goal ID", "Task"];
+    const bu = new Map([["grow partner revenue", "bu-1"], ["bg-1", "bu-1"], ["bg-2", "bu-2"]]);
     it("links a goal to the unit goal named by its title, in any case", () => {
       expect(parseGoalUpload(HB, [["G", "KR1.1", "Grow Partner Revenue", "T"]], subs, bu).goals[0].buGoalId).toBe("bu-1");
+    });
+    it("links a goal to the unit goal named by its code, however the code is written", () => {
+      for (const v of ["BG-1", "bg-1", "BG 1", "BG-01", " bg_1 "]) expect(parseGoalUpload(HB, [["G", "KR1.1", v, "T"]], subs, bu).goals[0].buGoalId, v).toBe("bu-1");
+      expect(parseGoalUpload(HB, [["G", "KR1.1", "BG-2", "T"]], subs, bu).goals[0].buGoalId).toBe("bu-2");
+    });
+    it("refuses a code the unit does not have, and says to use a code", () => {
+      const e = parseGoalUpload(HB, [["G", "KR1.1", "BG-9", "T"]], subs, bu).errors.join(" ");
+      expect(e).toContain(`BU goal "BG-9" is not one of your unit's active goals`);
+      expect(e).toContain("use its code, for example BG-1");
+    });
+    it("reads the heading BU goal as well as BU goal ID", () => {
+      expect(parseGoalUpload(["Goal", "Sub-KR", "BU goal", "Task"], [["G", "KR1.1", "BG-1", "T"]], subs, bu).goals[0].buGoalId).toBe("bu-1");
     });
     it("asks for one once the unit has goals, but not for a stretch goal", () => {
       expect(parseGoalUpload(HB, [["G", "KR1.1", "", "T"]], subs, bu).errors.join(" ")).toContain("choose which BU goal");
@@ -66,5 +78,19 @@ describe("parseGoalUpload", () => {
       expect(parseGoalUpload(HB, [["G", "KR1.1", "Someone else's goal", "T"]], subs, bu).errors.join(" ")).toContain("is not one of your unit's active goals");
       expect(parseGoalUpload(HB, [["G", "KR1.1", "", "T"]], subs, new Map()).errors).toEqual([]);
     });
+  });
+});
+
+describe("goal codes", () => {
+  it("normalises the ways a code is written, and nothing else", () => {
+    expect(normaliseGoalCode("BG-3")).toBe("bg-3");
+    expect(normaliseGoalCode(" bg 12 ")).toBe("bg-12");
+    expect(normaliseGoalCode("Grow revenue")).toBeNull();
+    expect(normaliseGoalCode("BG-")).toBeNull();
+    expect(normaliseGoalCode("XBG-1")).toBeNull();
+  });
+  it("lists a unit's codes with their titles, ready to open in a spreadsheet", () => {
+    expect(goalCodesCsv([{ code: "BG-1", title: "Grow partner revenue by 20%" }, { code: "BG-2", title: 'Cut "late" reports, fast' }]))
+      .toBe('BU goal ID,BU goal\r\nBG-1,Grow partner revenue by 20%\r\nBG-2,"Cut ""late"" reports, fast"\r\n');
   });
 });

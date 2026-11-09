@@ -8,13 +8,13 @@ export interface GoalFact {
   buGoalId: string | null; subKrCode: string | null; krCode: string | null; title: string; done: boolean;
   tasksTotal: number; tasksDone: number; tasksUndefined: number; smart: number | null;
 }
-export interface BuGoalInput { id: string; businessUnitId: string; title: string; status: "ACTIVE" | "RETIRED" }
+export interface BuGoalInput { id: string; code?: string; businessUnitId: string; title: string; status: "ACTIVE" | "RETIRED" }
 export interface QuarterFrame { startsOn: string; endsOn: string; weeks: { id: string; number: number; start: string; holiday: boolean }[] }
 
 export type Outlook = "ON_TRACK" | "AT_RISK" | "OFF_TRACK" | "NO_DATA";
 export type Severity = "high" | "medium" | "low";
 export interface GoalOutlook {
-  id: string; title: string; outlook: Outlook; weeklyGoals: number; doneGoals: number; weeksActive: number;
+  id: string; code?: string; title: string; outlook: Outlook; weeklyGoals: number; doneGoals: number; weeksActive: number;
   completion: number | null; recent: number | null; trend: number | null; projected: number | null;
   confidence: "low" | "medium" | "high"; lastActiveWeek: number | null; series: (number | null)[]; note: string;
 }
@@ -109,7 +109,7 @@ export function buildBuIntelligence(input: { unit: { id: string; name: string };
     const outlook: Outlook = mine.length === 0 ? "NO_DATA" : (projected ?? 0) >= ON_TRACK_AT ? "ON_TRACK" : (projected ?? 0) >= AT_RISK_AT ? "AT_RISK" : "OFF_TRACK";
     const note = outlook === "NO_DATA" ? "No weekly goal supports this yet."
       : `${done} of ${mine.length} weekly goals done over ${weeksActive} ${weeksActive === 1 ? "week" : "weeks"}${tr !== null ? `, ${tr >= 1 ? "improving" : tr <= -1 ? "declining" : "steady"}` : ""}.`;
-    return { id: bg.id, title: bg.title, outlook, weeklyGoals: mine.length, doneGoals: done, weeksActive, completion: completion === null ? null : round1(completion),
+    return { id: bg.id, code: bg.code, title: bg.title, outlook, weeklyGoals: mine.length, doneGoals: done, weeksActive, completion: completion === null ? null : round1(completion),
       recent: recent === null ? null : round1(recent), trend: tr === null ? null : round1(tr), projected: projected === null ? null : round1(projected), confidence,
       lastActiveWeek: lastActive?.number ?? null, series, note };
   });

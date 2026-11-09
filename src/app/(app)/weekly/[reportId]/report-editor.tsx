@@ -23,7 +23,7 @@ let pendingRelease: Promise<void> = Promise.resolve();
 type Caps = { edit: boolean; submit: boolean; execute: boolean; review: boolean; integrity: boolean };
 type SubKr = { id: string; label: string; kr: string };
 
-export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intelligence, caps }: { view: ReportView; subKrs: SubKr[]; buGoals: { id: string; title: string }[]; trend: TrendPoint[]; currentWeek: string; intelligence?: ReactNode; caps: Caps }) {
+export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intelligence, caps }: { view: ReportView; subKrs: SubKr[]; buGoals: { id: string; code: string; title: string }[]; trend: TrendPoint[]; currentWeek: string; intelligence?: ReactNode; caps: Caps }) {
   const { report, week, phase } = view;
   const holiday = week.reporting_state === "ORGANIZATION_HOLIDAY";
   const late = phase === "LATE_OPEN";
@@ -138,7 +138,7 @@ export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intell
           <section aria-labelledby="goals-h" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 id="goals-h" className="text-lg font-semibold">SMART goals ({view.goals.length})</h2>
-              {canMutate ? <span className="flex gap-2"><BulkGoalsButton reportId={report.id} /><Button size="sm" onClick={() => setGoalModal({})}><Plus className="h-4 w-4" aria-hidden />Add goal</Button></span> : null}
+              {canMutate ? <span className="flex gap-2"><BulkGoalsButton reportId={report.id} buGoals={buGoals} /><Button size="sm" onClick={() => setGoalModal({})}><Plus className="h-4 w-4" aria-hidden />Add goal</Button></span> : null}
             </div>
             {view.goals.length === 0 ? (
               <Card><EmptyState title="No weekly goals yet">Add at least one SMART Goal before submitting your report.</EmptyState></Card>
@@ -342,7 +342,7 @@ function EditTaskButton({ taskId, text, version }: { taskId: string; text: strin
   );
 }
 
-function GoalForm({ reportId, version, subKrs, buGoals, goal, onClose }: { reportId: string; version: number; subKrs: SubKr[]; buGoals: { id: string; title: string }[]; goal?: GoalView; onClose: () => void }) {
+function GoalForm({ reportId, version, subKrs, buGoals, goal, onClose }: { reportId: string; version: number; subKrs: SubKr[]; buGoals: { id: string; code: string; title: string }[]; goal?: GoalView; onClose: () => void }) {
   const { run, pending } = useAction();
   const [type, setType] = useState<"KR_ALIGNED" | "STRETCH">(goal?.goal_type ?? "KR_ALIGNED");
   const [subKr, setSubKr] = useState(goal?.sub_key_result?.id ?? "");
@@ -396,7 +396,7 @@ function GoalForm({ reportId, version, subKrs, buGoals, goal, onClose }: { repor
             <Label htmlFor="bu-goal">Business Unit goal this supports{type === "STRETCH" ? " (optional)" : ""}</Label>
             <Select id="bu-goal" value={buGoal} onChange={(e) => setBuGoal(e.target.value)} required={buGoalNeeded}>
               <option value="">Select one of your unit&apos;s goals…</option>
-              {buGoals.map((b, i) => <option key={b.id} value={b.id}>BU Goal {i + 1} · {b.title}</option>)}
+              {buGoals.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.title}</option>)}
             </Select>
           </div>
         ) : (

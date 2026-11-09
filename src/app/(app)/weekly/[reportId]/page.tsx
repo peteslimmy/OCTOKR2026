@@ -26,7 +26,7 @@ export default async function ReportPage({ params }: PageProps<"/weekly/[reportI
       trend={trend}
       intelligence={week ? <BuIntelligenceSection buId={view.business_unit.id} buName={view.business_unit.name} quarterId={week.quarter_id} /> : null}
       currentWeek={`W${view.week.week_number}`}
-      buGoals={buGoals.filter((g) => g.status === "ACTIVE").map((g) => ({ id: g.id, title: g.title }))}
+      buGoals={buGoals.filter((g) => g.status === "ACTIVE").map((g) => ({ id: g.id, code: g.code, title: g.title }))}
       subKrs={(tree?.key_results ?? []).flatMap((k) => k.sub_key_results.map((s) => ({ id: s.id, label: `${s.code} · ${s.title}`, kr: `${k.code} · ${k.title}` })))}
       caps={{
         edit: ownBu && can(actor, "weekly_report.edit"),

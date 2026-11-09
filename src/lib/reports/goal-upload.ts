@@ -1,5 +1,5 @@
 // Turns an uploaded sheet (already read as plain cells) into the goals a Business Unit Lead is adding to a weekly report.
-// One row per task. Columns (names are matched loosely): Goal, Sub-KR, BU goal (the unit goal it supports, by its title), Task. (A Description column is still read if a file has one.)
+// One row per task. Columns (names are matched loosely): Goal, Sub-KR, BU goal ID (the unit goal it supports, by its code such as BG-1; its full title is still accepted), Task. (A Description column is still read if a file has one.)
 //   - a row with a Goal starts a new goal; a row with a blank Goal adds another task to the goal above it
 //   - Sub-KR is the code (for example KR1.1); leave it blank for a stretch goal
 // Nothing here talks to the database: the caller supplies the Sub-KR codes that exist and gets back goals plus every problem found.
@@ -8,7 +8,10 @@ export interface UploadedGoal { goalType: "KR_ALIGNED" | "STRETCH"; subKeyResult
 export interface GoalUploadResult { goals: UploadedGoal[]; errors: string[] }
 
 export const GOAL_UPLOAD_LIMITS = { goals: 100, tasksPerGoal: 50, title: 500, description: 4000, task: 1000 } as const;
-export const GOAL_TEMPLATE_HEADERS = ["Goal", "Sub-KR", "BU goal", "Task"] as const;
+export const GOAL_TEMPLATE_HEADERS = ["Goal", "Sub-KR", "BU goal ID", "Task"] as const;
+
+/** A unit goal written as "bg-1", "BG 1" or "BG-01" is the code BG-1. */
+export const normaliseGoalCode = (v: string) => { const m = /^bg[\s_-]*0*(\d{1,4})$/i.exec(v.trim()); return m ? `bg-${m[1]}` : null; };
 
 const find = (headers: string[], re: RegExp) => headers.findIndex((h) => re.test(h.trim()));
 
@@ -40,9 +43,10 @@ export function parseGoalUpload(headers: string[], rows: string[][], subKrByCode
       currentCode = sub.split(/\s+/)[0].toUpperCase();
       let buId: string | null = null;
       if (bu) {
-        buId = buGoals.get(bu.toLowerCase()) ?? null;
-        if (!buId) errors.push(`Row ${line}: BU goal "${bu.slice(0, 60)}" is not one of your unit's active goals for this quarter.`);
-      } else if (buGoals.size > 0 && sub) errors.push(`Row ${line}: choose which BU goal this supports (the BU goal column).`);
+        const code = normaliseGoalCode(bu);
+        buId = (code ? buGoals.get(code) : undefined) ?? buGoals.get(bu.toLowerCase()) ?? null;
+        if (!buId) errors.push(`Row ${line}: BU goal "${bu.slice(0, 60)}" is not one of your unit's active goals for this quarter (use its code, for example BG-1).`);
+      } else if (buGoals.size > 0 && sub) errors.push(`Row ${line}: choose which BU goal this supports (the BU goal ID column, for example BG-1).`);
       current = { goalType: sub ? "KR_ALIGNED" : "STRETCH", subKeyResultId: subId, buGoalId: buId, title: goal, description: desc || null, tasks: [] };
       goals.push(current);
     } else if (!current) {
@@ -66,12 +70,18 @@ export function parseGoalUpload(headers: string[], rows: string[][], subKrByCode
   return { goals, errors };
 }
 
+/** The list of a unit's goal codes a person downloads beside the template: each code with its title. */
+export function goalCodesCsv(goals: { code: string; title: string }[]): string {
+  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return [["BU goal ID", "BU goal"], ...goals.map((g) => [g.code, g.title])].map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";
+}
+
 /** The template a person downloads: headings and two example goals. */
 export function goalTemplateCsv(): string {
   const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   const rows = [
     [...GOAL_TEMPLATE_HEADERS],
-    ["Close 5 partner onboarding calls by Friday", "KR2.1", "Grow partner revenue by 20%", "Schedule the five calls by Tuesday"],
+    ["Close 5 partner onboarding calls by Friday", "KR2.1", "BG-1", "Schedule the five calls by Tuesday"],
     ["", "", "", "Complete the five calls and log outcomes"],
     ["Publish the Q4 pricing sheet to all sales leads by Thursday", "", "", "Draft the pricing sheet"],
     ["", "", "", "Send the sheet to all sales leads"],

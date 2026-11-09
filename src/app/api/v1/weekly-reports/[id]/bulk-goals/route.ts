@@ -21,13 +21,16 @@ export const POST = api({}, async ({ actor, req, params, rpc }) => {
   const week = await getWeek(view.week.id);
   const tree = week ? await getStrategyTree(week.quarter_id) : null;
   const subKrByCode = new Map((tree?.key_results ?? []).flatMap((k) => k.sub_key_results.filter((s) => s.status !== "RETIRED").map((s) => [s.code.toUpperCase(), s.id] as const)));
-  const buGoals = new Map((week ? await listBuGoals(view.business_unit.id, week.quarter_id) : []).filter((b) => b.status === "ACTIVE").map((b) => [b.title.trim().toLowerCase(), b.id] as const));
+  const activeGoals = (week ? await listBuGoals(view.business_unit.id, week.quarter_id) : []).filter((b) => b.status === "ACTIVE");
+  // a unit goal is named by its code (BG-1); its full title is still accepted so files prepared the old way keep working. The code wins if a title happens to look like one.
+  const buGoals = new Map<string, string>([...activeGoals.map((b) => [b.title.trim().toLowerCase(), b.id] as const), ...activeGoals.map((b) => [b.code.toLowerCase(), b.id] as const)]);
 
   const { goals, errors } = parseGoalUpload(parsed.headers, parsed.rows, subKrByCode, buGoals);
   if (errors.length) {
     const valid = [...subKrByCode.keys()].sort().slice(0, 12).join(", ");
+    const goalCodes = activeGoals.map((b) => b.code).join(", ");
     throw fail("VALIDATION_ERROR", 422, `The file has ${errors.length} problem${errors.length === 1 ? "" : "s"}. Nothing was added.`,
-      errors.slice(0, 40).map((e) => `${e} — What to do: ${/Sub-KR/i.test(e) && valid ? `use one of this quarter's Sub-KRs (${valid}) or leave it empty for a stretch goal.` : fixFor(e)}`));
+      errors.slice(0, 40).map((e) => `${e} — What to do: ${/Sub-KR/i.test(e) && valid ? `use one of this quarter's Sub-KRs (${valid}) or leave it empty for a stretch goal.` : /BU goal/i.test(e) && goalCodes ? `use one of your unit's goal codes (${goalCodes}).` : fixFor(e)}`));
   }
 
   const payload: Record<string, unknown>[] = [];

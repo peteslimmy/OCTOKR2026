@@ -18,7 +18,7 @@ async function load(quarterId?: string): Promise<Inputs | null> {
   const sb = await userClient();
   const [weeks, now, factsRes, goalsRes] = await Promise.all([
     weeksOfQuarter(quarter.id), serverNow(), sb.rpc("read_goal_facts", { p_quarter_id: quarter.id }),
-    sb.from("bu_goals").select("id, business_unit_id, title, status").eq("quarter_id", quarter.id),
+    sb.from("bu_goals").select("id, code, business_unit_id, title, status").eq("quarter_id", quarter.id),
   ]);
   if (factsRes.error) throw dbError(factsRes.error, "goal facts");
   if (goalsRes.error) throw dbError(goalsRes.error, "business unit goals");
@@ -31,7 +31,7 @@ async function load(quarterId?: string): Promise<Inputs | null> {
     title: String(r.title), done: r.done === true, tasksTotal: Number(r.tasks_total ?? 0), tasksDone: Number(r.tasks_done ?? 0), tasksUndefined: Number(r.tasks_undefined ?? 0),
     smart: evaluateSmart({ title: String(r.title), subKrTitle: r.sub_kr_code ? subTitle.get(String(r.sub_kr_code)) ?? null : null, goalType: r.sub_kr_code ? "KR_ALIGNED" : "STRETCH" }).overall,
   }));
-  const buGoals = ((goalsRes.data ?? []) as { id: string; business_unit_id: string; title: string; status: "ACTIVE" | "RETIRED" }[]).map((g): BuGoalInput => ({ id: g.id, businessUnitId: g.business_unit_id, title: g.title, status: g.status }));
+  const buGoals = ((goalsRes.data ?? []) as { id: string; code: string; business_unit_id: string; title: string; status: "ACTIVE" | "RETIRED" }[]).map((g): BuGoalInput => ({ id: g.id, code: g.code, businessUnitId: g.business_unit_id, title: g.title, status: g.status }));
   return {
     quarterId: quarter.id, quarterLabel: `Q${quarter.quarter_number} ${quarter.year}`, now, facts, buGoals,
     frame: { startsOn: quarter.starts_on, endsOn: quarter.ends_on, weeks: weeks.map((w) => ({ id: w.id, number: w.week_number, start: w.week_start_at, holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" })) },

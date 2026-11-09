@@ -5,7 +5,7 @@ import { useState } from "react";
 import { apiRequest, useAction } from "@/components/ui/client";
 import { Badge, Button, Input } from "@/components/ui/primitives";
 
-export interface BuGoalItem { id: string; title: string; status: "ACTIVE" | "RETIRED"; weeklyGoals: number }
+export interface BuGoalItem { id: string; code: string; title: string; status: "ACTIVE" | "RETIRED"; weeklyGoals: number }
 
 /** The unit's own goals for the quarter: add, rename, retire and restore. Retiring keeps the weekly goals that already point at it. */
 export function BuGoalsManager({ goals, businessUnitId, quarterId, locked }: { goals: BuGoalItem[]; businessUnitId: string; quarterId: string; locked: boolean }) {
@@ -19,7 +19,7 @@ export function BuGoalsManager({ goals, businessUnitId, quarterId, locked }: { g
     <div className="space-y-4 px-6 py-4">
       {goals.length === 0 ? <p className="text-sm text-muted">No goals yet. Add the goals your unit is committing to this quarter; every weekly goal you write will then be aligned to one of them as well as to a Sub-KR.</p> : (
         <ol className="divide-y divide-line rounded-lg border border-line">
-          {goals.map((g, i) => (
+          {goals.map((g) => (
             <li key={g.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
               {editing?.id === g.id ? (
                 <form className="flex flex-1 gap-2" onSubmit={async (e) => { e.preventDefault(); if (await save({ id: g.id, title: editing.title, status: g.status }, "Goal saved.")) setEditing(null); }}>
@@ -30,7 +30,7 @@ export function BuGoalsManager({ goals, businessUnitId, quarterId, locked }: { g
               ) : (
                 <>
                   <div className="min-w-0 flex-1">
-                    <p className={g.status === "RETIRED" ? "text-muted line-through" : "font-medium"}><span className="mr-2 text-muted">BU Goal {i + 1}</span>{g.title}</p>
+                    <p className={g.status === "RETIRED" ? "text-muted line-through" : "font-medium"}><span className="mr-2 font-mono text-xs text-muted" title="Use this code in the weekly goals upload">{g.code}</span>{g.title}</p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                       {g.status === "RETIRED" ? <Badge tone="locked">Retired</Badge> : null}
                       {g.weeklyGoals} weekly {g.weeklyGoals === 1 ? "goal" : "goals"} aligned

@@ -274,9 +274,9 @@ export async function currentPenaltyRate(): Promise<number | null> {
   return (data as { rate: number } | null)?.rate ?? null;
 }
 
-export interface BuGoalRow { id: string; business_unit_id: string; quarter_id: string; title: string; position: number; status: "ACTIVE" | "RETIRED"; created_at: string }
+export interface BuGoalRow { id: string; business_unit_id: string; quarter_id: string; code: string; title: string; position: number; status: "ACTIVE" | "RETIRED"; created_at: string }
 /** A unit's own goals for a quarter, read as the signed-in person (row-level security limits it to units they may see). */
 export async function listBuGoals(buId: string, quarterId: string): Promise<BuGoalRow[]> {
   const sb = await userClient();
-  return unwrap(await sb.from("bu_goals").select("id, business_unit_id, quarter_id, title, position, status, created_at").eq("business_unit_id", buId).eq("quarter_id", quarterId).order("position"), "business unit goals") as BuGoalRow[];
+  return unwrap(await sb.from("bu_goals").select("id, business_unit_id, quarter_id, code, title, position, status, created_at").eq("business_unit_id", buId).eq("quarter_id", quarterId).order("position"), "business unit goals") as BuGoalRow[];
 }

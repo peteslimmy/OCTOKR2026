@@ -43,7 +43,7 @@ export default async function BuGoalsPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardHeader title={`${unit.name} — goals for Q${quarter.quarter_number} ${quarter.year}`} description="Active goals appear in the weekly goal form. A retired goal stays on the weekly goals that already use it." />
         <BuGoalsManager businessUnitId={unit.id} quarterId={quarter.id} locked={quarter.status === "LOCKED"}
-          goals={goals.map((g) => ({ id: g.id, title: g.title, status: g.status, weeklyGoals: counts.get(g.id) ?? 0 }))} />
+          goals={goals.map((g) => ({ id: g.id, code: g.code, title: g.title, status: g.status, weeklyGoals: counts.get(g.id) ?? 0 }))} />
       </Card>
     </>
   );
