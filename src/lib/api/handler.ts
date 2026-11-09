@@ -8,6 +8,7 @@ import { getActor, type Actor } from "@/lib/auth/actor";
 import { hasRecentSecondFactor } from "@/lib/auth/mfa";
 import { adminClient } from "@/lib/supabase/admin";
 import { hiddenFrom, mentionsHidden, namedIn } from "@/lib/auth/shield";
+import { requestAudit } from "@/lib/audit/request-context";
 import { auditHeaders, buildAuditContext, sessionReference } from "@/lib/audit/context";
 import { toDomainError, type DomainError } from "@/lib/domain/errors";
 import { httpRequestDuration, httpRequestsTotal } from "@/lib/observability/metrics";
@@ -71,6 +72,7 @@ export function api<S extends z.ZodObject<z.ZodRawShape> | undefined = undefined
   return async (req: Request, routeCtx: RouteCtx): Promise<Response> => {
     const correlationId = req.headers.get("x-correlation-id") ?? randomUUID();
     const auditCtx = await buildAuditContext(req, false);
+    requestAudit.enterWith(auditCtx);       // the rest of this request's server work (including direct database calls) carries the same audit context
     let sessionRef: string | null = null;     // looked up until found: a sign-in creates the session part-way through the request
     /** The request facts the database stamps on every audit event written during this request (ADR-108). */
     const auditAs = async () => adminClient(correlationId, auditHeaders({ ...auditCtx, sessionRef: (sessionRef ??= await sessionReference()) }));

@@ -11,7 +11,9 @@ import { userClient } from "@/lib/supabase/server";
  * never the first, client-chosen entry), the user agent, a one-way reference to the sign-in session, and a request id of its own.
  * They are only honoured on calls made with the service key, so a browser cannot forge them.
  */
+export interface AuditGeo { country: string | null; region: string | null; city: string | null }
 export interface AuditContext {
+  geo?: AuditGeo | null;
   ip: string | null;
   userAgent: string | null;
   requestId: string;
@@ -30,6 +32,20 @@ export async function sessionReference(): Promise<string | null> {
   } catch { return null; }
 }
 
+/** Plain ASCII for a header: accents are folded and anything else unusual is dropped. */
+const ascii = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "").trim();
+const decode = (s: string | null) => { if (!s) return null; try { return ascii(decodeURIComponent(s)) || null; } catch { return ascii(s) || null; } };
+
+/**
+ * Where the request came from, as the hosting platform reports it (Vercel sets these headers and replaces anything a client sent). Approximate: a VPN or a mobile network shows
+ * where the network exits. Recorded only when the platform is trusted (running on Vercel, or TRUST_GEO_HEADERS=true), because anywhere else a client could write them itself.
+ */
+export function geoFrom(req: Request, env: Record<string, string | undefined> = process.env): AuditGeo | null {
+  if (env.VERCEL !== "1" && env.TRUST_GEO_HEADERS !== "true") return null;
+  const country = decode(req.headers.get("x-vercel-ip-country")), region = decode(req.headers.get("x-vercel-ip-country-region")), city = decode(req.headers.get("x-vercel-ip-city"));
+  return country || region || city ? { country, region, city } : null;
+}
+
 export async function buildAuditContext(req: Request, withSession = true): Promise<AuditContext> {
   const ip = clientIp(req);
   const ua = req.headers.get("user-agent");
@@ -39,6 +55,7 @@ export async function buildAuditContext(req: Request, withSession = true): Promi
     userAgent: ua ? ua.slice(0, 400) : null,
     requestId: randomUUID(),
     channel: bearer ? "API" : "WEB",
+    geo: geoFrom(req),
     sessionRef: withSession ? await sessionReference() : null,
   };
 }
@@ -51,5 +68,8 @@ export function auditHeaders(ctx: AuditContext | undefined): Record<string, stri
   if (ctx.ip) h["x-audit-ip"] = clean(ctx.ip);
   if (ctx.userAgent) h["x-audit-ua"] = clean(ctx.userAgent);
   if (ctx.sessionRef) h["x-audit-session"] = ctx.sessionRef;
+  if (ctx.geo?.country) h["x-audit-geo-country"] = clean(ctx.geo.country);
+  if (ctx.geo?.region) h["x-audit-geo-region"] = clean(ctx.geo.region);
+  if (ctx.geo?.city) h["x-audit-geo-city"] = clean(ctx.geo.city);
   return h;
 }

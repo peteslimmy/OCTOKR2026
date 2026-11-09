@@ -19,7 +19,14 @@ const LOOKS_LIKE_AN_ADDRESS = /^[0-9a-fA-F:.]{2,45}$/;
 export function clientIp(req: Request, hops = trustedProxyHops()): string {
   if (hops === 0) return "direct";
   const entries = (req.headers.get("x-forwarded-for") ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-  if (entries.length === 0) return "direct";
+  if (entries.length === 0) return platformAddress(req) ?? "direct";
   const entry = entries[Math.max(0, entries.length - hops)];
-  return LOOKS_LIKE_AN_ADDRESS.test(entry) ? entry : "invalid";
+  return LOOKS_LIKE_AN_ADDRESS.test(entry) ? entry : platformAddress(req) ?? "invalid";
+}
+
+/** The address the hosting platform itself reports (Vercel sets it and replaces anything the client sent), used when the forwarded list gives nothing usable. Only on that platform. */
+function platformAddress(req: Request, env: Record<string, string | undefined> = process.env): string | null {
+  if (env.VERCEL !== "1" && env.TRUST_GEO_HEADERS !== "true") return null;
+  const v = (req.headers.get("x-vercel-forwarded-for") ?? req.headers.get("x-real-ip") ?? "").split(",")[0].trim();
+  return LOOKS_LIKE_AN_ADDRESS.test(v) ? v : null;
 }

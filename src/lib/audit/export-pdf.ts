@@ -5,7 +5,7 @@ import type { AuditRow } from "@/lib/data/audit";
 const WAT = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 export const watText = (iso: string) => `${WAT.format(new Date(iso))} WAT`;
 
-export interface AuditPdfInput { generatedAt: string; generatedFor: string; filterText: string; rows: AuditRow[]; truncated: boolean; chainNote: string }
+export interface AuditPdfInput { generatedAt: string; generatedFor: string; filterText: string; rows: AuditRow[]; truncated: boolean; chainNote: string; /** a Super Admin's export carries the technical detail; any other export is the summary only */ detail?: boolean }
 
 /** The audit events as a PDF: one block per event, newest first, with the filter, who generated it and when, and page numbers. Times are West Africa Time. */
 export function auditPdf(m: AuditPdfInput): Promise<Buffer> {
@@ -30,12 +30,13 @@ export function auditPdf(m: AuditPdfInput): Promise<Buffer> {
       const head = `${watText(r.occurred_at)}  |  ${r.action}  |  ${r.outcome}${r.severity ? `  |  ${r.severity}` : ""}`;
       doc.font("Helvetica-Bold").fontSize(8.5).fillColor(r.outcome === "SUCCESS" ? "#17191c" : "#7f1519").text(head, left, doc.y, { width });
       const who = [r.actor_name, r.actor_email && `<${r.actor_email}>`, r.actor_role && `(${r.actor_role})`, r.actor_bu_name].filter(Boolean).join(" ") || "system";
-      const where = [r.ip_address, r.browser, r.os, r.device, r.channel].filter(Boolean).join(" · ");
+      const g = (r.metadata as { geo?: { city?: string; region?: string; country?: string } } | null | undefined)?.geo;
+      const where = m.detail ? [r.ip_address, [g?.city, g?.region, g?.country].filter(Boolean).join(", "), r.browser, r.os, r.device, r.channel].filter(Boolean).join(" · ") : "";
       const lines = [
         `By: ${who}`, `On: ${r.entity_type}${r.entity_id ? ` ${r.entity_id}` : ""}${r.event_category ? `  ·  ${r.event_category}` : ""}`,
         r.reason ? `Reason: ${r.reason}` : null, where ? `From: ${where}` : null,
         `Event ${r.id}${r.request_id ? `  ·  request ${r.request_id}` : ""}${r.workflow_id ? `  ·  workflow ${r.workflow_id}` : ""}`,
-        r.old_values ? `Before: ${JSON.stringify(r.old_values).slice(0, 600)}` : null, r.new_values ? `After: ${JSON.stringify(r.new_values).slice(0, 600)}` : null,
+        m.detail && r.old_values ? `Before: ${JSON.stringify(r.old_values).slice(0, 600)}` : null, m.detail && r.new_values ? `After: ${JSON.stringify(r.new_values).slice(0, 600)}` : null,
       ].filter(Boolean) as string[];
       doc.font("Helvetica").fontSize(7.5).fillColor("#17191c");
       for (const l of lines) doc.text(l, left + 8, doc.y, { width: width - 8, lineGap: 0.5 });

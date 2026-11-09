@@ -1,3 +1,4 @@
+import { canSeeAuditDetail } from "@/lib/audit/detail";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { wat } from "@/components/status";
@@ -25,7 +26,9 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
   if (!can(actor, "audit.read")) return <Card><EmptyState title="You do not have access to the audit log" /></Card>;
   const sp: Params = await searchParams;
   const filter = filterFrom(sp);
-  const tab = (TABS.find(([k]) => k === sp.tab)?.[0]) ?? "events";
+  const detail = canSeeAuditDetail(actor);                         // the technical detail (address, location, device, raw values, integrity chain) is for Super Admins only (ADR-121)
+  const tabs = TABS.filter(([k]) => detail || k !== "integrity");
+  const tab = (tabs.find(([k]) => k === sp.tab)?.[0]) ?? "events";
   const cursor = typeof sp.cursor === "string" ? sp.cursor : null;
   const traceId = typeof sp.trace === "string" && /^[0-9a-f-]{36}$/i.test(sp.trace) ? sp.trace : null;
   const base = filterParams(filter);
@@ -38,7 +41,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
 
   const [kpis, page, alerts, rules, trace] = await Promise.all([
     auditKpis(actor.id, filter),
-    tab === "events" ? pageAudit(filter, cursor, AUDIT_PAGE_SIZE) : Promise.resolve(null),
+    tab === "events" ? pageAudit(filter, cursor, AUDIT_PAGE_SIZE, detail) : Promise.resolve(null),
     tab === "alerts" || tab === "events" ? listAlerts(tab === "events" ? "open" : undefined) : Promise.resolve([]),
     tab === "rules" ? listRules() : Promise.resolve([]),
     traceId ? auditTrace(actor.id, traceId).catch(() => null) : Promise.resolve(null),
@@ -71,7 +74,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
       </section>
 
       <nav aria-label="Audit sections" className="mb-4 flex flex-wrap gap-2 border-b border-line">
-        {TABS.map(([k, name]) => (
+        {tabs.map(([k, name]) => (
           <Link key={k} href={href({ tab: k === "events" ? null : k, cursor: null, trace: null })} aria-current={tab === k ? "page" : undefined}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === k ? "border-brand-700 text-brand-800" : "border-transparent text-muted hover:text-ink"}`}>
             {name}{k === "alerts" && kpis.open_alerts > 0 ? <> <Badge tone="critical">{kpis.open_alerts}</Badge></> : null}
@@ -86,14 +89,14 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
             <Link key={c} href={href({ category: c, cursor: null })} aria-current={filter.category === c ? "true" : undefined} className={chip(filter.category === c)}>{label(c)} <span className="text-muted">{kpis.by_category[c] ?? 0}</span></Link>
           ))}
         </div>
-        <Filters filter={filter} />
+        <Filters filter={filter} detail={detail} />
         {trace ? <TracePanel trace={trace} closeHref={href({ trace: null })} href={href} /> : null}
         <Card>
           <CardHeader title={`${page.rows.length}${page.nextCursor ? "+" : ""} event${page.rows.length === 1 ? "" : "s"}${cursor ? " on this page" : filtered ? " match" : " most recent"}`}
             description="Open an event for the people, place, before and after, and the events that belong with it." />
           {page.rows.length === 0 ? <EmptyState title="No audit events match" /> : (
             <ul className="divide-y divide-line">
-              {page.rows.map((r) => <EventRow key={r.id} r={r} traceHref={href({ trace: r.id })} />)}
+              {page.rows.map((r) => <EventRow key={r.id} r={r} traceHref={href({ trace: r.id })} detail={detail} />)}
             </ul>
           )}
           {page.nextCursor ? <p className="border-t border-line px-6 py-3"><Link href={href({ cursor: page.nextCursor })} className={buttonClass("secondary", "sm")}>Older events</Link></p> : null}
@@ -142,7 +145,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         </Card>
       ) : null}
 
-      {tab === "integrity" ? (
+      {tab === "integrity" && detail ? (
         <Card className="p-6">
           <h2 className="text-lg font-semibold">Integrity of the record</h2>
           <p className="mt-1 text-sm text-muted">Every new event is linked to the one before it with a SHA-256 hash. If any event is changed or removed, the chain no longer matches and the first broken event is reported.
@@ -160,7 +163,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
 
 const chip = (on: boolean) => `rounded-full border px-3 py-1 text-sm ${on ? "border-brand-700 bg-brand-100 text-brand-800" : "border-line bg-panel text-ink hover:bg-surface"}`;
 
-function Filters({ filter }: { filter: AuditFilter }) {
+function Filters({ filter, detail }: { filter: AuditFilter; detail: boolean }) {
   const filtered = Object.keys(filter).length > 0;
   return (
     <form method="get" className="mb-4 grid gap-3 rounded-xl border border-line bg-panel p-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Filter the audit log">
@@ -176,9 +179,9 @@ function Filters({ filter }: { filter: AuditFilter }) {
       <Field id="au-outcome" label="Outcome"><Select name="outcome" defaultValue={filter.outcome ?? ""}><option value="">Any</option>{AUDIT_OUTCOMES.map((o) => <option key={o} value={o}>{label(o)}</option>)}</Select></Field>
       <Field id="au-severity" label="Severity"><Select name="severity" defaultValue={filter.severity ?? ""}><option value="">Any</option>{AUDIT_SEVERITIES.map((o) => <option key={o} value={o}>{label(o)}</option>)}</Select></Field>
       <Field id="au-channel" label="Channel"><Select name="channel" defaultValue={filter.channel ?? ""}><option value="">Any</option>{AUDIT_CHANNELS.map((o) => <option key={o} value={o}>{label(o)}</option>)}</Select></Field>
-      <Field id="au-ip" label="Source address"><Input name="ip" defaultValue={filter.ip ?? ""} maxLength={64} /></Field>
-      <Field id="au-session" label="Session reference"><Input name="session" defaultValue={filter.session ?? ""} maxLength={64} /></Field>
-      <Field id="au-request" label="Request id"><Input name="request" defaultValue={filter.request ?? ""} maxLength={80} /></Field>
+      {detail ? <Field id="au-ip" label="Source address"><Input name="ip" defaultValue={filter.ip ?? ""} maxLength={64} /></Field> : null}
+      {detail ? <Field id="au-session" label="Session reference"><Input name="session" defaultValue={filter.session ?? ""} maxLength={64} /></Field> : null}
+      {detail ? <Field id="au-request" label="Request id"><Input name="request" defaultValue={filter.request ?? ""} maxLength={80} /></Field> : null}
       <Field id="au-q" label="Record id or words in the reason" className="sm:col-span-2"><Input name="q" defaultValue={filter.q ?? ""} maxLength={100} /></Field>
       <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
         <button type="submit" className={buttonClass("primary", "sm")}>Apply filters</button>
@@ -188,7 +191,14 @@ function Filters({ filter }: { filter: AuditFilter }) {
   );
 }
 
-function EventRow({ r, traceHref }: { r: AuditRow; traceHref: string }) {
+/** "Lagos, NG" style text from the location stored in an entry's metadata, or nothing. */
+function geoText(metadata: unknown): string | null {
+  const g = (metadata as { geo?: { country?: string; region?: string; city?: string } } | null | undefined)?.geo;
+  const parts = [g?.city, g?.region, g?.country].filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
+}
+
+function EventRow({ r, traceHref, detail }: { r: AuditRow; traceHref: string; detail: boolean }) {
   return (
     <li>
       <details className="group">
@@ -201,12 +211,16 @@ function EventRow({ r, traceHref }: { r: AuditRow; traceHref: string }) {
           <span className="text-sm text-muted">{r.entity_type}{r.entity_id ? ` ${r.entity_id.length > 12 ? r.entity_id.slice(0, 8) + "…" : r.entity_id}` : ""}</span>
         </summary>
         <div className="grid gap-4 bg-surface px-6 py-4 lg:grid-cols-3">
-          <Facts title="Who" rows={[["Name", r.actor_name], ["E-mail", r.actor_email], ["Role at the time", r.actor_role], ["Business unit", r.actor_bu_name], ["Scope", r.actor_scope && label(r.actor_scope)]]} />
-          <Facts title="Where from" rows={[["Address", r.ip_address && `${r.ip_address}${r.ip_trusted ? "" : " (server-side, not the person's)"}`], ["Browser", r.browser], ["System", r.os], ["Device", r.device], ["Channel", r.channel && label(r.channel)], ["Session", r.session_ref]]} />
-          <Facts title="Identifiers" rows={[["Event", r.id], ["Record", r.entity_id], ["Request", r.request_id], ["Correlation", r.correlation_id], ["Workflow", r.workflow_id], ["Approval", r.related_approval_id], ["Category", r.event_category && label(r.event_category)]]} />
+          <Facts title="Who" rows={[["Name", r.actor_name], ...(detail ? [["E-mail", r.actor_email] as [string, string | null | undefined]] : []), ["Role at the time", r.actor_role], ["Business unit", r.actor_bu_name], ["Scope", r.actor_scope && label(r.actor_scope)]]} />
+          {detail
+            ? <Facts title="Where from" rows={[["Address", r.ip_address && `${r.ip_address}${r.ip_trusted ? "" : " (server-side, not the person's)"}`], ["Location", geoText(r.metadata)], ["Browser", r.browser], ["System", r.os], ["Device", r.device], ["Channel", r.channel && label(r.channel)], ["Session", r.session_ref]]} />
+            : <Facts title="Channel" rows={[["Channel", r.channel && label(r.channel)]]} />}
+          {detail
+            ? <Facts title="Identifiers" rows={[["Event", r.id], ["Record", r.entity_id], ["Request", r.request_id], ["Correlation", r.correlation_id], ["Workflow", r.workflow_id], ["Approval", r.related_approval_id], ["Category", r.event_category && label(r.event_category)]]} />
+            : <Facts title="Record" rows={[["Event", r.id], ["Record", r.entity_id], ["Category", r.event_category && label(r.event_category)]]} />}
           {r.reason ? <p className="lg:col-span-3"><span className="text-sm font-medium">Reason: </span>{r.reason}</p> : null}
-          <div className="lg:col-span-3"><Changes before={r.old_values} after={r.new_values} /></div>
-          {r.metadata ? <pre className="overflow-x-auto rounded border border-line bg-panel p-2 text-xs lg:col-span-3">{JSON.stringify(r.metadata, null, 2)}</pre> : null}
+          {detail ? <div className="lg:col-span-3"><Changes before={r.old_values} after={r.new_values} /></div> : null}
+          {detail && r.metadata ? <pre className="overflow-x-auto rounded border border-line bg-panel p-2 text-xs lg:col-span-3">{JSON.stringify(r.metadata, null, 2)}</pre> : null}
           <p className="lg:col-span-3 text-sm"><Link href={traceHref} className="text-brand-700 underline">Trace related events (request, workflow, session, person)</Link>
             {r.chain_seq ? <span className="ml-3 font-mono text-xs text-muted">chain #{r.chain_seq} · {r.row_hash?.slice(0, 12)}</span> : null}</p>
         </div>

@@ -222,6 +222,7 @@
     "attendance.session.outcome.request",
     "audit.alerts.manage",
     "audit.read",
+    "audit.read_detail",
     "audit.rules.configure",
     "branding.manage",
     "bu_goals.manage",

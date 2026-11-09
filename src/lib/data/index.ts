@@ -221,7 +221,7 @@ export async function latestQuarterSnapshot(quarterId: string, buId: string) {
 
 export async function listAudit(limit = 100, entityType?: string) {
   const sb = await userClient();
-  let q = sb.from("audit_logs").select("id, seq, occurred_at, actor_user_id, actor_role, action, entity_type, entity_id, reason, outcome, old_values, new_values, correlation_id").order("occurred_at", { ascending: false }).order("seq", { ascending: false }).limit(limit);
+  let q = sb.from("audit_logs").select("id, seq, occurred_at, actor_user_id, actor_role, action, entity_type, entity_id, reason, outcome").order("occurred_at", { ascending: false }).order("seq", { ascending: false }).limit(limit);
   if (entityType) q = q.eq("entity_type", entityType);
   return unwrap(await q, "audit");
 }

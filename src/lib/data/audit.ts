@@ -1,6 +1,7 @@
 import "server-only";
 import { adminClient } from "@/lib/supabase/admin";
 import { userClient } from "@/lib/supabase/server";
+import { AUDIT_DETAIL_COLUMNS, AUDIT_SUMMARY_COLUMNS } from "@/lib/audit/detail";
 import { unwrapRows } from "./audit-unwrap";
 import { dbError } from "./errors";
 
@@ -24,15 +25,15 @@ export interface AuditFilter {
 }
 export interface AuditRow {
   id: string; seq: number; occurred_at: string; actor_user_id: string | null; actor_role: string | null; action: string; entity_type: string; entity_id: string | null;
-  reason: string | null; outcome: string; old_values: unknown; new_values: unknown; correlation_id: string | null;
-  event_category: string | null; severity: string | null; channel: string | null; request_id: string | null; workflow_id: string | null; related_approval_id: string | null;
-  session_ref: string | null; actor_name: string | null; actor_email: string | null; actor_bu_name: string | null; actor_scope: string | null;
-  ip_address: string | null; ip_trusted: boolean | null; user_agent: string | null; browser: string | null; os: string | null; device: string | null;
-  metadata: unknown; chain_seq: number | null; row_hash: string | null;
+  reason: string | null; outcome: string; old_values?: unknown; new_values?: unknown; correlation_id?: string | null;
+  event_category: string | null; severity: string | null; channel: string | null; request_id?: string | null; workflow_id?: string | null; related_approval_id?: string | null;
+  session_ref?: string | null; actor_name: string | null; actor_email?: string | null; actor_bu_name: string | null; actor_scope: string | null;
+  ip_address?: string | null; ip_trusted?: boolean | null; user_agent?: string | null; browser?: string | null; os?: string | null; device?: string | null;
+  metadata?: unknown; chain_seq?: number | null; row_hash?: string | null;
 }
 export interface AuditPage { rows: AuditRow[]; nextCursor: string | null }
 
-const COLUMNS = "id, seq, occurred_at, actor_user_id, actor_role, action, entity_type, entity_id, reason, outcome, old_values, new_values, correlation_id, event_category, severity, channel, request_id, workflow_id, related_approval_id, session_ref, actor_name, actor_email, actor_bu_name, actor_scope, ip_address, ip_trusted, user_agent, browser, os, device, metadata, chain_seq, row_hash";
+// the columns of each tier live in lib/audit/detail.ts
 export const AUDIT_PAGE_SIZE = 100;
 export const AUDIT_MAX_PAGE_SIZE = 500;
 export const AUDIT_CATEGORIES = ["AUTHENTICATION", "SECURITY", "ROLES_PERMISSIONS", "USER_LIFECYCLE", "CONFIGURATION", "SCHEDULING", "STRATEGY", "REPORTING", "INTEGRITY", "ATTENDANCE_HR", "FINANCE", "FILES_EXPORT", "GOVERNANCE", "ORGANISATION", "SYSTEM", "OTHER"] as const;
@@ -56,7 +57,7 @@ export function filterRange(filter: AuditFilter, defaultDays = 7): { from: strin
 }
 
 // the query builder's generic type is not worth spelling out; every method used here returns the same builder
-function applyFilter<T>(query: T, filter: AuditFilter): T {
+function applyFilter<T>(query: T, filter: AuditFilter, detail = true): T {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let x = query as any;
   if (filter.action) x = x.ilike("action", `${plain(filter.action).replace(/_/g, "\\_")}%`);
@@ -68,13 +69,14 @@ function applyFilter<T>(query: T, filter: AuditFilter): T {
   const channel = oneOf(filter.channel, AUDIT_CHANNELS); if (channel) x = x.eq("channel", channel);
   if (filter.actor) {
     const a = plain(filter.actor);
-    if (UUID.test(a)) x = x.eq("actor_user_id", a); else if (a) x = x.or(`actor_name.ilike.%${a}%,actor_email.ilike.%${a}%`);
+    if (UUID.test(a)) x = x.eq("actor_user_id", a); else if (a) x = x.or(detail ? `actor_name.ilike.%${a}%,actor_email.ilike.%${a}%` : `actor_name.ilike.%${a}%`);
   }
   if (filter.role) x = x.ilike("actor_role", `%${plain(filter.role)}%`);
   if (filter.bu) x = x.ilike("actor_bu_name", `%${plain(filter.bu)}%`);
-  if (filter.ip) x = x.eq("ip_address", plain(filter.ip));
-  if (filter.session) x = x.eq("session_ref", plain(filter.session));
-  if (filter.request) x = x.eq("request_id", plain(filter.request));
+  // network address, session and request ids are detail columns: a summary viewer's filter on them is ignored
+  if (detail && filter.ip) x = x.eq("ip_address", plain(filter.ip));
+  if (detail && filter.session) x = x.eq("session_ref", plain(filter.session));
+  if (detail && filter.request) x = x.eq("request_id", plain(filter.request));
   if (filter.from && DAY.test(filter.from)) x = x.gte("occurred_at", `${filter.from}T00:00:00+01:00`);
   if (filter.to && DAY.test(filter.to)) {
     const next = new Date(`${filter.to}T00:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
@@ -86,12 +88,13 @@ function applyFilter<T>(query: T, filter: AuditFilter): T {
 }
 
 /** Newest first, keyset-paged on the audit sequence number: a page costs the same however much history exists. `cursor` is the seq of the last row seen. */
-export async function pageAudit(filter: AuditFilter, cursor: string | null, limit = AUDIT_PAGE_SIZE): Promise<AuditPage> {
+export async function pageAudit(filter: AuditFilter, cursor: string | null, limit = AUDIT_PAGE_SIZE, detail = false): Promise<AuditPage> {
   const size = Math.min(Math.max(1, Math.floor(limit)), AUDIT_MAX_PAGE_SIZE);
-  const sb = await userClient();
-  let q = sb.from("audit_logs").select(COLUMNS).order("seq", { ascending: false }).limit(size + 1);
+  // detail (a Super Admin holding audit.read_detail, who is never shielded) reads every column with the service role; everyone else reads the summary columns as themselves, so row-level security and column privileges apply
+  const sb = detail ? adminClient() : await userClient();
+  let q = sb.from("audit_logs").select(detail ? AUDIT_DETAIL_COLUMNS : AUDIT_SUMMARY_COLUMNS).order("seq", { ascending: false }).limit(size + 1);
   if (cursor && /^\d{1,18}$/.test(cursor)) q = q.lt("seq", Number(cursor));
-  q = applyFilter(q, filter);
+  q = applyFilter(q, filter, detail);
   const rows = unwrapRows<AuditRow>(await q, "audit");
   const more = rows.length > size;
   const page = more ? rows.slice(0, size) : rows;
@@ -99,11 +102,11 @@ export async function pageAudit(filter: AuditFilter, cursor: string | null, limi
 }
 
 /** Everything that matches, up to a cap, for a file the person asked to download. */
-export async function allAudit(filter: AuditFilter, cap = 10_000): Promise<{ rows: AuditRow[]; truncated: boolean }> {
+export async function allAudit(filter: AuditFilter, cap = 10_000, detail = false): Promise<{ rows: AuditRow[]; truncated: boolean }> {
   const out: AuditRow[] = [];
   let cursor: string | null = null;
   while (out.length < cap) {
-    const page: AuditPage = await pageAudit(filter, cursor, Math.min(AUDIT_MAX_PAGE_SIZE, cap - out.length));
+    const page: AuditPage = await pageAudit(filter, cursor, Math.min(AUDIT_MAX_PAGE_SIZE, cap - out.length), detail);
     out.push(...page.rows);
     if (!page.nextCursor) return { rows: out, truncated: false };
     cursor = page.nextCursor;

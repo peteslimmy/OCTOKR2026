@@ -1,4 +1,5 @@
 import { api, requirePerm } from "@/lib/api/handler";
+import { canSeeAuditDetail } from "@/lib/audit/detail";
 import { AUDIT_PAGE_SIZE, filterFrom, pageAudit } from "@/lib/data/audit";
 
 /**
@@ -9,5 +10,5 @@ export const GET = api({}, async ({ actor, req }) => {
   requirePerm(actor, "audit.read");
   const u = new URL(req.url);
   const limit = Number(u.searchParams.get("limit") ?? AUDIT_PAGE_SIZE);
-  return pageAudit(filterFrom(u.searchParams), u.searchParams.get("cursor"), Number.isFinite(limit) ? limit : AUDIT_PAGE_SIZE);
+  return pageAudit(filterFrom(u.searchParams), u.searchParams.get("cursor"), Number.isFinite(limit) ? limit : AUDIT_PAGE_SIZE, canSeeAuditDetail(actor));
 });
