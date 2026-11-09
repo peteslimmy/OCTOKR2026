@@ -80,7 +80,7 @@ Audit (menu): filter by action (for example `ROLE_` shows every role event), ent
 Administration → Historical reports loads past weekly reports from a spreadsheet so earlier quarters appear in scores, trends and reports.
 
 1. **Prepare the sheet.** One row per goal: Year, Week, BU/Depart (a unit's code or name), SubKR (for example 1.1; empty for a stretch goal), Goal, then Task 1 / Status 1, Task 2 / Status 2 and so on. Status is Done or Not Done. A blank Year, Week or BU cell repeats the row above. The Business Units must already exist.
-2. **Choose the file.** Every problem is listed with its spreadsheet row; nothing is saved until the file is clean. Only quarters that have ended can be loaded, and a week the application already closed or a unit that already has a report for the week is refused.
+2. **Choose the file.** Every problem is listed with its spreadsheet row; nothing is saved until the file is clean. Weeks of quarters that have ended can be loaded, and so can weeks of the active quarter once the week has closed (its Sub-KRs must already exist; the running quarter is never locked or given placeholder strategy), and a week the application already closed or a unit that already has a report for the week is refused.
 3. **Rehearse.** The application runs the real import and the real scoring, shows the recomputed quarterly scores, then undoes everything. Decide whether weeks without rows should be scored as missed reports.
 4. **Import.** Type `IMPORT HISTORY` and confirm with your authenticator code. No second person approves it. Make sure the database backup is recent: the application never deletes reports, so this cannot be undone from here.
 

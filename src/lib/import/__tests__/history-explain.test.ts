@@ -61,7 +61,7 @@ describe("history import: what the database says, explained", () => {
     expect(e.code).toBe("REPORT_EXISTS");
     expect(e.fix).toMatch(/never overwrite/);
     expect(e.context).toBe('Engineering (ENG) · 2025 week 14 · goal "Improve API latency"');
-    expect(explainIssue({ row: 7, message: "This week belongs to a quarter that has not ended. Only closed quarters can be loaded here." }, parsedRow, units).code).toBe("QUARTER_OPEN");
+    expect(explainIssue({ row: 7, message: "This week belongs to a quarter that has not ended and is not the active quarter. Only closed quarters, or weeks of the active quarter, can be loaded here." }, parsedRow, units).code).toBe("QUARTER_OPEN");
     expect(explainIssue({ row: 7, message: "Something new" }, parsedRow, units).code).toBe("OTHER");
   });
 

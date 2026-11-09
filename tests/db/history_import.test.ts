@@ -169,3 +169,39 @@ describe("historical import by an Admin (ADR-122)", () => {
     });
   });
 });
+
+describe("historical import into the running quarter (ADR-122)", () => {
+  const running = async (c: Ctx, w: { sa: string }) => {                                       // Q2 2026 is running (now = 2026-06-01) with a real strategy
+    const [q] = await c.q<{ id: string }>("insert into quarters (organisation_id, year, quarter_number, starts_on, ends_on, status, activated_at) values ($1, 2026, 2, '2026-04-01', '2026-06-30', 'ACTIVE', '2026-04-01') returning id", [c.org]);
+    const [o] = await c.q<{ id: string }>("insert into quarterly_objectives (quarter_id, title, created_by) values ($1, 'Real objective', $2) returning id", [q.id, w.sa]);
+    const [k] = await c.q<{ id: string }>("insert into key_results (objective_id, sequence, code, title) values ($1, 1, 'KR1', 'Real KR') returning id", [o.id]);
+    await c.q("insert into sub_key_results (key_result_id, sequence, code, title) values ($1, 1, 'KR1.1', 'Real sub') returning id", [k.id]);
+    return q.id;
+  };
+  const wk = (bu: string, week: number, sub: string | null, row_no = 2): Row => ({ row_no, year: 2026, week, bu_id: bu, sub_kr: sub, goal: `Goal ${week}`, tasks: [{ d: "Task", s: "DONE" }] });
+
+  it("loads a closed week of the active quarter, leaves the quarter active and its strategy untouched", async () => {
+    await withTx(async (c) => {
+      const w = await world(c); const qid = await running(c, w);
+      const { id, f } = await stage(c, w.admin, [wk(w.bu, 18, "1.1")]);
+      expect(f.count).toBe(0);
+      const out = await c.rpc<{ reports: number; quarters_created: number }>("history_commit", w.admin, id, true, "IMPORT HISTORY");   // fill gaps requested: ignored for a running quarter
+      expect(out.reports).toBe(1);
+      expect(out.quarters_created).toBe(0);
+      expect((await c.q<{ status: string }>("select status from quarters where id = $1", [qid]))[0].status).toBe("ACTIVE");
+      expect((await c.q("select 1 from key_results where title like '%historical%'")).length).toBe(0);
+      expect((await c.q("select 1 from reporting_weeks where quarter_id = $1 and status = 'FINAL_LOCKED' and week_start_at > '2026-05-04'", [qid])).length).toBe(0);
+    });
+  });
+
+  it("still refuses a week that has not closed, a Sub-KR the running quarter does not have, and a quarter that is not active", async () => {
+    await withTx(async (c) => {
+      const w = await world(c); await running(c, w);
+      const { f } = await stage(c, w.sa, [wk(w.bu, 23, "1.1", 2), wk(w.bu, 18, "3.4", 3), wk(w.bu, 40, "1.1", 4)]);
+      const by = Object.fromEntries(f.issues.map((i) => [i.row, i.message]));
+      expect(by[2]).toMatch(/not closed yet/);
+      expect(by[3]).toMatch(/not in the strategy of the active quarter/);
+      expect(by[4]).toMatch(/not ended/);
+    });
+  });
+});
