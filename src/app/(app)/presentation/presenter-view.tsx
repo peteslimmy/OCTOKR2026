@@ -52,7 +52,7 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
               {view.session_outcome === "SKIPPED" ? <Badge tone="warn">SKIPPED WEEK</Badge> : null}</div>
           </div>
           {goalTotal > 0 ? (
-            <div className="flex min-w-[320px] flex-[1_1_0%] items-center gap-6 px-2">
+            <div className="flex min-w-0 flex-[1_1_0%] sm:min-w-[320px] items-center gap-6 px-2">
             <div className="h-24 min-w-0 flex-[7_1_0%]" aria-label={`Goals ${goalPct}% complete, tasks ${taskPct}% complete`}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={perf} layout="vertical" margin={{ left: 4, right: 36, top: 2, bottom: 2 }} role="img" aria-label="Percent of goals complete versus percent of tasks complete this week">

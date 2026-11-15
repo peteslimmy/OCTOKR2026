@@ -38,6 +38,7 @@ test.describe.serial("Reports module", () => {
   test("filters change every figure consistently and can be reset", async ({ page }) => {
     await loginAs(page, "exec@4core.local");
     await page.goto("/reports/weekly-compliance");
+    await expect(resultRows(page).first()).toBeVisible();      // wait for the table before counting it
     const all = await resultRows(page).count();
     await page.getByLabel("Business Unit").selectOption({ label: "Engineering" });
     await page.getByRole("button", { name: "Apply" }).click();
