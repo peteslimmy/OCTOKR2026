@@ -59,7 +59,7 @@ describe("history import: what the database says, explained", () => {
   it("gives each rule a code, a plain fix and the row's own context", () => {
     const e = explainIssue({ row: 7, message: "This unit already has a report for this week." }, parsedRow, units);
     expect(e.code).toBe("REPORT_EXISTS");
-    expect(e.fix).toMatch(/never overwrite/);
+    expect(e.fix).toMatch(/cannot be replaced/);
     expect(e.context).toBe('Engineering (ENG) · 2025 week 14 · goal "Improve API latency"');
     expect(explainIssue({ row: 7, message: "This week belongs to a quarter that has not ended and is not the active quarter. Only closed quarters, or weeks of the active quarter, can be loaded here." }, parsedRow, units).code).toBe("QUARTER_OPEN");
     expect(explainIssue({ row: 7, message: "Something new" }, parsedRow, units).code).toBe("OTHER");

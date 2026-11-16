@@ -84,14 +84,26 @@ describe("historical import (ADR-077)", () => {
     });
   });
 
-  it("a week the application already closed, or a unit that already has a report, is refused", async () => {
+  it("a unit that already has a report for a week in the file has it replaced: the old goals are kept in the audit entry, and the batch cannot be rolled back (ADR-124)", async () => {
     await withTx(async (c) => {
       const w = await world(c);
       const first = await stage(c, w.sa, rows(w.bu));
       await c.rpc("history_commit", w.sa, first.id, false, "IMPORT HISTORY");
-      const second = await stage(c, w.sa, [{ row_no: 2, year: 2025, week: 3, bu_id: w.bu, sub_kr: "1.1", goal: "Again", tasks: [{ d: "x", s: "DONE" }] }]);
-      expect(second.f.count).toBe(1);
-      expect(second.f.issues[0].message).toMatch(/already/);
+      const second = await stage(c, w.admin, [{ row_no: 2, year: 2025, week: 3, bu_id: w.bu, sub_kr: "1.1", goal: "Replacement goal", tasks: [{ d: "New task", s: "DONE" }] }]);
+      expect(second.f.count).toBe(0);                                                               // an existing report is no longer a reason to refuse
+      const rh = await c.rpc<{ reports_replaced: number; rehearsal: boolean }>("history_rehearse", w.admin, second.id, false);
+      expect(rh).toMatchObject({ rehearsal: true, reports_replaced: 1 });
+      expect((await c.q("select 1 from smart_goals where title = 'Launch pilot'")).length).toBe(1);   // the rehearsal changed nothing
+      const out = await c.rpc<{ reports_replaced: number }>("history_commit", w.admin, second.id, false, "IMPORT HISTORY");
+      expect(out.reports_replaced).toBe(1);
+      const goals = await c.q<{ title: string }>("select g.title from smart_goals g join weekly_reports r on r.id = g.weekly_report_id join reporting_weeks rw on rw.id = r.reporting_week_id where r.business_unit_id = $1 and rw.week_number = 3 and rw.week_year = 2025 order by g.title", [w.bu]);
+      expect(goals.map((g) => g.title)).toEqual(["Replacement goal"]);
+      const [a] = await c.q<{ old_values: { goals: { title: string }[]; scores: unknown[] } }>("select old_values from audit_logs where action = 'HISTORICAL_IMPORT_REPORT_REPLACED'");
+      expect(a.old_values.goals.map((g) => g.title).sort()).toEqual(["Launch pilot", "Stretch idea"]);   // what was removed is kept
+      expect(a.old_values.scores.length).toBeGreaterThan(0);
+      const snaps = await c.q<{ version_number: number; score_state: string }>("select s.version_number, s.score_state from weekly_score_snapshots s join reporting_weeks rw on rw.id = s.reporting_week_id where s.business_unit_id = $1 and rw.week_number = 3 and rw.week_year = 2025 order by 1", [w.bu]);
+      expect(snaps).toEqual([{ version_number: 1, score_state: "SCORED" }]);                        // one score for the new report
+      await c.expectError("IMPORT_VOID_NOT_AVAILABLE", () => c.rpc("history_void", w.sa, second.id, "Wrong file loaded earlier", "VOID IMPORT"));
     });
   });
 
@@ -251,7 +263,7 @@ describe("historical import into a week the application already closed (ADR-123)
     });
   });
 
-  it("still refuses a unit that already has a report for the closed week, and only an Admin or Super Admin can load", async () => {
+  it("a unit that already has a report for the closed week is replaced, and only an Admin or Super Admin can load", async () => {
     await withTx(async (c) => {
       const w = await world(c); await running(c, w);
       await c.q("update business_units set created_at = '2026-01-01T00:00:00Z' where id = $1", [w.bu]);
@@ -259,8 +271,7 @@ describe("historical import into a week the application already closed (ADR-123)
       const first = await stage(c, w.admin, [wk(w.bu, 18, "1.1")]);
       await c.rpc("history_commit", w.admin, first.id, false, "IMPORT HISTORY");
       const again = await stage(c, w.admin, [wk(w.bu, 18, "1.1")]);
-      expect(again.f.count).toBe(1);
-      expect(again.f.issues[0].message).toMatch(/already has a report/);
+      expect(again.f.count).toBe(0);                                                                 // an existing report is replaced (ADR-124), no longer refused
       await c.expectError("PERMISSION_DENIED", () => c.rpc("history_create_batch", w.hr, "a.xlsx", sha(), 1));
     });
   });

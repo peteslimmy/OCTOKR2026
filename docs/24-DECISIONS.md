@@ -1197,3 +1197,12 @@ Decided by the owner: the session notes are captured in Take notes (/notes), so 
 - **Scoring.** The week's first score for the unit (normally the final-lock zero) is never edited. A NEW weekly snapshot version is added with the ordinary rules (new reason value `HISTORICAL_IMPORT`), and the quarter's score gets a new snapshot version from the finished weeks. The week, its other reports and its lock are untouched. Compliance is left as recorded and is written (as compliant) only when none exists.
 - **Known limit, chosen deliberately.** Rolling back such a batch is refused by the existing safety check (it expects to remove only weeks the import created), so a correction there goes through the ordinary amendment routes, not a rollback.
 - **Ambiguity recorded.** The specification does not say whether history loaded into a closed week should change that week's compliance. It is left as recorded rather than invented.
+
+
+## ADR-124 — Historical import replaces a report that already exists
+**Status:** Accepted (owner decision, 2026-11-16: "overwrite any existing report when historical is being uploaded"; chosen over "replace and keep an archive": "delete old, replace"); migration 20261110000002.
+- **Rule.** A report that already exists for a unit and week in the file is deleted and replaced by the one in the file. A report that other records depend on (comments, corrections, exceptions, evidence) is still refused (`history_report_replaceable`); nothing is cut loose from its dependants.
+- **Trace.** There is no archive table. Each replaced report writes one `HISTORICAL_IMPORT_REPORT_REPLACED` audit entry (category FILES_EXPORT, severity HIGH) whose `old_values` keep the removed goals, tasks and scores. The rehearsal states how many reports it will replace before anything is saved.
+- **Rollback.** A batch that replaced reports, or loaded reports into weeks already closed, cannot be rolled back with the import's rollback (`IMPORT_VOID_NOT_AVAILABLE`): the rollback cannot restore what was removed. Corrections go through the ordinary routes.
+- **Safeguards unchanged.** Admin and Super Admin only, rehearsal, typed confirmation, fresh authenticator code, notification to every Super Admin.
+- **Risk accepted by the owner.** Submitted and reviewed reports that BU leads entered in the application can be deleted by a file. The audit entry is the only copy of what was removed.

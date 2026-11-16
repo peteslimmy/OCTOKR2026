@@ -13,7 +13,7 @@ interface Uploaded {
 interface Score { year: number; quarter: number; unit: string; unit_name: string; score: number | null; status: string; weeks_counted: number; weeks_without_report: number }
 interface Outcome {
   reports: number; goals: number; tasks: number; tasks_done: number; quarters_created: number; weeks_with_rows: number; weeks_without_rows_scored: number;
-  placeholders: { objectives: number; key_results: number; sub_key_results: number }; units_backdated: { business_unit_id: string; from: string }[];
+  reports_replaced?: number; closed_week_reports?: number; placeholders: { objectives: number; key_results: number; sub_key_results: number }; units_backdated: { business_unit_id: string; from: string }[];
   per_quarter: { year: number; quarter: number; weeks: number; reports: number }[]; quarterly_scores: Score[]; rehearsal?: boolean; already_committed?: boolean;
 }
 const pct = (n: number | null) => (n === null || n === undefined ? "—" : `${Number(n).toFixed(1)}%`);
@@ -120,6 +120,8 @@ function OutcomeView({ outcome: o, final }: { outcome: Outcome; final: boolean }
       <CardHeader title={final ? "Imported" : "Rehearsal result (nothing was saved)"} description={`${o.reports} reports, ${o.goals} goals and ${o.tasks} tasks (${o.tasks_done} done) across ${o.weeks_with_rows} weeks${o.weeks_without_rows_scored ? `, plus ${o.weeks_without_rows_scored} weeks with no rows scored as missed` : ""}.`} />
       <ul className="mb-4 list-disc space-y-1 pl-5 text-sm">
         {o.quarters_created ? <li>{o.quarters_created} quarter{o.quarters_created === 1 ? "" : "s"} did not exist and will be created as closed quarters, with placeholder strategy ({o.placeholders.objectives} objective, {o.placeholders.key_results} key results, {o.placeholders.sub_key_results} Sub-KRs) because the real wording was never entered here.</li> : null}
+        {o.reports_replaced ? <li><strong>{o.reports_replaced} existing report{o.reports_replaced === 1 ? " is" : "s are"} deleted and replaced by the ones in the file.</strong> What is removed is kept in the audit log, and this import cannot be rolled back.</li> : null}
+        {o.closed_week_reports ? <li>{o.closed_week_reports} report{o.closed_week_reports === 1 ? " goes" : "s go"} into weeks the application had already closed. Each gets a new score version; the first score is kept, and this import cannot be rolled back.</li> : null}
         {o.units_backdated.length ? <li>{o.units_backdated.length} Business Unit{o.units_backdated.length === 1 ? " is" : "s are"} treated as existing from its first week in the file, so earlier weeks do not count against it.</li> : null}
         <li>Imported reports are recorded as submitted and reviewed. No notification, email or webhook is sent.</li>
       </ul>
