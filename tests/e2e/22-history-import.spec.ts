@@ -5,10 +5,10 @@ import { expectNoA11yViolations, loginAs, query } from "./helpers";
 const HEADER = "Year,Week,BU/Depart,SubKR Category,Goal,Task 1,Status 1,Task 2,Status 2\n";
 
 test.describe.serial("historical import", () => {
-  test("an Admin cannot see it; the Super Admin can read a sheet, fix problems and rehearse without saving", async ({ page }) => {
+  test("an Admin can open it; the Super Admin can read a sheet, fix problems and rehearse without saving", async ({ page }) => {
     await loginAs(page, "admin@4core.local");
     await page.goto("/admin/import/history");
-    await expect(page.getByText("Only a Super Admin can load historical reports")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Import historical reports", level: 1 })).toBeVisible();      // an Admin may load history too (ADR-122)
 
     await loginAs(page, "superadmin@4core.local");
     await page.goto("/admin/import/history");

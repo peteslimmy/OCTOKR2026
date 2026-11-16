@@ -205,3 +205,63 @@ describe("historical import into the running quarter (ADR-122)", () => {
     });
   });
 });
+
+describe("historical import into a week the application already closed (ADR-123)", () => {
+  const running = async (c: Ctx, w: { sa: string }) => {
+    const [q] = await c.q<{ id: string }>("insert into quarters (organisation_id, year, quarter_number, starts_on, ends_on, status, activated_at) values ($1, 2026, 2, '2026-04-01', '2026-06-30', 'ACTIVE', '2026-04-01') returning id", [c.org]);
+    const [o] = await c.q<{ id: string }>("insert into quarterly_objectives (quarter_id, title, created_by) values ($1, 'Real objective', $2) returning id", [q.id, w.sa]);
+    const [k] = await c.q<{ id: string }>("insert into key_results (objective_id, sequence, code, title) values ($1, 1, 'KR1', 'Real KR') returning id", [o.id]);
+    await c.q("insert into sub_key_results (key_result_id, sequence, code, title) values ($1, 1, 'KR1.1', 'Real sub') returning id", [k.id]);
+    return q.id;
+  };
+  const closeWeek = async (c: Ctx, monday: string) => {                                          // the application's own calendar: the week exists and has been final-locked
+    const [{ ensure_reporting_week: id }] = await c.q<{ ensure_reporting_week: string }>("select ensure_reporting_week($1::date)", [monday]);
+    await c.q("select finalize_reporting_week($1)", [id]);
+    return id;
+  };
+  const wk = (bu: string, week: number, sub: string | null, row_no = 2): Row => ({ row_no, year: 2026, week, bu_id: bu, sub_kr: sub, goal: `Goal ${week}`, tasks: [{ d: "Task", s: "DONE" }] });
+
+  it("adds a report to a closed week as a new score version, leaving the first score, the week and its lock as they were", async () => {
+    await withTx(async (c) => {
+      const w = await world(c); await running(c, w);
+      await c.q("update business_units set created_at = '2026-01-01T00:00:00Z' where id = $1", [w.bu]);
+      const weekId = await closeWeek(c, "2026-04-27");
+      const before = await c.q<{ version_number: number; score_state: string; final_score: string }>("select version_number, score_state, final_score from weekly_score_snapshots where business_unit_id = $1 and reporting_week_id = $2", [w.bu, weekId]);
+      expect(before).toEqual([{ version_number: 1, score_state: "NOT_SUBMITTED", final_score: "0.00" }]);
+
+      const { id, f } = await stage(c, w.admin, [wk(w.bu, 18, "1.1")]);
+      expect(f.count).toBe(0);                                                                      // the closed week is no longer a reason to refuse
+      const rh = await c.rpc<{ reports: number; rehearsal: boolean }>("history_rehearse", w.admin, id, false);
+      expect(rh).toMatchObject({ reports: 1, rehearsal: true });
+      expect((await c.q("select 1 from weekly_reports")).length).toBe(0);                          // the rehearsal changed nothing
+
+      const out = await c.rpc<{ reports: number }>("history_commit", w.admin, id, false, "IMPORT HISTORY");
+      expect(out.reports).toBe(1);
+      const snaps = await c.q<{ version_number: number; score_state: string; final_score: string; reason: string }>("select version_number, score_state, final_score, reason from weekly_score_snapshots where business_unit_id = $1 and reporting_week_id = $2 order by version_number", [w.bu, weekId]);
+      expect(snaps).toEqual([
+        { version_number: 1, score_state: "NOT_SUBMITTED", final_score: "0.00", reason: "FINAL_LOCK" },
+        { version_number: 2, score_state: "SCORED", final_score: "100.00", reason: "HISTORICAL_IMPORT" },
+      ]);
+      const [wkRow] = await c.q<{ status: string }>("select status from reporting_weeks where id = $1", [weekId]);
+      expect(wkRow.status).toBe("FINAL_LOCKED");
+      const [rep] = await c.q<{ status: string; submission_status: string }>("select status, submission_status from weekly_reports where reporting_week_id = $1 and business_unit_id = $2", [weekId, w.bu]);
+      expect(rep).toEqual({ status: "FINAL_LOCKED", submission_status: "SUBMITTED" });
+      const [qs] = await c.q<{ n: number }>("select count(*)::int n from quarterly_score_snapshots where business_unit_id = $1", [w.bu]);
+      expect(qs.n).toBeGreaterThanOrEqual(2);                                                       // the quarter's score has a new version, the old one is kept
+    });
+  });
+
+  it("still refuses a unit that already has a report for the closed week, and only an Admin or Super Admin can load", async () => {
+    await withTx(async (c) => {
+      const w = await world(c); await running(c, w);
+      await c.q("update business_units set created_at = '2026-01-01T00:00:00Z' where id = $1", [w.bu]);
+      await closeWeek(c, "2026-04-27");
+      const first = await stage(c, w.admin, [wk(w.bu, 18, "1.1")]);
+      await c.rpc("history_commit", w.admin, first.id, false, "IMPORT HISTORY");
+      const again = await stage(c, w.admin, [wk(w.bu, 18, "1.1")]);
+      expect(again.f.count).toBe(1);
+      expect(again.f.issues[0].message).toMatch(/already has a report/);
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("history_create_batch", w.hr, "a.xlsx", sha(), 1));
+    });
+  });
+});
