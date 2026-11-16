@@ -63,17 +63,13 @@ test("Executive: comments and recommends from the unit's performance screen with
   await panel.getByTestId("eo-make-recommendation").click();
   const dialog = page.getByRole("dialog", { name: "Make a recommendation" });
   await ex(dialog).toBeVisible();
-  await dialog.getByLabel(/^Title/).fill(recTitle);
-  await dialog.getByLabel(/^Recommendation/).fill("Automate the nightly follow-up so every intake gets a reply within a day.");
-  await dialog.getByLabel(/Why you recommend it/).fill("Late replies delay onboarding.");
-  await dialog.getByLabel("Priority").selectOption("HIGH");
-  const due = new Date(Date.now() + 10 * 864e5).toISOString().slice(0, 10);
-  await dialog.getByLabel(/Respond by/).fill(due);
+  await dialog.getByLabel(/^Recommendation/).fill(`${recTitle}
+Automate the nightly follow-up so every intake gets a reply within a day.`);      // the title is made from the first line
   await expect(dialog.getByLabel(engName)).toBeChecked();                                // the unit came from the screen
   await dialog.getByRole("button", { name: "Issue recommendation" }).click();
   await expect(page.getByText("Recommendation issued.")).toBeVisible({ timeout: 90_000 });
   const r = (await query<{ id: string; reference: string; status: string; priority: string }>("select id, reference, status, priority from eo_recommendations where title = $1", [recTitle]))[0];
-  expect(r).toMatchObject({ status: "ACTIVE", priority: "HIGH" });
+  expect(r).toMatchObject({ status: "ACTIVE", priority: "NORMAL" });
   expect(r.reference).toMatch(/^EOR-/);
   recUrl = `/executive-oversight/recommendations/${r.id}`;
   expect((await query<{ status: string }>("select status from eo_rec_targets where recommendation_id = $1", [r.id]))[0].status).toBe("SUBMITTED");

@@ -288,7 +288,7 @@ describe("recommendations: creation and the rule that publishing changes nothing
 
   it("refuses incomplete, invalid and out-of-scope recommendations", () => withTx(async (c) => {
     const w = await world(c);
-    await c.expectError("VALIDATION_ERROR", () => w.rec(w.exec, { reason: null }));                    // publishing needs the reason
+    expect((await w.rec(w.exec, { reason: null, key: "no-reason-1" })).status).toBe("ACTIVE");              // the reason is optional (ADR-128): a recommendation is issued without one
     await c.expectError("VALIDATION_ERROR", () => w.rec(w.exec, { targets: [] }));
     await c.expectError("VALIDATION_ERROR", () => w.rec(w.exec, { due: "2031-01-01" }));                 // in the past (today is 2031-01-07)
     await c.expectError("VALIDATION_ERROR", () => w.rec(w.exec, { requested: false, due: "2031-01-20" }));

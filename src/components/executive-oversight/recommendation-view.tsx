@@ -43,7 +43,7 @@ export function RecommendationView({ rec, caps, units, categories, unitPeople }:
           action={isAuthor ? (
             <div className="flex flex-wrap gap-2">
               {rec.status === "DRAFT" && caps.recommend ? <><Button size="sm" variant="secondary" onClick={() => setEditing(true)}>Edit draft</Button>
-                <Button size="sm" disabled={pending || !rec.reason} onClick={() => void run(() => apiRequest("POST", `executive-recommendations/${rec.id}/publish`, { expectedVersion: rec.version, requestKey: newKey() }), { success: "Recommendation issued." })}>Issue recommendation</Button></> : null}
+                <Button size="sm" disabled={pending} onClick={() => void run(() => apiRequest("POST", `executive-recommendations/${rec.id}/publish`, { expectedVersion: rec.version, requestKey: newKey() }), { success: "Recommendation issued." })}>Issue recommendation</Button></> : null}
               {(rec.status === "DRAFT" || active) && caps.withdraw ? <ReasonDialog label="Withdraw" title="Withdraw this recommendation" description="Every addressed unit's record becomes withdrawn. The recommendation and everything said about it stay in the history." field="Why are you withdrawing it?" submit="Withdraw recommendation"
                 path={`executive-recommendations/${rec.id}/withdraw`} success="Recommendation withdrawn." variant="danger" /> : null}
               {active && caps.close ? <ReasonDialog label="Close all" title="Close this recommendation" description="Closing says you have finished following it up. It does not mean the underlying matter is resolved, and it changes nothing in the unit's records." field="Why are you closing it?" submit="Close recommendation"
