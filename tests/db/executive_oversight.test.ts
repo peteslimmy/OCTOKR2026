@@ -66,7 +66,7 @@ describe("permissions: who may do what (data, mapped by migration)", () => {
     expect(await codes(w.hr)).toEqual([]);
     expect(await codes(w.finance)).toEqual([]);
     expect(await codes(w.admin)).toEqual(["executive_oversight.configure"]);
-    expect(await codes(w.superAdmin)).toEqual(["executive_oversight.configure"]);
+    expect(await codes(w.superAdmin)).toEqual(expect.arrayContaining(["executive_oversight.configure", "executive_oversight.view_all", "executive_comment.create"]));      // the Super Admin holds every permission (ADR-125)
     const prot = await c.q<{ protected: boolean }>("select protected from permissions where code = 'executive_oversight.view_all'");
     expect(prot[0].protected).toBe(true);
   }));
@@ -115,7 +115,7 @@ describe("comments", () => {
 
   it("refuses people without the create permission, an unknown category and empty content", () => withTx(async (c) => {
     const w = await world(c);
-    for (const u of [w.finLead, w.presenter, w.hr, w.finance, w.admin, w.superAdmin]) await c.expectError("PERMISSION_DENIED", () => w.comment(u));
+    for (const u of [w.finLead, w.presenter, w.hr, w.finance, w.admin]) await c.expectError("PERMISSION_DENIED", () => w.comment(u));
     await c.expectError("VALIDATION_ERROR", () => w.comment(w.exec, { category: "NOT_A_CATEGORY" }));
     await c.expectError("VALIDATION_ERROR", () => w.comment(w.exec, { content: "   " }));
     await c.expectError("VALIDATION_ERROR", () => w.comment(w.exec, { content: "x".repeat(10001) }));
@@ -145,7 +145,7 @@ describe("comments", () => {
     await w.comment(w.exec);
     expect(await count(c, w.finLead, "eo_comments")).toBe("1");
     expect(await count(c, w.finLead2, "eo_comments")).toBe("1");
-    for (const u of [w.opsLead, w.hr, w.finance, w.admin, w.superAdmin]) expect(await count(c, u, "eo_comments")).toBe("0");
+    for (const u of [w.opsLead, w.hr, w.finance, w.admin]) expect(await count(c, u, "eo_comments")).toBe("0");
     expect(await count(c, w.presenter, "eo_comments")).toBe("1");        // a Presenter presents every unit, so reads every unit
     expect(await count(c, w.exec, "eo_comments")).toBe("1");
   }));
@@ -296,7 +296,7 @@ describe("recommendations: creation and the rule that publishing changes nothing
     await c.expectError("VALIDATION_ERROR", () => w.rec(w.exec, { title: " " }));
     await c.expectError("LINK_TARGET_INVALID", () => w.rec(w.exec, { targets: [w.ops] }));              // FIN's report cannot be the subject of a recommendation to OPS
     await c.expectError("RECIPIENT_UNAVAILABLE", () => w.rec(w.exec, { ownerUser: w.opsLead }));
-    for (const u of [w.finLead, w.presenter, w.hr, w.finance, w.admin, w.superAdmin]) await c.expectError("PERMISSION_DENIED", () => w.rec(u));
+    for (const u of [w.finLead, w.presenter, w.hr, w.finance, w.admin]) await c.expectError("PERMISSION_DENIED", () => w.rec(u));
   }));
 
   it("refuses a repeated recommendation but replays the same request key", () => withTx(async (c) => {
@@ -644,7 +644,7 @@ describe("dashboard, registers, follow-up and escalation", () => {
     expect(full.events.map((e) => e.event_type)).toEqual(expect.arrayContaining(["PUBLISHED", "CLARIFICATION_REQUESTED", "MESSAGE"]));
     expect(await c.asUser(w.opsLead, () => c.rpc("read_eo_recommendation", a.id))).toBeNull();
     expect(await c.asUser(w.hr, () => c.rpc("read_eo_recommendation", a.id))).toBeNull();
-    expect(await c.asUser(w.superAdmin, () => c.rpc("read_eo_recommendation", a.id))).toBeNull();
+    expect(await c.asUser(w.superAdmin, () => c.rpc("read_eo_recommendation", a.id))).not.toBeNull();      // the Super Admin holds every permission (ADR-125)
   }));
 });
 

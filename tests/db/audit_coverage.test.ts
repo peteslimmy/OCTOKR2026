@@ -7,7 +7,7 @@ import { withTx } from "./helpers";
  */
 const NOT_AUDITED_ON_PURPOSE: Record<string, string> = {
   // queues, leases, counters and housekeeping: no business decision is made
-  acquire_edit_lease: "edit lease (heartbeat)", release_edit_lease: "edit lease (heartbeat)", claim_email_batch: "outbox queue", claim_webhook_batch: "webhook queue", mark_email_result: "outbox queue",
+  grant_new_permission_to_super_admin: "trigger: gives the Super Admin each newly added permission (ADR-125); the permission itself is added by a migration", acquire_edit_lease: "edit lease (heartbeat)", release_edit_lease: "edit lease (heartbeat)", claim_email_batch: "outbox queue", claim_webhook_batch: "webhook queue", mark_email_result: "outbox queue",
   mark_webhook_result: "webhook queue", skip_email: "outbox queue", mark_report_email_delivery: "report email queue (the run is audited when it starts and finishes)", finish_report_email_run: "report email queue",
   rate_limit_hit: "request counter", record_job_heartbeat: "job heartbeat", okr_idem: "idempotency key", okr_idem_done: "idempotency key", okr_next_ref: "reference counter", next_payment_reference: "reference counter",
   mark_all_notifications_read: "a person's own notifications", send_report_reminders: "scheduled reminders (notifications)", bump_report_version: "version counter, inside audited goal and task changes",

@@ -63,7 +63,7 @@ export async function FundTab({ actor, params }: { actor: Actor; params: ModuleP
                     ? <ReviseRequestButton id={r.id} amount={Number(r.amount)} purpose={r.purpose} justification={r.justification} reason={r.decision?.reason ?? null}
                         available={fund ? Number(fund.available) : null} purposes={purposes.filter((p) => p.active).map((p) => p.name)} /> : null}
                   <RequestActions id={r.id} status={r.status} amount={money(r.amount)} mine={r.requested_by === actor.id}
-                    canDecide={can(actor, "disbursement.approve")} canReject={can(actor, "disbursement.reject")} canDisburse={can(actor, "disbursement.disburse")}
+                    canDecide={can(actor, "disbursement.approve")} canReject={can(actor, "disbursement.reject")} canDisburse={can(actor, "disbursement.disburse")} inOrder={r.in_order !== false} canSkip={can(actor, "disbursement.skip_queue")}
                     balanceAfter={fund ? money(Number(fund.available) - Number(r.amount)) : null} />
                 </li>
               ))}

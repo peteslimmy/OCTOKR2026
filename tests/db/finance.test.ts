@@ -134,6 +134,7 @@ describe("disbursements (FR-FIN-*, AC-FIN-*)", () => {
       const w = await world(c);
       await fund(c, w, 100000);
       const a = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 70000, "Data", "a", key());
+      await c.setNow("2030-12-01T10:00:00+01:00");                                                                       // b is later than a: requests are treated first in, first out (ADR-125)
       const b = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 60000, "Data", "b", key());   // each fits on its own at creation
       await c.rpc("decide_disbursement_request", w.finance, a.request_id, true, null, key());
       await c.expectError("INSUFFICIENT_FUNDS", () => c.rpc("decide_disbursement_request", w.finance, b.request_id, true, null, key()));

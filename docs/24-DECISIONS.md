@@ -1206,3 +1206,10 @@ Decided by the owner: the session notes are captured in Take notes (/notes), so 
 - **Rollback.** A batch that replaced reports, or loaded reports into weeks already closed, cannot be rolled back with the import's rollback (`IMPORT_VOID_NOT_AVAILABLE`): the rollback cannot restore what was removed. Corrections go through the ordinary routes.
 - **Safeguards unchanged.** Admin and Super Admin only, rehearsal, typed confirmation, fresh authenticator code, notification to every Super Admin.
 - **Risk accepted by the owner.** Submitted and reviewed reports that BU leads entered in the application can be deleted by a file. The audit entry is the only copy of what was removed.
+
+
+## ADR-125 — Fund requests are treated first in, first out; the Super Admin holds every permission; the Saved & Snapshots menu entry is removed
+**Status:** Accepted (owner decisions, 2026-11-16); migrations 20261110000003 and 20261110000004.
+- **First in, first out.** Starting a review, approving or rejecting a fund request is refused (`DISBURSEMENT_FIFO`) while an older request is still SUBMITTED or UNDER_REVIEW. Withdrawn, rejected and approved requests leave the queue; a revised request is new and goes to the back. Admin and Super Admin hold the new protected permission `disbursement.skip_queue` and can treat one request out of order after recording a reason (`skip_disbursement_queue`, audited as `DISBURSEMENT_QUEUE_SKIPPED`, kept in `disbursement_queue_waivers`). The list shows waiting requests first, oldest first, with `in_order`. Releasing cash for an approved request is unchanged.
+- **Super Admin holds every permission.** The rule of 20261101000001 had lapsed: the 13 Executive Oversight permissions were never granted to the Super Admin. They are granted now, and a trigger grants every permission added later. Segregation of duties is unchanged (it is enforced inside the functions, for example nobody decides their own request). This supersedes the part of the Executive Oversight design that limited the Super Admin to configuration.
+- **Menu.** "Saved & Snapshots" is removed from the left menu. The page and the buttons that lead to it from Reports remain.

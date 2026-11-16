@@ -171,7 +171,7 @@ export async function getLedger(limit = 100): Promise<LedgerRow[]> {
 }
 
 export interface DisbursementRow {
-  id: string; amount: number; purpose: string; justification: string; status: "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "DISBURSED" | "WITHDRAWN";
+  in_order?: boolean; id: string; amount: number; purpose: string; justification: string; status: "SUBMITTED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "DISBURSED" | "WITHDRAWN";
   created_at: string; updated_at: string; requested_by: string; requester_name: string | null; requester_unit: string | null;
   resubmits: string | null; resubmit_note: string | null; resubmitted_as: string | null;
   decision: { decision: string; reason: string | null; at: string; by: string | null } | null; disbursement: { reference: string; at: string; amount: number; by: string | null } | null;

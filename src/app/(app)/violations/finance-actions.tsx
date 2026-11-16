@@ -35,14 +35,16 @@ export function NewRequestButton({ available, purposes }: { available: number | 
   );
 }
 
-export function RequestActions({ id, status, amount, mine, canDecide, canReject, canDisburse, balanceAfter }: {
-  id: string; status: string; amount: string; mine: boolean; canDecide: boolean; canReject: boolean; canDisburse: boolean; balanceAfter: string | null;
+export function RequestActions({ id, status, amount, mine, canDecide, canReject, canDisburse, balanceAfter, inOrder = true, canSkip = false }: {
+  id: string; status: string; amount: string; mine: boolean; canDecide: boolean; canReject: boolean; canDisburse: boolean; balanceAfter: string | null; inOrder?: boolean; canSkip?: boolean;
 }) {
   const { run, pending } = useAction();
   const [key] = useState(() => crypto.randomUUID());
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [relOpen, setRelOpen] = useState(false);
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [skipReason, setSkipReason] = useState("");
   const [ref, setRef] = useState("");
   const decidable = status === "SUBMITTED" || status === "UNDER_REVIEW";
   if (mine && (decidable || status === "APPROVED")) {
@@ -51,6 +53,22 @@ export function RequestActions({ id, status, amount, mine, canDecide, canReject,
         <Badge tone="info">You requested this — someone else must {decidable ? "decide" : "release"} it</Badge>
         {decidable ? <ConfirmButton label="Withdraw" variant="secondary" title="Withdraw this request?" description="The request leaves the approval queue and no money is committed. It stays on record as withdrawn; you can raise a new request later."
           onConfirm={() => run(() => apiRequest("POST", `disbursement-requests/${id}/withdraw`), { success: "Request withdrawn." })} /> : null}
+      </div>
+    );
+  }
+  // first in, first out: an older request must be treated first; an Admin can skip the queue once, with a reason
+  if (decidable && !inOrder && (canDecide || canReject)) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone="warn">Waiting: an older request is treated first</Badge>
+        {canSkip ? <Button size="sm" variant="secondary" onClick={() => setSkipOpen(true)}>Treat out of order</Button> : null}
+        <Modal open={skipOpen} onOpenChange={setSkipOpen} title="Treat this request out of order" description="Requests are treated first in, first out. Say why this one cannot wait; the reason is recorded in the audit log.">
+          <div className="space-y-3">
+            <Field id={`skip-reason-${id}`} label="Reason (required, audited)"><Textarea value={skipReason} onChange={(e) => setSkipReason(e.target.value)} maxLength={1000} required /></Field>
+            <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setSkipOpen(false)}>Cancel</Button>
+              <Button disabled={pending || !skipReason.trim()} onClick={async () => { const ok = await run(() => apiRequest("POST", `disbursement-requests/${id}/skip-queue`, { reason: skipReason }), { success: "This request can now be treated." }); if (ok) { setSkipOpen(false); setSkipReason(""); } }}>Allow</Button></div>
+          </div>
+        </Modal>
       </div>
     );
   }
