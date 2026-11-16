@@ -10,6 +10,8 @@
     "audit.alerts.manage",
     "audit.read",
     "branding.manage",
+    "bu_goals.approve_change",
+    "bu_goals.lock",
     "bu_goals.manage",
     "business_units.change_type",
     "business_units.manage",
@@ -125,6 +127,7 @@
     "weekly_report.view_all"
   ],
   "EXECUTIVE": [
+    "bu_goals.approve_change",
     "dashboard.executive.view",
     "executive_comment.amend",
     "executive_comment.create",
@@ -170,6 +173,7 @@
     "attendance.record",
     "attendance.session.manage",
     "attendance.session.outcome.request",
+    "bu_goals.approve_change",
     "disbursement.create",
     "evidence.manage",
     "finance.fund.view",
@@ -230,6 +234,8 @@
     "audit.read_detail",
     "audit.rules.configure",
     "branding.manage",
+    "bu_goals.approve_change",
+    "bu_goals.lock",
     "bu_goals.manage",
     "business_units.change_type",
     "business_units.manage",

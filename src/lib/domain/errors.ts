@@ -67,6 +67,8 @@ const MAP: Record<string, { status: number; message: string }> = {
   VIOLATION_SELF_VOID: { status: 403, message: "The person who raised a violation cannot void it. Ask another administrator." },
   DUPLICATE_PAYMENT: { status: 409, message: "That payment reference has already been used." },
   DISBURSEMENT_FIFO: { status: 409, message: "An older fund request is still waiting. Requests are treated first in, first out: treat the oldest one first (an Admin can skip the queue with a reason)." },
+  BU_GOALS_LOCKED: { status: 409, message: "These goals are locked. Send a change request with the reason; an Executive, Admin or HR will approve it." },
+  BU_GOAL_CHANGE_SELF_APPROVAL: { status: 403, message: "You cannot decide a change request you raised." },
   DISBURSEMENT_SELF_APPROVAL: { status: 403, message: "You cannot approve or release a request you created." },
   QUOTE_SELF_APPROVAL: { status: 403, message: "The person who recorded or submitted a quote cannot approve it." },
   DISBURSEMENT_REJECTION_REASON_REQUIRED: { status: 422, message: "A justification is required to reject a disbursement request." },
