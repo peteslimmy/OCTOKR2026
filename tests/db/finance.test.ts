@@ -88,6 +88,7 @@ describe("disbursements (FR-FIN-*, AC-FIN-*)", () => {
       const r = await c.rpc<{ request_id: string }>("create_disbursement_request", w.hr, 30000, "Others", "Quarterly culture event", key());
       expect((await c.q("select count(*)::int n from notifications where event_type = 'DISBURSEMENT_REQUESTED' and user_id = $1", [w.finance]))[0].n).toBe(1);
       await c.expectError("PERMISSION_DENIED", () => c.rpc("decide_disbursement_request", w.hr, r.request_id, true, null, key()));
+      await c.setNow("2030-12-01T10:00:00+01:00");                                                                       // a later request: first in, first out (ADR-125)
       const mine = await c.rpc<{ request_id: string }>("create_disbursement_request", w.both, 1000, "Others", "self", key());
       await c.expectError("DISBURSEMENT_SELF_APPROVAL", () => c.rpc("decide_disbursement_request", w.both, mine.request_id, true, null, key()));
       await c.expectError("DISBURSEMENT_SELF_APPROVAL", () => c.rpc("decide_disbursement_request", w.both, mine.request_id, false, "no", key()));

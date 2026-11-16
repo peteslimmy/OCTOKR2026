@@ -209,11 +209,11 @@ describe("notes: autosave, versions, concurrency and links", () => {
 });
 
 describe("access: who can see what", () => {
-  it("HR, Finance and Admin hold no session permission and cannot reach content (the Super Admin does, ADR-112)", () => withTx(async (c) => {
+  it("HR and Finance hold no session permission and cannot reach content (the Super Admin and, since ADR-126, the Admin can see every unit's notes)", () => withTx(async (c) => {
     const w = await world(c);
     const s = await w.newSession(); await c.rpc("transition_okr_session", w.presenter, s.id, "IN_PROGRESS", null, null, null);
     await note(c, w.presenter, s.id);
-    for (const u of [w.hr, w.finance, w.admin]) {
+    for (const u of [w.hr, w.finance]) {
       const codes = (await c.q<{ c: string }>("select unnest(actor_permission_codes($1)) c", [u])).map((r) => r.c).filter((x) => x.startsWith("session_"));
       expect(codes.filter((x) => x !== "session_notes.configure")).toEqual([]);
       await c.expectError("PERMISSION_DENIED", () => note(c, u, s.id));

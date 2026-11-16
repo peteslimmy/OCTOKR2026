@@ -47,6 +47,8 @@
     "retention.configure",
     "roles.request",
     "session_notes.configure",
+    "session_notes.view",
+    "session_notes.view_all",
     "strategy.annual_theme.create",
     "strategy.annual_theme.view",
     "strategy.change.approve",
