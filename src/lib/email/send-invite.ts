@@ -31,7 +31,8 @@ export async function sendInvitation(o: { actorId: string; userId: string; email
     }
   } catch (e) {
     outcome = "FAILED";
-    message = "The invitation email could not be sent. Pass the set-up link on yourself, or resend the invitation.";
+    const why = (e instanceof Error ? e.message : String(e)).replace(/\s+/g, " ").replace(/\b(re_|sk_|key_)[A-Za-z0-9_]{8,}/g, "[removed]").slice(0, 240);   // the provider's own reason, never a key
+    message = `The invitation email could not be sent (${why}). Pass the set-up link on yourself, or resend the invitation.`;
     console.error("invitation email failed", e instanceof Error ? e.message : e);
   }
   try { await admin.rpc("record_user_invitation", { p_actor: o.actorId, p_user: o.userId, p_outcome: outcome }); } catch (e) { console.error("invitation audit failed", e instanceof Error ? e.message : e); }
