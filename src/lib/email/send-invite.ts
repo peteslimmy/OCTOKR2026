@@ -26,7 +26,16 @@ export async function sendInvitation(o: { actorId: string; userId: string; email
     setupLink = `${appUrl}/auth/confirm?token_hash=${encodeURIComponent(hashed)}&type=recovery`;
     if (!mail.transport) { outcome = "NO_PROVIDER"; message = "No email provider is configured, so the invitation was not emailed. Pass the set-up link on yourself."; }
     else {
-      await mail.transport.send(composeInvitation({ to: o.email, firstName: o.firstName, setupUrl: setupLink, appUrl, invitedBy: o.invitedBy, brand: await emailBrand(appUrl) }));
+      const composed = composeInvitation({ to: o.email, firstName: o.firstName, setupUrl: setupLink, appUrl, invitedBy: o.invitedBy, brand: await emailBrand(appUrl) });
+      // providers cap how fast mail may be sent (Resend: about 2 a second); a refusal for speed is retried after a pause, so a bulk invitation run does not lose people
+      for (let attempt = 1; ; attempt++) {
+        try { await mail.transport.send(composed); break; }
+        catch (err) {
+          const text = err instanceof Error ? err.message : String(err);
+          if (attempt >= 4 || !/429|rate|too many|throttl|limit/i.test(text)) throw err;
+          await new Promise((r) => setTimeout(r, 700 * attempt));
+        }
+      }
       outcome = "SENT";
     }
   } catch (e) {

@@ -31,8 +31,9 @@ export const POST = api({ stepUp: true, body }, async ({ actor, body: b, correla
     }
     made.push({ userId: created.data.user.id, email: p.email, roles: p.roles });
     // each person is emailed their invitation; the link is also kept in the result so the administrator can pass it on if the email could not be sent
+    if (made.length > 1) await new Promise((r) => setTimeout(r, 600));          // stay under the provider's sending speed limit
     const inv = await sendInvitation({ actorId: actor.id, userId: created.data.user.id, email: p.email, firstName: emp.first_name, invitedBy: actor.name, fallbackAppUrl: new URL(req.url).origin, correlationId });
-    results.push({ row: p.row, email: p.email, created: true, message: null, setupLink: inv.setupLink, invitation: inv.outcome });
+    results.push({ row: p.row, email: p.email, created: true, message: null, setupLink: inv.setupLink, invitation: inv.outcome, ...(inv.message ? { message: inv.message } : {}) });
   }
   if (!results.length) throw fail("VALIDATION_ERROR", 422, "Nobody to create.");
   // a record of who this import created, so a Super Admin can roll it back inside the window (ADR-088)
