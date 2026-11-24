@@ -1,4 +1,4 @@
--- ADR-108: the 4COREPAL AI assistant was removed from the application (ADR-104); this removes what it left in the database.
+-- ADR-130: the 4COREPAL AI assistant was removed from the application (ADR-104); this removes what it left in the database.
 -- The scheduler stops calling the AI job runner, then the AI tables, functions, permissions and notification types are dropped.
 -- The minutes' own ai_drafted / ai_model columns are kept: minutes are immutable history and other records hash them.
 
