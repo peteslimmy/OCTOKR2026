@@ -53,6 +53,7 @@ const BLIND_2XX_OK = new Set([
   "/api/v1/weekly-reports/[id]/edit-session DELETE",
   "/api/v1/site/images/[slot] DELETE",
   "/api/v1/audit/verify POST",   // read-only integrity check of the audit chain; it changes nothing
+  "/api/v1/access-reviews POST",   // starts a review of who holds which access; it takes no input, and the Super Admin holds every permission (ADR-125)
 ]);
 
 const mutating = (m: string) => m !== "GET";

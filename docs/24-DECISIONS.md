@@ -1237,3 +1237,6 @@ Decided by the owner: the session notes are captured in Take notes (/notes), so 
 
 ## ADR-130 — The AI assistant's database objects are dropped
 After the assistant was removed from the application (ADR-104), migration `20261109000001` drops its 20 `ai_*` tables, about 53 functions, the `ai.*` permissions and the `AI_*` notification types, and stops the scheduler from calling the AI job runner. The `ai_drafted` and `ai_model` columns on session minutes stay, because minutes are immutable history. A backup of the owner's database was taken before the migration was applied.
+
+## ADR-131 — The configuration-change queue no longer returns a hidden Super Admin's id
+Found by the Super Admin shield API test: the queue (`read_config_changes`) hid a Super Admin's name but still returned their user id in `requested_by` and `decided_by`, and inside the saved snapshot of the setting in force (for example `created_by` of the penalty rate). Migration `20261111000001` withholds those ids from viewers who may not see that person (null in the two columns, a zero uuid inside the snapshots). The Super Admin's own view is unchanged. Several stale tests were updated to the rules decided since they were written (ADR-114, 117, 118, 119, 121, 122, 125).

@@ -105,14 +105,16 @@ describe("approved email domains", () => {
       const w = await world(c);
       const sa = await c.user(["SUPER_ADMIN"], w.bu, "sa");
       await c.expectError("PERMISSION_DENIED", () => c.rpc("save_allowed_domain", w.hr, "acme.org", true));
-      await c.expectError("VALIDATION_ERROR", () => c.rpc("save_allowed_domain", sa, "gmail.com", true));
+      // a public provider may be approved by the Super Admin when needed (ADR-119, amended); it is simply not approved here
       await c.expectError("VALIDATION_ERROR", () => c.rpc("save_allowed_domain", sa, "not a domain", true));
       await c.rpc("save_allowed_domain", sa, "Acme.org", true);
       expect((await c.q<{ ok: boolean }>("select email_domain_approved('Someone@ACME.org') ok"))[0].ok).toBe(true);
       expect((await c.q<{ ok: boolean }>("select email_domain_approved('someone@gmail.com') ok"))[0].ok).toBe(false);
       const auth = (await c.q<{ id: string }>("select id from users where id = $1", [w.hr]))[0].id;
       void auth;
-      await c.expectError("VALIDATION_ERROR", () => c.rpc("provision_user", sa, crypto.randomUUID(), "x@elsewhere.net", "X", "Y", w.bu, ["HR"]));
+      const adm = await c.user(["ADMIN"], w.bu, "adm");
+      // an Admin needs an approved company domain; the Super Admin does not (ADR-119)
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("provision_user", adm, crypto.randomUUID(), "x@elsewhere.net", "X", "Y", w.bu, ["HR"]));
       // a person on an approved domain can sign in; a gmail one cannot, unless they are the Super Admin
       await c.q("update users set email = 'a@acme.org' where id = $1", [w.hr]);
       expect((await c.q<{ ok: boolean }>("select login_domain_allowed($1) ok", [w.hr]))[0].ok).toBe(true);

@@ -62,7 +62,7 @@ const db = async <T = Record<string, unknown>>(sql: string, params: unknown[] = 
 const run = randomUUID().slice(0, 8);
 const mail = (n: string) => `import-${run}-${n}@example.test`;
 const P = "/api/v1/imports/employees";
-const row = (n: string, o: Record<string, string> = {}) => ({ email: mail(n), firstName: "Imp", lastName: "Orted", businessUnit: "HQ", status: "", ...o });
+const row = (n: string, o: Record<string, string> = {}) => ({ email: mail(n), firstName: "Imp", lastName: "Orted", businessUnit: "HQ", department: "", status: "", ...o });
 const sha = (c: string) => c.repeat(64);
 
 describe("employee import API", () => {
@@ -84,7 +84,7 @@ describe("employee import API", () => {
     const r = await admin.upload(`${P}/parse`, "people.csv", csv);
     expect(r.status).toBe(200);
     expect(r.json.data.headers).toEqual(["Work Email", "Given Name", "Surname", "BU Code"]);
-    expect(r.json.data.mapping).toEqual({ email: 0, firstName: 1, lastName: 2, businessUnit: 3, status: null });
+    expect(r.json.data.mapping).toEqual({ email: 0, firstName: 1, lastName: 2, businessUnit: 3, department: null, status: null });
     expect(r.json.data.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(r.json.data.rows).toEqual([[mail("p1"), "Pia", "Pine", "HQ"]]);
   });
@@ -100,7 +100,7 @@ describe("employee import API", () => {
     const r = await admin.upload(`${P}/parse`, "people.xlsx", bytes);
     expect(r.status).toBe(200);
     expect(r.json.data.rows[1][1]).toBe("=1+1");
-    const v = await admin.request("POST", `${P}/validate`, { rows: r.json.data.rows.map((x: string[]) => ({ email: x[0], firstName: x[1], lastName: x[2], businessUnit: x[3], status: "" })), policy: "SKIP_EXISTING" });
+    const v = await admin.request("POST", `${P}/validate`, { rows: r.json.data.rows.map((x: string[]) => ({ email: x[0], firstName: x[1], lastName: x[2], businessUnit: x[3], department: "", status: "" })), policy: "SKIP_EXISTING" });
     expect(v.status).toBe(200);
     expect(v.json.data.results[0].action).toBe("CREATE");
     expect(v.json.data.results[1].issues[0]).toMatchObject({ code: "INVALID_TEXT", severity: "ERROR" });
@@ -213,7 +213,7 @@ describe("Business Unit import API", () => {
     const v = await admin.request("POST", `${B}/validate`, { rows: [unit("a"), unit("a"), { ...unit("b"), code: "HQ" }, { ...unit("c"), code: "bad code" }], policy: "SKIP_EXISTING" });
     expect(v.status).toBe(200);
     expect(v.json.data.results.map((x: { action: string }) => x.action)).toEqual(["CREATE", "BLOCKED", "SKIP", "BLOCKED"]);
-    expect((await admin.request("POST", `${B}/validate`, { rows: [{ email: "a@b.co", firstName: "A", lastName: "B", businessUnit: "HQ", status: "" }], policy: "SKIP_EXISTING" })).status).toBe(422);   // employee fields are not accepted here
+    expect((await admin.request("POST", `${B}/validate`, { rows: [{ email: "a@b.co", firstName: "A", lastName: "B", businessUnit: "HQ", department: "", status: "" }], policy: "SKIP_EXISTING" })).status).toBe(422);   // employee fields are not accepted here
   });
 
   it("commits once, replays, and cannot reuse an employee import key or file", async () => {

@@ -30,7 +30,8 @@ describe("changing a unit between Business Unit and Department (ADR-114)", () =>
       expect(await row(c, w.bu)).toEqual(before);
       const audit = await c.q<{ reason: string; old_values: { unit_type: string }; new_values: { unit_type: string }; actor_user_id: string }>(
         "select reason, old_values, new_values, actor_user_id from audit_logs where action = 'BU_TYPE_CHANGED' and entity_id = $1 order by occurred_at, id", [w.bu]);
-      expect(audit.map((a) => [a.reason, a.old_values.unit_type, a.new_values.unit_type])).toEqual([["HR is a department", "BUSINESS_UNIT", "DEPARTMENT"], ["Now a full unit", "DEPARTMENT", "BUSINESS_UNIT"]]);
+      // both changes happen in one transaction and share a timestamp, so the order of the two rows is not asserted
+      expect(audit.map((a) => [a.reason, a.old_values.unit_type, a.new_values.unit_type]).sort()).toEqual([["HR is a department", "BUSINESS_UNIT", "DEPARTMENT"], ["Now a full unit", "DEPARTMENT", "BUSINESS_UNIT"]].sort());
       expect(audit.every((a) => a.actor_user_id === w.root)).toBe(true);
     });
   });

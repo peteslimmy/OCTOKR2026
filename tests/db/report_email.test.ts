@@ -34,8 +34,9 @@ describe("automated report emails (ADR-115)", () => {
       await save(c, w.admin, id, [w.r1], { name: "Renamed", sections: ["HEADLINES"] });
       const row = (await c.q<{ name: string; recipient_ids: string[]; sections: string[] }>("select name, recipient_ids, sections from report_email_schedules where id = $1", [id]))[0];
       expect(row).toEqual({ name: "Renamed", recipient_ids: [w.r1], sections: ["HEADLINES"] });
-      const audit = await c.q<{ action: string }>("select action from audit_logs where entity_id = $1 and action like 'REPORT_EMAIL_%' order by occurred_at, id", [id]);
-      expect(audit.map((a) => a.action)).toEqual(["REPORT_EMAIL_SCHEDULE_CREATED", "REPORT_EMAIL_SCHEDULE_CHANGED"]);
+      const audit = await c.q<{ action: string }>("select action from audit_logs where entity_id = $1 and action like 'REPORT_EMAIL_%'", [id]);
+      // both rows are written in one transaction and share a timestamp, so their order is not asserted
+      expect(audit.map((a) => a.action).sort()).toEqual(["REPORT_EMAIL_SCHEDULE_CHANGED", "REPORT_EMAIL_SCHEDULE_CREATED"]);
       await c.expectError("PERMISSION_DENIED", () => c.rpc("delete_report_email_schedule", w.lead, id));
       await c.rpc("delete_report_email_schedule", w.root, id);
       expect(await c.q("select 1 from report_email_schedules where id = $1", [id])).toHaveLength(0);

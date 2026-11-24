@@ -246,7 +246,8 @@ describe("email through an SMTP integration, end to end", () => {
     let transportName = ""; let found = false;
     for (let i = 0; i < 20 && !found; i++) {
       const jobs = await runJobs(); transportName = jobs.data.email.transport;
-      found = mails.some((m) => { const flat = m.replace(/=\r?\n/g, ""); return flat.includes(`Password changed ${marker}`) && flat.includes("https://okr.example.com/notifications"); });
+      // the email is scripted copy (ADR-117): its subject is fixed and its button uses the integration's own address
+      found = mails.some((m) => { const flat = m.replace(/=\r?\n/g, ""); return flat.includes("To: exec@4core.local") && flat.includes("Your 4Core Weekly OKR password was changed") && flat.includes("https://okr.example.com/"); });
     }
     expect(transportName).toMatch(/^smtp:127\.0\.0\.1/);
     expect(found).toBe(true);

@@ -66,13 +66,15 @@ describe("concurrent money movement", () => {
       errorOf(rpc(c2, "decide_disbursement_request", ids.fin2, b, true, null, "conc-d2")),
     ]);
     expect(results.filter((r) => r === null)).toHaveLength(1);
-    expect(results.filter((r) => r?.startsWith("INSUFFICIENT_FUNDS"))).toHaveLength(1);
+    expect(results.filter((r) => r?.startsWith("INSUFFICIENT_FUNDS") || r?.startsWith("DISBURSEMENT_FIFO"))).toHaveLength(1);   // the loser fails on funds, or on the queue when the older request is still open (ADR-125)
     const approved = (await admin.query("select count(*)::int n from disbursement_requests where status = 'APPROVED'")).rows[0].n;
     expect(approved).toBe(1);
     // release the approved one and confirm the fund is still non-negative
     const winner = (await admin.query("select id from disbursement_requests where status = 'APPROVED'")).rows[0].id;
     await rpc(admin, "record_disbursement", ids.fin2, winner, "CONC-BANK-1", "conc-disb-1");
     expect(await balance()).toBe(20000);
+    // the request that lost is still waiting; treat it so it does not hold up the queue for the next tests
+    for (const row of (await admin.query("select id from disbursement_requests where status in ('SUBMITTED','UNDER_REVIEW')")).rows) await rpc(admin, "decide_disbursement_request", ids.fin1, row.id, false, "Not enough in the fund", `conc-rej-${row.id}`);
   });
 
   it("many simultaneous releases of the same approved request post exactly one DEBIT", async () => {

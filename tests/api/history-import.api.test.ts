@@ -64,11 +64,11 @@ const HEADER = "Year,Week,BU/Depart,SubKR Category,Goal,Task 1,Status 1,Task 2,S
 const P = "/api/v1/history-imports";
 
 describe("historical import API", () => {
-  it("requires sign-in, and the history.import permission held only by the Super Admin tier", async () => {
+  it("requires sign-in, and the history.import permission held by the Super Admin and the Admin (ADR-122)", async () => {
     const anon = new Session();
     expect((await anon.request("GET", P)).status).toBe(401);
     expect((await anon.upload(P, "a.csv", `${HEADER}\n`)).status).toBe(401);
-    for (const who of ["admin@4core.local", "hr@4core.local", "lead.eng@4core.local"]) {
+    for (const who of ["hr@4core.local", "lead.eng@4core.local"]) {
       const s = await as(who);
       expect((await s.request("GET", P)).status, who).toBe(403);
       expect((await s.upload(P, "a.csv", `${HEADER}\n2025,3,HQ,1.1,G,T,Done,,,,\n`)).status, who).toBe(403);

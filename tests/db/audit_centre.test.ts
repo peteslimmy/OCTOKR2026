@@ -200,23 +200,28 @@ describe("detection rules and alerts", () => {
     });
   });
 
+  const exportAlerts = async (c: { q: <T>(sql: string) => Promise<T[]> }) => Number((await c.q<{ n: number }>("select count(*)::int n from audit_alerts where rule_code = 'UNUSUAL_EXPORTS'"))[0].n);
+
   it("honours a changed threshold and a disabled rule; configuring rules needs its own permission and a reason, and is audited", async () => {
     await withTx(async (c) => {
       const bu = await c.bu("AC8");
       const sa = await c.user(["SUPER_ADMIN"], bu, "sa");
       const admin = await c.user(["ADMIN"], bu, "admin");
       for (let i = 0; i < 3; i++) await c.rpc("write_audit", sa, "REPORT_EXPORTED", "report", String(i));
-      expect(await c.rpc<number>("audit_run_detection")).toBe(0);                       // threshold is 5
+      await c.rpc<number>("audit_run_detection");
+      expect(await exportAlerts(c)).toBe(0);   // threshold is 5 (other rules, such as Super Admin off-hours activity, depend on the time of day and are not asserted here)
       await c.expectError("PERMISSION_DENIED", () => c.rpc("audit_rule_configure", admin, "UNUSUAL_EXPORTS", null, 3, null, null, "tighten"));
       await c.expectError("REASON_REQUIRED", () => c.rpc("audit_rule_configure", sa, "UNUSUAL_EXPORTS", null, 3, null, null, " "));
       await c.rpc("audit_rule_configure", sa, "UNUSUAL_EXPORTS", null, 3, null, null, "tighten");
       expect(await last(c)).toMatchObject({ action: "AUDIT_RULE_CHANGED", old_values: { threshold: 5 }, new_values: { threshold: 3 } });
-      expect(await c.rpc<number>("audit_run_detection")).toBe(1);
+      await c.rpc<number>("audit_run_detection");
+      expect(await exportAlerts(c)).toBe(1);
       await c.rpc("audit_rule_configure", sa, "UNUSUAL_EXPORTS", false, null, null, null, "off for test");
       await c.rpc("write_audit", sa, "REPORT_EXPORTED", "report", "9");
       await c.rpc("write_audit", sa, "REPORT_EXPORTED", "report", "10");
       await c.rpc("write_audit", sa, "REPORT_EXPORTED", "report", "11");
-      expect(await c.rpc<number>("audit_run_detection")).toBe(0);
+      await c.rpc<number>("audit_run_detection");
+      expect(await exportAlerts(c)).toBe(1);   // the disabled rule opened nothing new
     });
   });
 

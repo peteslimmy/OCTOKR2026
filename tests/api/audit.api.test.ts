@@ -63,7 +63,7 @@ describe("audit log endpoints", () => {
   });
 
   it("pages newest first without repeating or skipping, and filters", async () => {
-    const admin = await as("admin@4core.local");
+    const admin = await as("superadmin@4core.local");   // the detail tier (ADR-121); the Admin summary tier is covered in audit-tier.api.test.ts
     const first = (await admin.request("GET", "/api/v1/audit?limit=5")).json.data;
     expect(first.rows).toHaveLength(5);
     expect(first.nextCursor).toBe(String(first.rows[4].seq));
@@ -87,7 +87,7 @@ describe("audit log endpoints", () => {
   });
 
   it("exports a CSV with the same filters and records that it did", async () => {
-    const admin = await as("admin@4core.local");
+    const admin = await as("superadmin@4core.local");   // the detail tier (ADR-121); the Admin summary tier is covered in audit-tier.api.test.ts
     const res = await admin.raw("/api/v1/audit/export?action=USER_");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/csv");
@@ -105,7 +105,7 @@ describe("audit log endpoints", () => {
   });
 
   it("exports a PDF, refuses other formats, and records the export with its format", async () => {
-    const admin = await as("admin@4core.local");
+    const admin = await as("superadmin@4core.local");   // the detail tier (ADR-121); the Admin summary tier is covered in audit-tier.api.test.ts
     const res = await admin.raw("/api/v1/audit/export?format=pdf&action=USER_");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("application/pdf");
@@ -116,7 +116,7 @@ describe("audit log endpoints", () => {
   });
 
   it("filters on the richer fields and carries the event model", async () => {
-    const admin = await as("admin@4core.local");
+    const admin = await as("superadmin@4core.local");   // the detail tier (ADR-121); the Admin summary tier is covered in audit-tier.api.test.ts
     const rows = (await admin.request("GET", "/api/v1/audit?category=AUTHENTICATION&limit=20")).json.data.rows as Record<string, unknown>[];
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((r) => r.event_category === "AUTHENTICATION")).toBe(true);
@@ -133,7 +133,7 @@ describe("audit log endpoints", () => {
   });
 
   it("records the client address the proxy saw, not the app server's", async () => {
-    const admin = await as("admin@4core.local");
+    const admin = await as("superadmin@4core.local");   // the detail tier (ADR-121); the Admin summary tier is covered in audit-tier.api.test.ts
     const s = new Session();
     const ip = (s as unknown as { ip: string }).ip;
     await s.request("POST", "/api/v1/auth/login", { email: `nobody-${Date.now()}@4core.local`, password: "wrong-password-xyz" });
@@ -146,13 +146,15 @@ describe("audit log endpoints", () => {
 
   it("the indicator, rule and verification endpoints need their own permissions", async () => {
     const admin = await as("admin@4core.local");
+    const sa = await as("superadmin@4core.local");   // the detail tier (ADR-121)
     const lead = await as("lead.eng@4core.local");
     expect((await lead.request("POST", "/api/v1/audit/verify")).status).toBe(403);
     expect((await lead.request("POST", "/api/v1/audit/alerts/00000000-0000-0000-0000-000000000000/status", { status: "UNDER_REVIEW" })).status).toBe(403);
     expect((await admin.request("POST", "/api/v1/audit/rules/UNUSUAL_EXPORTS", { threshold: 3, reason: "test" })).status).toBe(403);   // Admin may review indicators but not change rules
-    const v = await admin.request("POST", "/api/v1/audit/verify");
+    expect((await admin.request("POST", "/api/v1/audit/verify")).status).toBe(403);   // verifying the chain is a detail-tier act
+    const v = await sa.request("POST", "/api/v1/audit/verify");
     expect(v.status).toBe(200);
     expect(v.json.data.ok).toBe(true);
-    expect((await admin.request("POST", "/api/v1/audit/alerts/00000000-0000-0000-0000-000000000000/status", { status: "BOGUS" })).status).toBe(422);
+    expect((await sa.request("POST", "/api/v1/audit/alerts/00000000-0000-0000-0000-000000000000/status", { status: "BOGUS" })).status).toBe(422);
   });
 });

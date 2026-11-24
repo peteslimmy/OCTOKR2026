@@ -13,10 +13,10 @@ const get = async (email: string, route: string) => (await loginAs(email)).reque
 const rows = (r: { json: { data?: unknown } }) => (Array.isArray(r.json.data) ? (r.json.data as unknown[]).length : -1);
 
 describe("read routes return only what each role may see", () => {
-  it("the history-import list works for the Super Admin and is refused to everyone else (it refused everyone before the fix)", async () => {
+  it("the history-import list works for the Super Admin and the Admin (ADR-122) and is refused to everyone else (it refused everyone before the fix)", async () => {
     for (const e of emails) {
       const r = await get(e, "/api/v1/history-imports");
-      if (ROLE_ACCOUNTS[e].includes("SUPER_ADMIN")) expect(r.status, e).toBe(200);
+      if (ROLE_ACCOUNTS[e].includes("SUPER_ADMIN") || ROLE_ACCOUNTS[e].includes("ADMIN")) expect(r.status, e).toBe(200);
       else expect(r.status, e).toBe(403);
     }
   });
@@ -41,7 +41,10 @@ describe("read routes return only what each role may see", () => {
     const counts: Record<string, number> = Object.fromEntries(await Promise.all(emails.map(async (e) => [e, rows(await get(e, "/api/v1/employees"))])));
     const everyone = Math.max(...Object.values(counts));
     expect(everyone).toBeGreaterThan(2);
-    for (const e of asRoles("SUPER_ADMIN", "ADMIN", "HR", "PRESENTER", "DIRECTOR", "EXECUTIVE")) expect(counts[e], e).toBe(everyone);
+    // the cross-unit roles all see the same people; a Super Admin account is invisible to everyone but a Super Admin (ADR-118), so they see that many fewer
+    for (const e of asRoles("SUPER_ADMIN")) expect(counts[e], e).toBe(everyone);
+    const others = asRoles("ADMIN", "HR", "PRESENTER", "DIRECTOR", "EXECUTIVE");
+    for (const e of others) { expect(counts[e], e).toBe(counts[others[0]]); expect(counts[e], e).toBeLessThanOrEqual(everyone); }
     // the two accounts that hold no cross-unit permission see strictly less
     expect(counts["lead.eng@4core.local"]).toBeLessThan(everyone);
     expect(counts["finance@4core.local"]).toBeLessThan(everyone);
