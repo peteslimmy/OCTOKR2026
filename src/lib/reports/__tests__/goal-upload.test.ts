@@ -5,6 +5,12 @@ const subs = new Map([["KR1.1", "sub-1"], ["KR2.1", "sub-2"]]);
 const H = ["Goal", "Sub-KR", "Description", "Task"];
 
 describe("parseGoalUpload", () => {
+  it("drops a list number typed at the start of a task, because screens number tasks themselves", () => {
+    const { goals, errors } = parseGoalUpload(H, [["Improve the portal", "", "", "1. Optimize taxpayer self-service portal"], ["", "", "", "2) Audit logs"], ["", "", "", "2026 targets"]], subs);
+    expect(errors).toEqual([]);
+    expect(goals[0].tasks.map((t) => t.description)).toEqual(["Optimize taxpayer self-service portal", "Audit logs", "2026 targets"]);
+  });
+
   it("groups rows into goals: a Goal starts one, a blank Goal continues it", () => {
     const { goals, errors } = parseGoalUpload(H, [
       ["Close 5 calls by Friday", "KR2.1", "five partners", "Schedule calls"],

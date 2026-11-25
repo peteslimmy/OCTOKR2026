@@ -129,7 +129,7 @@ export function parseHistoryRows(headers: string[], rows: string[][], units: Uni
       if (!desc) { bad("TASK_MISSING", t.task, "", `Status ${n + 1} has a value but Task ${n + 1} is empty.`, `Type the task in "${col(t.task)}", or clear "${col(t.status)}" if there is no Task ${n + 1}.`); continue; }
       const sv = parseStatus(st);
       if (!sv) { bad("STATUS_INVALID", t.status, st, `Status ${n + 1} must be Done or Not Done (found "${st}").`, `Write exactly Done or Not Done in "${col(t.status)}". Also accepted: Completed, Complete, Yes (Done) and Incomplete, Not Completed, No (Not Done). ${st ? "" : "The cell is empty."}`.trim()); continue; }
-      tasks.push({ d: desc, s: sv });
+      tasks.push({ d: stripLeadingNumber(desc), s: sv });
     }
     if (!tasks.length && here.length === before) bad("NO_TASK", L.tasks[0].task, "", "The goal has no task.", `Put at least one task in "${col(L.tasks[0].task)}" with its status in "${col(L.tasks[0].status)}".`);
     if (here.length) { problems.push(...here); return; }
@@ -138,3 +138,5 @@ export function parseHistoryRows(headers: string[], rows: string[][], units: Uni
   if (!out.length && !problems.length) return { error: "The sheet has no data rows." };
   return { rows: out, problems, unknownUnits: [...unknown] };
 }
+
+import { stripLeadingNumber } from "@/lib/domain/task-text";

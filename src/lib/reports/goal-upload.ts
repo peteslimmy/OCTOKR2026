@@ -57,7 +57,7 @@ export function parseGoalUpload(headers: string[], rows: string[][], subKrByCode
     }
     if (task) {
       if (task.length > GOAL_UPLOAD_LIMITS.task) errors.push(`Row ${line}: the task is longer than ${GOAL_UPLOAD_LIMITS.task} characters.`);
-      current!.tasks.push({ description: task });
+      current!.tasks.push({ description: stripLeadingNumber(task) });
     }
   });
 
@@ -88,3 +88,5 @@ export function goalTemplateCsv(): string {
   ];
   return rows.map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";
 }
+
+import { stripLeadingNumber } from "@/lib/domain/task-text";

@@ -16,6 +16,7 @@ import type { GoalView, ReportView } from "@/lib/data";
 import { formatWeekLabel } from "@/lib/domain/week-label";
 import { formatPercent, formatFraction } from "@/lib/format";
 import { DiscardReportButton } from "@/app/(app)/admin/admin-actions";
+import { stripLeadingNumber } from "@/lib/domain/task-text";
 
 // Ordering guard for the edit lease: React may unmount and remount the editor in quick succession (navigation, hot reload, strict mode).
 let pendingRelease: Promise<void> = Promise.resolve();
@@ -285,7 +286,7 @@ function GoalCard({ goal, number, phase, canMutate, exec, integrity, version, on
         <ul className="divide-y divide-line rounded-lg border border-line">
           {goal.tasks.map((t, ti) => (
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-              <span className="min-w-0 flex-1"><span className="mr-2 font-medium text-muted">{number}.{ti + 1}</span>{t.description}</span>
+              <span className="min-w-0 flex-1"><span className="mr-2 font-medium text-muted">{number}.{ti + 1}</span>{stripLeadingNumber(t.description)}</span>
               {exec && t.status === "UNDEFINED" ? <UndefinedPicker taskId={t.id} number={`${number}.${ti + 1}`} /> : <TaskStatusBadge status={t.status} />}
               {canMutate ? (
                 <span className="flex gap-1">

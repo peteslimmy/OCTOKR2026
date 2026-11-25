@@ -11,6 +11,7 @@ import { SmartStrip } from "@/components/smart-strip";
 import { RichText } from "@/components/ui/rich-text";
 import type { ReportView } from "@/lib/data";
 import { formatWeekLabel } from "@/lib/domain/week-label";
+import { stripLeadingNumber } from "@/lib/domain/task-text";
 
 
 export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, lastWeek, intelligence }: { view: ReportView; canCorrect: boolean; prevHref: string; nextHref: string; buName: string; lastWeek?: ReactNode; intelligence?: ReactNode }) {
@@ -110,7 +111,7 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
                 <ul className="divide-y divide-line self-center">
                   {g.tasks.map((t, ti) => (
                     <li key={t.id} className="flex h-11 items-center justify-between gap-3 px-4 text-sm leading-tight">
-                      <span className="line-clamp-2" title={t.description}><span className="mr-2 font-mono text-xs text-muted tabular-nums">{gi + 1}.{ti + 1}</span>{t.description}</span>
+                      <span className="line-clamp-2" title={stripLeadingNumber(t.description)}><span className="mr-2 font-mono text-xs text-muted tabular-nums">{gi + 1}.{ti + 1}</span>{stripLeadingNumber(t.description)}</span>
                       {correctable && t.status !== "UNDEFINED" ? (
                         <button type="button" onClick={() => setIc(t)} className="shrink-0 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" title="Click to correct this task's status" aria-label={`Correct status of task ${gi + 1}.${ti + 1}`}><TaskStatusBadge status={t.status} /></button>
                       ) : <span className="shrink-0"><TaskStatusBadge status={t.status} /></span>}

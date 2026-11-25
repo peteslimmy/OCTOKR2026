@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, ApiFailure, Modal } from "@/components/ui/client";
 import { Badge, Button } from "@/components/ui/primitives";
 import { formatWeekLabel } from "@/lib/domain/week-label";
+import { stripLeadingNumber } from "@/lib/domain/task-text";
 
 interface Hint {
   availability: "OK" | "NO_PREVIOUS_WEEK" | "HOLIDAY" | "NO_REPORT";
@@ -86,7 +87,7 @@ export function LastWeekHint({ weekId, buId, buName }: { weekId: string; buId: s
                     <tbody>
                       {data.tasks.map((t) => (
                         <tr key={t.id} className="border-t border-line align-top">
-                          <th scope="row" className="px-3 py-2 font-medium">{t.description}</th>
+                          <th scope="row" className="px-3 py-2 font-medium">{stripLeadingNumber(t.description)}</th>
                           <td className="px-3 py-2 text-muted">{t.goal_title}{t.goal_type === "STRETCH" ? " (stretch)" : ""}</td>
                           <td className="px-3 py-2"><Badge tone="notdone">Not Done</Badge></td>
                         </tr>

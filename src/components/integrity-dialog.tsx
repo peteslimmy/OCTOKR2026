@@ -5,6 +5,7 @@ import { ApiFailure, apiRequest, Modal, useAction } from "@/components/ui/client
 import { Banner, Button, Textarea, Field } from "@/components/ui/primitives";
 import { TaskStatusBadge } from "@/components/status";
 import { formatPercent, formatFraction } from "@/lib/format";
+import { stripLeadingNumber } from "@/lib/domain/task-text";
 
 interface Preview {
   task_status: string; target_status: string; total_goals: number; done_goals_before: number; done_goals_after: number;
@@ -41,7 +42,7 @@ export function IntegrityDialog({ task, open, onOpenChange }: {
       description="Every correction is recorded with your reason and cannot be silently changed. SuperAdmin, Admin and Presenter use this same workflow.">
       <div className="space-y-4 text-sm">
         <div className="rounded-lg bg-surface p-3">
-          <p className="font-medium">{task.description}</p>
+          <p className="font-medium">{stripLeadingNumber(task.description)}</p>
           <p className="mt-2 flex items-center gap-2">Current <TaskStatusBadge status={task.status} /> → proposed <TaskStatusBadge status={target} /></p>
         </div>
         {loadErr ? <Banner tone="critical" title="Cannot prepare this correction">{loadErr}</Banner> : null}
