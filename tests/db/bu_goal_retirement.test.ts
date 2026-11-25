@@ -86,7 +86,7 @@ describe("no direct retirement", () => {
     await c.expectError("BU_GOAL_RETIRE_REQUIRES_APPROVAL", () => c.rpc("save_bu_goal", w.finLead, null, w.fin, w.q, "Born retired", "RETIRED"));
     expect(await w.status(g)).toBe("ACTIVE");
     await c.rpc("lock_bu_goals", w.admin, w.q, null, null);
-    await c.expectError("VALIDATION_ERROR", () => c.rpc("request_bu_goal_change", w.finLead, w.fin, w.q, "RETIRE", g, null, "Dropped"));
+    await c.expectError("VALIDATION_ERROR", () => c.rpc("request_bu_goal_change", w.finLead, w.fin, w.q, "RETIRE", g, null, "Dropped", w.exec));
     expect(await w.status(g)).toBe("ACTIVE");
   }));
 
@@ -96,9 +96,12 @@ describe("no direct retirement", () => {
     await c.rpc("lock_bu_goals", w.admin, w.q, null, null);
     // a request raised before the workflow existed
     const old = (await c.q<{ id: string }>("insert into bu_goal_change_requests (business_unit_id, quarter_id, kind, bu_goal_id, reason, requested_by) values ($1, $2, 'RETIRE', $3, 'old', $4) returning id", [w.fin, w.q, g, w.finLead]))[0].id;
-    await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("decide_bu_goal_change", w.exec, old, true, null));
+    
+    // a request raised before the workflow has no executive named, so only the Super Admin decides it (ADR-135)
+    await c.expectError("PERMISSION_DENIED", () => c.rpc("decide_bu_goal_change", w.exec, old, true, null));
+    await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("decide_bu_goal_change", w.sa, old, true, null));
     expect(await w.status(g)).toBe("ACTIVE");
-    await c.rpc("decide_bu_goal_change", w.exec, old, false, "Use the retirement request");
+    await c.rpc("decide_bu_goal_change", w.sa, old, false, "Use the retirement request");
   }));
 });
 

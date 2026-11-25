@@ -1,13 +1,14 @@
 "use client";
 
 import { Lock, LockOpen } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiRequest, Modal, useAction } from "@/components/ui/client";
-import { Badge, Button, Field, Textarea } from "@/components/ui/primitives";
+import { Badge, Button, Field, NativeSelect, Textarea } from "@/components/ui/primitives";
 import { wat } from "@/components/status";
 
 export interface ChangeRequest { id: string; kind: "ADD" | "RENAME" | "RETIRE" | "RESTORE"; status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN"; title: string | null; goal_title: string | null; reason: string; unit: string | null;
-  requested_at: string; requester: string | null; decided_at: string | null; decider: string | null; decision_reason: string | null; mine: boolean }
+  requested_at: string; requester: string | null; decided_at: string | null; decider: string | null; decision_reason: string | null; mine: boolean;
+  executive?: string | null; can_decide?: boolean }
 
 const KIND: Record<ChangeRequest["kind"], string> = { ADD: "Add a goal", RENAME: "Rename a goal", RETIRE: "Retire a goal", RESTORE: "Restore a goal" };
 const TONE = { PENDING: "warn", APPROVED: "done", REJECTED: "notdone", WITHDRAWN: "locked" } as const;
@@ -45,25 +46,37 @@ export function RequestChangeButton({ quarterId, businessUnitId, kind, goalId, c
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(currentTitle ?? "");
   const [reason, setReason] = useState("");
+  const [executiveId, setExecutiveId] = useState("");
+  const [executives, setExecutives] = useState<{ id: string; name: string }[] | null>(null);
   const needsTitle = kind === "ADD" || kind === "RENAME";
+  useEffect(() => {
+    if (!open || executives) return;
+    apiRequest<{ id: string; name: string }[]>("GET", "bu-goals/retirement-executives").then(setExecutives, () => setExecutives([]));
+  }, [open, executives]);
   return (
     <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>{label}</Button>
       <Modal open={open} onOpenChange={setOpen} title={`${KIND[kind]}${currentTitle && kind !== "ADD" ? `: ${currentTitle}` : ""}`}
-        description="These goals are locked. An Executive, Admin or HR decides this request; the change only happens if it is approved.">
+        description="These goals are locked. Only the Executive you choose can approve this change, and nothing changes unless they do.">
         <div className="space-y-3">
           {needsTitle ? <Field id={`rc-title-${kind}-${goalId ?? "new"}`} label={kind === "ADD" ? "The new goal" : "The new wording"}><Textarea value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} required /></Field> : null}
+          <Field id={`rc-exec-${kind}-${goalId ?? "new"}`} label="Executive who decides (required)" hint={executives && executives.length === 0 ? "No executive is available to choose. Ask an Admin." : undefined}>
+            <NativeSelect value={executiveId} onChange={(e) => setExecutiveId(e.target.value)} required>
+              <option value="">{executives ? "Choose an executive…" : "Loading…"}</option>
+              {(executives ?? []).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </NativeSelect>
+          </Field>
           <Field id={`rc-reason-${kind}-${goalId ?? "new"}`} label="Why is this change needed? (required)"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
           <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button disabled={pending || !reason.trim() || (needsTitle && !title.trim())}
-              onClick={async () => { const ok = await run(() => apiRequest("POST", "bu-goals/change-requests", { quarterId, businessUnitId, kind, goalId, title: needsTitle ? title : undefined, reason }), { success: "Request sent for approval." }); if (ok) { setOpen(false); setReason(""); } }}>Send request</Button></div>
+            <Button disabled={pending || !reason.trim() || !executiveId || (needsTitle && !title.trim())}
+              onClick={async () => { const ok = await run(() => apiRequest("POST", "bu-goals/change-requests", { quarterId, businessUnitId, kind, goalId, title: needsTitle ? title : undefined, reason, executiveId }), { success: "Request sent for approval." }); if (ok) { setOpen(false); setReason(""); } }}>Send request</Button></div>
         </div>
       </Modal>
     </>
   );
 }
 
-/** The change requests for the quarter. Approvers (Executive, Admin, HR) approve or reject; the person who asked can withdraw a pending one. */
+/** The change requests for the quarter. Only the executive the request names (and the Super Admin) can approve or reject; the person who asked can withdraw a pending one. */
 export function ChangeRequestList({ requests, canDecide }: { requests: ChangeRequest[]; canDecide: boolean }) {
   const { run, pending } = useAction();
   const [rejecting, setRejecting] = useState<string | null>(null);
@@ -78,11 +91,11 @@ export function ChangeRequestList({ requests, canDecide }: { requests: ChangeReq
             <span className="font-medium">{KIND[r.kind]}</span>{r.unit ? <span className="text-muted">· {r.unit}</span> : null}
           </div>
           <p>{r.kind === "ADD" || r.kind === "RENAME" ? <>{r.goal_title && r.kind === "RENAME" ? <><span className="text-muted line-through">{r.goal_title}</span> → </> : null}<strong className="font-medium">{r.title}</strong></> : <strong className="font-medium">{r.goal_title}</strong>}</p>
-          <p className="text-muted">Why: {r.reason} · {r.requester ?? "Someone"} · {wat(r.requested_at)}</p>
+          <p className="text-muted">Why: {r.reason} · {r.requester ?? "Someone"} · {wat(r.requested_at)}{r.executive ? ` · to be decided by ${r.executive}` : ""}</p>
           {r.status !== "PENDING" && r.decision_reason ? <p className="text-muted">Decision: {r.decision_reason}{r.decider ? ` · ${r.decider}` : ""}</p> : null}
           {r.status === "PENDING" ? (
             <div className="flex flex-wrap gap-2">
-              {canDecide && !r.mine ? <>
+              {(r.can_decide ?? (canDecide && !r.mine)) ? <>
                 <Button size="sm" disabled={pending} onClick={() => run(() => apiRequest("POST", `bu-goals/change-requests/${r.id}/decide`, { approve: true }), { success: "Approved. The change is in place." })}>Approve</Button>
                 <Button size="sm" variant="secondary" onClick={() => { setRejecting(r.id); setReason(""); }}>Reject</Button></> : null}
               {r.mine ? <Button size="sm" variant="ghost" disabled={pending} onClick={() => run(() => apiRequest("POST", `bu-goals/change-requests/${r.id}/withdraw`), { success: "Request withdrawn." })}>Withdraw</Button> : null}
