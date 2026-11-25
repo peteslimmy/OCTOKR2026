@@ -101,7 +101,6 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
                   <div className="mt-auto space-y-1 border-t border-line pt-2">
                     {g.sub_key_result ? (
                       <>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{g.sub_key_result.kr_code} {g.sub_key_result.kr_title} →</p>
                         <p className="inline-block rounded-md border border-line bg-panel px-2 py-0.5 text-xs">{g.sub_key_result.code} {g.sub_key_result.title}</p>
                       </>
                     ) : <p className="text-xs text-muted">Stretch goal — no Sub-KR</p>}
