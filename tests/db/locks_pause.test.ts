@@ -148,3 +148,44 @@ describe("pausing the locks for the whole organisation", () => {
     });
   });
 });
+
+describe("while the locks are paused the report is fully open (owner, 25 November 2026)", () => {
+  it("the BU Lead edits goals and tasks and sets and changes every task's status freely, even on a draft report; when the clock returns the one-way rule and the final lock apply again", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const g = await draftGoal(c, w.lead, w.wk, w.strat.subKrIds[0], ["task one", "task two"], "Goal one by Friday");
+      const tasks = await c.q<{ id: string }>("select t.id from tasks t join smart_goals s on s.id = t.smart_goal_id where s.weekly_report_id = $1 order by t.position", [g.reportId]);
+      const [t1, t2] = [tasks[0].id, tasks[1].id];
+      const status = async (id: string) => (await c.q<{ status: string }>("select status from tasks where id = $1", [id]))[0].status;
+
+      // not paused: a draft report in an open week cannot have its statuses set (they are set after the content lock)
+      await c.expectError("EXECUTION_NOT_OPEN", () => c.rpc("execute_task", w.lead, t1, "DONE"));
+
+      await setPause(c, w.sa, true);
+      // paused: any status in any direction, on a report that was never submitted
+      await c.rpc("execute_task", w.lead, t1, "DONE");
+      await c.rpc("execute_task", w.lead, t1, "NOT_DONE");
+      await c.rpc("execute_task", w.lead, t1, "DONE");
+      expect(await status(t1)).toBe("DONE");
+      expect(await c.rpc<{ unchanged?: boolean }>("execute_task", w.lead, t1, "DONE")).toMatchObject({ unchanged: true });     // the same status again changes nothing
+      const history = await c.q<{ from_status: string; to_status: string }>("select from_status, to_status from task_status_history where task_id = $1", [t1]);
+      expect(history.map((h) => `${h.from_status}>${h.to_status}`).sort()).toEqual(["DONE>NOT_DONE", "NOT_DONE>DONE", "UNDEFINED>DONE"]);    // the real previous status is kept
+      // the content is open too: another goal can be added while paused
+      const g2 = await draftGoal(c, w.lead, w.wk, w.strat.subKrIds[0], ["task three"], "A second goal added during the pause");
+      expect(g2.goalId).toBeTruthy();
+
+      // the clock returns: the content lock applies, and a status already set can no longer be flipped (Undefined to Done or Not done only)
+      await setPause(c, w.sa, false, "The corrections are finished");
+      await c.setNow(W1.afterContentLock);
+      await c.rpc("run_scheduled_jobs");
+      expect(await phase(c, w.wk)).toBe("CONTENT_LOCKED");
+      await c.expectError("INVALID_STATE_TRANSITION", () => c.rpc("execute_task", w.lead, t1, "NOT_DONE"));
+      await c.rpc("execute_task", w.lead, t2, "DONE");                                                                      // an Undefined one can still be settled once
+      // at the final lock whatever is still Undefined becomes Not done
+      await c.setNow(W1.finalLock);
+      await c.rpc("run_scheduled_jobs");
+      const left = await c.q<{ status: string }>("select t.status from tasks t join smart_goals s on s.id = t.smart_goal_id where s.weekly_report_id = $1 and t.deleted_at is null", [g.reportId]);
+      expect(left.every((x) => x.status !== "UNDEFINED")).toBe(true);
+    });
+  });
+});

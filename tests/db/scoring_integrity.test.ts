@@ -294,14 +294,14 @@ describe("quarterly score (fixed denominator, versions)", () => {
 });
 
 describe("a week held open by an administrator (locks suspended)", () => {
-  it("lets the BU Lead set undefined tasks and the Presenter toggle Done <-> Not done once the report is submitted, and not before", async () => {
+  it("lets the BU Lead set and change task statuses, submitted or not, and the Presenter toggle Done <-> Not done as a governed correction, while the locks are suspended", async () => {
     await withTx(async (c) => {
       const w = await world(c);
       const first = await draftGoal(c, w.leadA, w.wk, w.strat.subKrIds[0], ["a-1", "a-2"], "Goal one by Friday");
       const [t1, t2] = (await c.q<{ id: string }>("select id from tasks where smart_goal_id = $1 order by position", [first.goalId])).map((r) => r.id);
       await c.q("update reporting_weeks set locks_suspended_at = app_now(), locks_suspended_by = $2, locks_suspended_reason = 'test' where id = $1", [w.wk, w.sa]);
-      // not submitted yet: statuses stay closed
-      await c.expectError("EXECUTION_NOT_OPEN", () => c.rpc("execute_task", w.leadA, t1, "DONE"));
+      // locks suspended: the week is open for statuses even before the report is submitted (owner, 25 November 2026)
+      expect((await c.asUser(w.leadA, () => c.rpc<{ status_changes_open: boolean }>("read_report_view", first.reportId))).status_changes_open).toBe(true);
       await c.rpc("submit_weekly_report", w.leadA, first.reportId, null, null);
       expect((await c.asUser(w.leadA, () => c.rpc<{ phase: string; status_changes_open: boolean }>("read_report_view", first.reportId))).status_changes_open).toBe(true);
       // BU Lead: undefined -> done / not done

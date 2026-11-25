@@ -108,6 +108,7 @@ export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intell
         <p className="text-xs text-muted">Content locks {wat(week.content_lock_at)} · Final lock {wat(week.final_lock_at)}</p>
 
         {holiday ? <Banner tone="info" title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No report is due for this week.</Banner> : null}
+        {view.status_changes_open && !holiday ? <Banner tone="info" title="The locks are paused for this week">You can edit goals and tasks and set or change every task&apos;s status (Done, Not done) until the pause ends. Then the content lock and the final lock apply again; at the final lock a task still Undefined becomes Not done.</Banner> : null}
         {late ? <Banner tone="locked" title="Late report — authorised exception.">{view.late_exception?.reason ? `Reason: ${view.late_exception.reason}. ` : ""}Add your goals and tasks, set every task to Done or Not done, then submit. It is reviewed before the quarterly score is amended; the original zero and earlier scores stay on record.</Banner> : null}
         {phase === "CONTENT_LOCKED" ? <Banner tone="locked" title="Content Locked — goal and task definitions can no longer be changed.">{exec ? "You can still set each task to Done or Not done until final lock. Tasks left undefined become Not done at final lock." : null}</Banner> : null}
         {phase === "FINAL_LOCKED" ? <Banner tone="locked" title="Report Finalized — historical record is immutable.">Scores and compliance are final{view.snapshot && view.snapshot.version > 1 ? ` (score version ${view.snapshot.version} after an integrity correction)` : ""}.</Banner> : null}
@@ -144,7 +145,7 @@ export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intell
             {view.goals.length === 0 ? (
               <Card><EmptyState title="No weekly goals yet">Add at least one SMART Goal before submitting your report.</EmptyState></Card>
             ) : view.goals.map((g, gi) => (
-              <GoalCard key={g.id} goal={g} number={gi + 1} phase={phase} canMutate={canMutate} exec={exec} integrity={caps.integrity && !view.quarter_locked && ((phase !== "OPEN" && phase !== "NOT_OPEN" && phase !== "LATE_OPEN") || !!view.status_changes_open)}
+              <GoalCard key={g.id} goal={g} number={gi + 1} phase={phase} canMutate={canMutate} exec={exec} paused={!!view.status_changes_open} integrity={caps.integrity && !view.quarter_locked && ((phase !== "OPEN" && phase !== "NOT_OPEN" && phase !== "LATE_OPEN") || !!view.status_changes_open)}
                 version={report.version} onEdit={() => setGoalModal({ goal: g })} />
             ))}
           </section>
@@ -236,27 +237,27 @@ function blockerText(b: string): string {
   return b;
 }
 
-/** The Undefined badge of a task is a button: click it to settle the task as Done or Not done. */
-function UndefinedPicker({ taskId, number }: { taskId: string; number: string }) {
+/** The status badge of a task is a button: click it to settle an Undefined task as Done or Not done. While the locks are paused it also works on a Done or Not done task, so the status can be changed back and forth. */
+function StatusPicker({ taskId, number, status }: { taskId: string; number: string; status: "UNDEFINED" | "DONE" | "NOT_DONE" }) {
   const { run, pending } = useAction();
   const [open, setOpen] = useState(false);
   const set = (status: "DONE" | "NOT_DONE") => run(() => apiRequest("POST", `tasks/${taskId}/execution-status`, { status }), { success: status === "DONE" ? "Marked done." : "Marked not done." });
   return (
     <span className="flex items-center gap-1">
-      <button type="button" aria-expanded={open} aria-label={`Task ${number} is Undefined: click to mark it Done or Not done`} title="Click to mark this task Done or Not done" onClick={() => setOpen((v) => !v)}
-        className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"><TaskStatusBadge status="UNDEFINED" /></button>
+      <button type="button" aria-expanded={open} aria-label={status === "UNDEFINED" ? `Task ${number} is Undefined: click to mark it Done or Not done` : `Task ${number} is ${status === "DONE" ? "Done" : "Not done"}: click to change it`} title={status === "UNDEFINED" ? "Click to mark this task Done or Not done" : "The locks are paused: click to change this task's status"} onClick={() => setOpen((v) => !v)}
+        className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"><TaskStatusBadge status={status} /></button>
       {open ? (
         <span className="flex gap-1">
-          <Button size="sm" disabled={pending} onClick={() => set("DONE")}>Done</Button>
-          <Button size="sm" variant="secondary" disabled={pending} onClick={() => set("NOT_DONE")}>Not done</Button>
+          <Button size="sm" disabled={pending || status === "DONE"} onClick={() => set("DONE")}>Done</Button>
+          <Button size="sm" variant="secondary" disabled={pending || status === "NOT_DONE"} onClick={() => set("NOT_DONE")}>Not done</Button>
         </span>
       ) : null}
     </span>
   );
 }
 
-function GoalCard({ goal, number, phase, canMutate, exec, integrity, version, onEdit }: {
-  goal: GoalView; number: number; phase: string; canMutate: boolean; exec: boolean; integrity: boolean; version: number; onEdit: () => void;
+function GoalCard({ goal, number, phase, canMutate, exec, paused, integrity, version, onEdit }: {
+  goal: GoalView; number: number; phase: string; canMutate: boolean; exec: boolean; paused: boolean; integrity: boolean; version: number; onEdit: () => void;
 }) {
   const { run, pending } = useAction();
   const [open, setOpen] = useState(false);
@@ -287,7 +288,7 @@ function GoalCard({ goal, number, phase, canMutate, exec, integrity, version, on
           {goal.tasks.map((t, ti) => (
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
               <span className="min-w-0 flex-1"><span className="mr-2 font-medium text-muted">{number}.{ti + 1}</span>{stripLeadingNumber(t.description)}</span>
-              {exec && t.status === "UNDEFINED" ? <UndefinedPicker taskId={t.id} number={`${number}.${ti + 1}`} /> : <TaskStatusBadge status={t.status} />}
+              {exec && (t.status === "UNDEFINED" || paused) ? <StatusPicker taskId={t.id} number={`${number}.${ti + 1}`} status={t.status} /> : <TaskStatusBadge status={t.status} />}
               {canMutate ? (
                 <span className="flex gap-1">
                   <EditTaskButton taskId={t.id} text={t.description} version={version} />
