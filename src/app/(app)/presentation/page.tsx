@@ -14,7 +14,7 @@ import { ExecutiveCommentary } from "@/components/executive-oversight/commentary
 import { PresenterView } from "./presenter-view";
 import { QuotePresenter } from "./quote-presenter";
 import { WeekStrip } from "./week-strip";
-import { formatWeekLabel } from "@/lib/domain/week-label";
+import { formatWeekLabel, formatWeekRange, formatWeekShort } from "@/lib/domain/week-label";
 
 export const metadata: Metadata = { title: "Presentation" };
 
@@ -48,22 +48,24 @@ export default async function PresentationPage({ searchParams }: PageProps<"/pre
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="min-w-0 sm:shrink-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">Presentation mode</h1>
-          <p className="mt-1 text-sm text-muted">{`${formatWeekLabel(week)} · final lock ${wat(week.final_lock_at)}`}</p>
+      {/* one compact toolbar: title and final lock, the two parts, the weeks and the exit, in a single row (it wraps on a narrow screen) */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-panel px-4 py-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-lg font-semibold tracking-tight text-ink">Presentation mode</h1>
+          <span className="whitespace-nowrap rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-muted" title={`${formatWeekLabel(week)} · the week is scored at its final lock`}>{`Final lock: ${wat(week.final_lock_at)}`}</span>
         </div>
-        <WeekStrip currentId={week.id} view={tab === "quote" ? "quote" : undefined} weeks={unique.map((w) => ({ id: w.id, label: formatWeekLabel(w), holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" }))} />
+        <span className="hidden h-6 w-px bg-line sm:block" aria-hidden />
+        <PresentationTabs weekId={week.id} active={tab} showQuote={hasQuoteTab} />
+        <WeekStrip currentId={week.id} view={tab === "quote" ? "quote" : undefined} weeks={unique.map((w) => ({ id: w.id, label: `${formatWeekShort(w)} · ${formatWeekRange(w.week_start_at)}`, holiday: w.reporting_state === "ORGANIZATION_HOLIDAY" }))} />
         {quote && turns.length === 0 ? <QuotePresenter quote={quote.quote} speaker={quote.speaker_name} businessUnit={quote.business_unit} session={`Week ${week.week_number} · ${month}`}
           previous={neighbour(ordered[at - 1], quoteBefore)} next={neighbour(ordered[at + 1], quoteAfter)} /> : null}
-        <Link href="/dashboard" className="shrink-0 rounded-lg border border-line bg-panel px-4 py-2 text-sm">Exit presentation</Link>
+        <Link href="/dashboard" className="shrink-0 rounded-lg border border-line bg-panel px-3 py-1.5 text-sm hover:bg-surface">Exit presentation</Link>
       </div>
-      <PresentationTabs weekId={week.id} active={tab} showQuote={hasQuoteTab} />
       {tab === "quote" ? <QuoteReview turns={turns} weekLabel={formatWeekLabel(week)} session={`Week ${week.week_number} · ${month}`} canAssign={can(actor, "quote.assign")} />
       : week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Card><EmptyState title="ORGANIZATION HOLIDAY · REPORT NOT REQUIRED">No BU reports are due for this week.</EmptyState></Card> : (
         <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <Card>
-            <nav aria-label="Business units" className="max-h-[calc(100vh-13rem)] overflow-y-auto"><ul className="divide-y divide-line">
+            <nav aria-label="Business units" className="max-h-[calc(100vh-10rem)] overflow-y-auto"><ul className="divide-y divide-line">
               {overview.map((o, i) => (
                 <li key={o.business_unit.id}>
                   <Link href={`${base}&bu=${o.business_unit.id}`} aria-current={i === idx ? "page" : undefined}

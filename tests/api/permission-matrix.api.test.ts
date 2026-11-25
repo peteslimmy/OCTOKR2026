@@ -80,6 +80,7 @@ const GUARDED: Guarded[] = [
   { method: "POST", path: `/api/v1/ledger-entries/${fake}/emergency-reversal`, body: { reason: "a long enough reason", ...k(), confirm: true }, any: ["ledger.reversal.emergency"], label: "emergency ledger reversal" },
   { method: "POST", path: `/api/v1/disbursement-requests/${fake}/approve`, body: k(), any: ["disbursement.approve"], label: "approve a disbursement" },
   { method: "POST", path: `/api/v1/strategy/change-requests/${fake}/decision`, body: { decision: "APPROVE", ...k() }, any: ["strategy.change.approve"], label: "decide a strategy change" },
+  { method: "POST", path: `/api/v1/bu-goals/retirements/${fake}/decide`, body: { approve: true, ...k() }, any: ["bu_goals.approve_retirement"], label: "decide a goal retirement" },
   { method: "POST", path: `/api/v1/config-changes/${fake}/decision`, body: { decision: "APPROVE", ...k() }, any: ["config.approve", "config.protected.approve"], label: "decide a configuration change" },
   { method: "POST", path: "/api/v1/config-changes/emergency", body: { topic: "PENALTY_RATE", target: null, proposed: { rate: 0.5 }, reason: "a long enough reason", ...k(), confirm: true }, any: ["config.emergency"], label: "emergency configuration change" },
   { method: "POST", path: `/api/v1/users/${fake}/mfa-reset`, body: { reason: "api test" }, any: ["users.manage"], label: "reset someone's authenticator" },

@@ -274,3 +274,10 @@ Fourteen permissions, all data, mapped by migration 20261106000001. Full matrix 
 | HR, Finance | nothing |
 
 An Executive's `view_all` is the right to read, never to answer for a unit or to change any operational record. The Super Admin tier does **not** inherit these codes (ADR-097).
+
+## Business Unit goal retirement permission (ADR-134)
+| Permission | Risk | Executive | Director | Super Admin | Others |
+|---|---|---|---|---|---|
+| `bu_goals.approve_retirement` | high | ✔ | – | ✔ (decides for any chosen executive; never offered in the list) | – |
+
+`bu_goals.manage` (BU Lead, Admin, Super Admin) asks for a retirement and cancels its own request. Only the executive named in the request decides it; the Super Admin has no limit (ADR-112) and may decide any, recorded as done on the executive's behalf. Retiring a goal directly is closed to everyone except the Super Admin.

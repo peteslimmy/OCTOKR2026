@@ -157,3 +157,7 @@ The task change happens as part of the governed transaction.
 - `SCHEDULED → HELD → FINALIZED`: normal OKR session; roster defaults to PRESENT and HR marks exceptions before finalisation.
 - `SCHEDULED → SKIPPED`: permitted user confirms Skip OKR for this week; atomic operation marks all staff `VIRTUAL_PRESENT` and freezes the skipped-week attendance result. The weekly report lifecycle remains active and mandatory for every BU; a manual performance summary is required and reports must be reviewed.
 - A finalised or skipped outcome is not silently reversible. An authorised, audited exception workflow is required to correct an erroneous session outcome.
+
+
+## Business Unit goal retirement request (ADR-134)
+`PENDING → APPROVED | REJECTED | CANCELLED`. Only the chosen executive (or a Super Admin) moves PENDING to APPROVED or REJECTED (REJECTED needs a comment); only the requesting lead moves it to CANCELLED. All three end states are final and immutable. APPROVED retires the goal in the same transaction (`bu_goals.status ACTIVE → RETIRED`, the only path to RETIRED other than a Super Admin's direct edit). One PENDING request per goal.

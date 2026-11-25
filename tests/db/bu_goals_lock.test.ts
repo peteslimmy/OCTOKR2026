@@ -57,7 +57,8 @@ describe("a change to locked goals is requested and approved", () => {
     await c.expectError("VALIDATION_ERROR", () => c.rpc("request_bu_goal_change", w.finLead, w.fin, w.q, "ADD", null, "New goal", " "));
     const add = await c.rpc<string>("request_bu_goal_change", w.finLead, w.fin, w.q, "ADD", null, "Open a second office", "New market opportunity");
     const ren = await c.rpc<string>("request_bu_goal_change", w.finLead, w.fin, w.q, "RENAME", g1, "Grow partner revenue by 20%", "Target agreed with the board");
-    const ret = await c.rpc<string>("request_bu_goal_change", w.finLead, w.fin, w.q, "RETIRE", g1, null, "No longer relevant");
+    await c.expectError("VALIDATION_ERROR", () => c.rpc("request_bu_goal_change", w.finLead, w.fin, w.q, "RETIRE", g1, null, "No longer relevant"));   // a retirement has its own workflow (ADR-134)
+    const ret = await c.rpc<string>("request_bu_goal_change", w.finLead, w.fin, w.q, "RENAME", g1, "Something else", "Not the right wording");
     expect((await c.q("select 1 from notifications where event_type = 'BU_GOAL_CHANGE_REQUESTED' and user_id = $1", [w.exec])).length).toBeGreaterThan(0);
     await c.expectError("PERMISSION_DENIED", () => c.rpc("decide_bu_goal_change", w.finLead, add, true, null));
     await c.expectError("PERMISSION_DENIED", () => c.rpc("decide_bu_goal_change", w.finance, add, true, null));
@@ -77,7 +78,7 @@ describe("a change to locked goals is requested and approved", () => {
     const w = await world(c);
     const g1 = await goal(c, w.finLead, w.fin, w.q, "Grow partner revenue");
     await c.rpc("lock_bu_goals", w.admin, w.q, null, null);
-    const r = await c.rpc<string>("request_bu_goal_change", w.finLead, w.fin, w.q, "RETIRE", g1, null, "Dropped");
+    const r = await c.rpc<string>("request_bu_goal_change", w.finLead, w.fin, w.q, "RENAME", g1, "Dropped wording", "Dropped");
     await c.expectError("PERMISSION_DENIED", () => c.rpc("withdraw_bu_goal_change", w.opsLead, r));
     const mine = await c.asUser(w.finLead, () => c.rpc<{ id: string; mine: boolean }[]>("read_bu_goal_change_requests", w.q, null));
     expect(mine.map((x) => x.id)).toEqual([r]);

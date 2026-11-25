@@ -6,8 +6,9 @@ import { apiRequest, useAction } from "@/components/ui/client";
 import { Badge, Button, Input } from "@/components/ui/primitives";
 import { BulkBuGoalsButton } from "./bulk-bu-goals";
 import { RequestChangeButton } from "./bu-goals-governance";
+import { RetireGoalButton } from "./bu-goal-retirement";
 
-export interface BuGoalItem { id: string; code: string; title: string; status: "ACTIVE" | "RETIRED"; weeklyGoals: number }
+export interface BuGoalItem { id: string; code: string; title: string; status: "ACTIVE" | "RETIRED"; weeklyGoals: number; pendingRetirementBy?: string | null }
 
 /** The unit's own goals for the quarter: add, rename, retire and restore. Retiring keeps the weekly goals that already point at it. */
 export function BuGoalsManager({ goals, businessUnitId, quarterId, locked, goalsLocked = false, canEdit = true }: { goals: BuGoalItem[]; businessUnitId: string; quarterId: string; locked: boolean; goalsLocked?: boolean; canEdit?: boolean }) {
@@ -35,19 +36,20 @@ export function BuGoalsManager({ goals, businessUnitId, quarterId, locked, goals
                     <p className={g.status === "RETIRED" ? "text-muted line-through" : "font-medium"}><span className="mr-2 font-mono text-xs text-muted" title="Use this code in the weekly goals upload">{g.code}</span>{g.title}</p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                       {g.status === "RETIRED" ? <Badge tone="locked">Retired</Badge> : null}
+                      {g.pendingRetirementBy ? <Badge tone="warn">Retirement pending approval by {g.pendingRetirementBy}</Badge> : null}
                       {g.weeklyGoals} weekly {g.weeklyGoals === 1 ? "goal" : "goals"} aligned
                     </p>
                   </div>
                   {locked || !canEdit ? null : goalsLocked ? (
                     <span className="flex gap-2">
-                      {g.status === "ACTIVE" ? <RequestChangeButton quarterId={quarterId} businessUnitId={businessUnitId} kind="RENAME" goalId={g.id} currentTitle={g.title} label="Request rename" /> : null}
-                      <RequestChangeButton quarterId={quarterId} businessUnitId={businessUnitId} kind={g.status === "ACTIVE" ? "RETIRE" : "RESTORE"} goalId={g.id} currentTitle={g.title} label={g.status === "ACTIVE" ? "Request retirement" : "Request restore"} />
+                      {g.status === "ACTIVE" ? <RequestChangeButton quarterId={quarterId} businessUnitId={businessUnitId} kind="RENAME" goalId={g.id} currentTitle={g.title} label="Request rename" /> : <RequestChangeButton quarterId={quarterId} businessUnitId={businessUnitId} kind="RESTORE" goalId={g.id} currentTitle={g.title} label="Request restore" />}
+                      {g.status === "ACTIVE" && !g.pendingRetirementBy ? <RetireGoalButton goalId={g.id} goalTitle={g.title} /> : null}
                     </span>
                   ) : (
                     <span className="flex gap-2">
                       {g.status === "ACTIVE" ? <Button size="sm" variant="ghost" aria-label={`Rename ${g.title}`} onClick={() => setEditing({ id: g.id, title: g.title })}><Pencil className="h-4 w-4" aria-hidden />Edit</Button> : null}
-                      <Button size="sm" variant="secondary" disabled={pending}
-                        onClick={() => save({ id: g.id, title: g.title, status: g.status === "ACTIVE" ? "RETIRED" : "ACTIVE" }, g.status === "ACTIVE" ? "Goal retired." : "Goal restored.")}>{g.status === "ACTIVE" ? "Retire" : "Restore"}</Button>
+                      {g.status === "ACTIVE" ? (g.pendingRetirementBy ? null : <RetireGoalButton goalId={g.id} goalTitle={g.title} />)
+                        : <Button size="sm" variant="secondary" disabled={pending} onClick={() => save({ id: g.id, title: g.title, status: "ACTIVE" }, "Goal restored.")}>Restore</Button>}
                     </span>
                   )}
                 </>

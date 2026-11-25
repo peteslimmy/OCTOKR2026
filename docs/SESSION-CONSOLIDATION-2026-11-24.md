@@ -47,3 +47,21 @@ It also noted, and left uncommitted: `package.json` and `package-lock.json` chan
 - Run only one test-stack, Playwright or database-reset process at a time, and check for others first.
 - Never reset or run destructive scripts against the owner's local database; back it up first and ask.
 - Super Admin has no access limits (ADR-112); audit, immutable history and hash-chain integrity still apply to the Super Admin.
+
+## Fourth pass (25 November 2026, at the owner's request: "merge all session as one")
+All remaining sessions of this project were merged into **Executive Oversight, Commentary & Recommendations** (`local_e1663c03-321e-408e-8e2b-50792904433c`). Nothing was deleted; each archived session keeps its history (Archived list) and was exported first.
+
+| Session | Id | Transcript export |
+|---|---|---|
+| Outstandings | `local_e56aaad0-8166-45d9-b2ae-7f58c140614f` | `C:\Users\4Core\Downloads\session-export-1795559965565.zip` |
+| Add executive-approval workflow to retire a BU goal | `local_f899ce1b-16a9-4e25-be8b-0020690af65e` | `C:\Users\4Core\Downloads\session-export-1795559964604.zip` |
+
+**Open items handed over**
+- **BU-goal retirement (ADR-134)**: written but **not committed** (migration `20261113000001_bu_goal_retirement_requests.sql`, routes under `src/app/api/v1/bu-goals/retirements*` and `retirement-executives`, `src/lib/data/bu-goal-retirements.ts`, the BU goals page and manager, `bu-goal-retirement.tsx`, a navigation line, tests and docs). Verified: `tsc`, `eslint`, its 13 database tests. **Not verified:** its API tests and browser spec 29. Migration `20261112000001` (ADR-132, locks pause) belongs to another piece of work and is also uncommitted. Neither is on the hosted database.
+- **Final browser run**: the last full run was invalidated when the shared test database was reset while it ran. One clean full run is still owed, after the owner says the test stack is free.
+- **Database failures reported by the other session in the owner's own run**: `unit_take_notes` (5, a missing function, probably a database that was not fully migrated), `locks_pause` (1), `admin_read` (1), `audit_centre` (1, a time-of-day test fixed in commit 5de41e8). Not investigated.
+- **Owner steps**: create the Vercel project and paste the keys, run `npm run bootstrap`, set up the per-minute jobs call, rotate the Supabase token and database password that were pasted into chat, connect a real mail provider.
+
+## Rules for the one remaining session
+- One test-stack, Playwright or reset process at a time; ask the owner first, because the owner also runs the stack.
+- Never reset or run destructive scripts against the owner's local database, or the hosted one. Back up first and ask.

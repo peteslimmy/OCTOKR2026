@@ -128,6 +128,7 @@
   ],
   "EXECUTIVE": [
     "bu_goals.approve_change",
+    "bu_goals.approve_retirement",
     "dashboard.executive.view",
     "executive_comment.amend",
     "executive_comment.create",
@@ -235,6 +236,7 @@
     "audit.rules.configure",
     "branding.manage",
     "bu_goals.approve_change",
+    "bu_goals.approve_retirement",
     "bu_goals.lock",
     "bu_goals.manage",
     "business_units.change_type",

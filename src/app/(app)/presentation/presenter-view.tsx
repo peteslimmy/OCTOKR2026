@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { IntegrityDialog } from "@/components/integrity-dialog";
 import { ComplianceBadge, GoalStatusBadge, PhaseBadge, ScoreText, SubmissionBadge, TaskStatusBadge } from "@/components/status";
 import { Badge, Card } from "@/components/ui/primitives";
@@ -44,39 +43,36 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
   if (stretchN) alignment.push({ label: "Stretch", n: stretchN });
   return (
     <div className="space-y-4">
-      <Card className="p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold">{buName}</h2>
-            <div className="mt-2 flex flex-wrap gap-2"><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} /><ComplianceBadge status={view.compliance?.status} />
+      {/* compact unit card: name and week on one line, the two progress bars and the alignment chips beside it, the score and last-week hint to the right */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="min-w-0 flex-1 basis-52">
+            <h2 className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold leading-tight">{buName}<span className="text-sm font-normal text-muted">{`Week ${view.week.week_number}`}</span></h2>
+            <div className="mt-1.5 flex flex-wrap gap-1.5"><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} /><ComplianceBadge status={view.compliance?.status} />
               {view.session_outcome === "SKIPPED" ? <Badge tone="warn">SKIPPED WEEK</Badge> : null}</div>
           </div>
           {goalTotal > 0 ? (
-            <div className="flex min-w-0 flex-[1_1_0%] sm:min-w-[320px] items-center gap-6 px-2">
-            <div className="h-24 min-w-0 flex-[7_1_0%]" aria-label={`Goals ${goalPct}% complete, tasks ${taskPct}% complete`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={perf} layout="vertical" margin={{ left: 4, right: 36, top: 2, bottom: 2 }} role="img" aria-label="Percent of goals complete versus percent of tasks complete this week">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={52} />
-                  <Bar dataKey="pct" barSize={18} radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                    {perf.map((r) => <Cell key={r.name} fill={r.color} />)}
-                    <LabelList dataKey="pct" content={(p) => { const { x, y, width, height, value, index } = p as { x: number; y: number; width: number; height: number; value: number; index: number }; return <text x={Number(x) + Number(width) + 6} y={Number(y) + Number(height) / 2} dy={4} fontSize={12} fontWeight={600} fill={perf[index]?.color}>{`${value}%`}</text>; }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex min-w-0 flex-[3_1_0%] flex-col items-start gap-1 text-xs" aria-label="Goal alignment to Key Results this week">
-              <span className="font-medium">Alignment this week</span>
-              {alignment.map((a) => <Badge key={a.label} tone={a.n ? "done" : "undefined"}>{a.label} {pct(a.n, goalTotal)}% ({a.n}/{goalTotal})</Badge>)}
-            </div>
+            <div className="flex min-w-0 flex-[2_1_22rem] flex-wrap items-center gap-x-6 gap-y-3 lg:border-l lg:border-line lg:pl-6">
+              <div className="min-w-[11rem] flex-1 space-y-1.5" role="group" aria-label={`Goals ${goalPct}% complete, tasks ${taskPct}% complete`}>
+                {perf.map((r) => (
+                  <div key={r.name} className="grid grid-cols-[2.75rem_1fr_3rem] items-center gap-2 text-sm">
+                    <span className="text-muted">{r.name}</span>
+                    <span className="h-2.5 overflow-hidden rounded-full bg-line" aria-hidden><span className="block h-full rounded-full" style={{ width: `${r.pct}%`, backgroundColor: r.color }} /></span>
+                    <span className="text-right font-semibold tabular-nums text-ink">{r.pct}%</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex min-w-0 flex-1 basis-40 flex-col items-start gap-1 text-xs" aria-label="Goal alignment to Key Results this week">
+                <span className="font-medium">Alignment this week</span>
+                <span className="flex flex-wrap gap-1.5">{alignment.map((a) => <Badge key={a.label} tone={a.n ? "done" : "undefined"}>{a.label} {pct(a.n, goalTotal)}% ({a.n}/{goalTotal})</Badge>)}</span>
+              </div>
             </div>
           ) : null}
-          <div className="flex flex-col items-end text-right">{lastWeek}<p className="text-4xl font-semibold leading-none"><ScoreText value={final} /></p>
-            <p className="text-sm text-muted">{view.score_preview.done_goals}/{view.score_preview.total_goals} goals done{view.snapshot ? " · final" : " · preview"}</p></div>
+          <div className="flex flex-col items-end text-right lg:border-l lg:border-line lg:pl-6">{lastWeek}<p className="mt-1 text-3xl font-semibold leading-none"><ScoreText value={final} /></p>
+            <p className="mt-1 text-xs text-muted">{view.score_preview.done_goals}/{view.score_preview.total_goals} goals done{view.snapshot ? " · final" : " · preview"}</p></div>
         </div>
-        {view.report.skipped_session_summary_comment ? <blockquote className="mt-4 rounded-lg bg-surface p-4 text-sm"><p className="mb-1 font-medium">BU performance summary</p><RichText value={view.report.skipped_session_summary_comment} /></blockquote> : null}
-        <div className="mt-4 flex items-center justify-between">
+        {view.report.skipped_session_summary_comment ? <blockquote className="mt-3 rounded-lg bg-surface p-3 text-sm"><p className="mb-1 font-medium">BU performance summary</p><RichText value={view.report.skipped_session_summary_comment} /></blockquote> : null}
+        <div className="mt-3 flex items-center justify-between border-t border-line pt-2">
           <Link href={prevHref} className="inline-flex items-center gap-1 text-sm text-brand-700 underline"><ChevronLeft className="h-4 w-4" aria-hidden />Previous BU</Link>
           <span className="text-xs text-muted">Tip: use ← → keys</span>
           <Link href={nextHref} className="inline-flex items-center gap-1 text-sm text-brand-700 underline">Next BU<ChevronRight className="h-4 w-4" aria-hidden /></Link>
@@ -90,7 +86,7 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
             <p className="text-xs text-muted">{view.goals.length} {view.goals.length === 1 ? "goal" : "goals"} · {view.goals.reduce((n, g) => n + g.tasks.length, 0)} tasks</p>
           </div>
           {canCorrect && view.quarter_locked ? <p className="border-b border-line bg-panel px-5 py-2 text-xs text-muted">This quarter is locked, so task statuses can no longer be corrected.</p> : null}
-          <ol className="max-h-[max(20rem,calc(100vh-22rem))] space-y-3 overflow-y-auto overscroll-contain bg-surface p-3" tabIndex={0} aria-label="Goals and tasks">
+          <ol className="max-h-[max(20rem,calc(100vh-19rem))] space-y-3 overflow-y-auto overscroll-contain bg-surface p-3" tabIndex={0} aria-label="Goals and tasks">
             {view.goals.map((g, gi) => (
               <li key={g.id}
                 className={`grid overflow-hidden rounded-xl border lg:grid-cols-[2fr_3fr] ${g.status === "DONE"

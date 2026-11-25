@@ -33,6 +33,7 @@ export const CAPABILITIES: Capability[] = [
   { id: "calendar.holiday", label: "Declare an organisation holiday", module: "Reporting calendar & integrity", path: "/admin/calendar", all: ["reporting.period.holiday.manage"] },
   { id: "calendar.window", label: "Change when reporting opens and locks", module: "Reporting calendar & integrity", path: "/admin/calendar", all: ["reporting.week.manage"] },
   { id: "calendar.suspend", label: "Suspend a week's locks to fill it in by hand", module: "Reporting calendar & integrity", path: "/admin/calendar", all: ["reporting.locks.suspend"] },
+  { id: "calendar.lockpause", label: "Switch the content locks off and on for the whole organisation", module: "Reporting calendar & integrity", path: "/admin/calendar", all: ["reporting.locks.suspend"] },
   { id: "integrity", label: "Correct a task after the lock", module: "Reporting calendar & integrity", path: "/weekly", all: ["integrity_correction.create"] },
   { id: "admin.users", label: "Add and manage people", module: "Administration & security", path: "/admin/people", all: ["users.manage"] },
   { id: "admin.roles.ask", label: "Ask for a role to be created or changed", module: "Administration & security", path: "/admin/roles", all: ["roles.request"] },

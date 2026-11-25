@@ -5,11 +5,12 @@ import { seedStrategy, withTx, type Ctx } from "./helpers";
 async function world(c: Ctx) {
   const buA = await c.bu("CODEA"); const buB = await c.bu("CODEB");
   const root = await c.user(["SUPER_ADMIN"], buA, "root");
+  const exec = await c.user(["EXECUTIVE"], buA, "exec");
   const leadA = await c.user(["BU_LEAD"], buA, "leadA"); const leadB = await c.user(["BU_LEAD"], buB, "leadB");
   const st = await seedStrategy(c, root);
   const add = (lead: string, bu: string, title: string) => c.rpc<string>("save_bu_goal", lead, null, bu, st.quarterId, title, "ACTIVE");
   const codes = async (bu: string) => (await c.q<{ code: string; title: string }>("select code, title from bu_goals where business_unit_id = $1 and quarter_id = $2 order by code", [bu, st.quarterId]));
-  return { buA, buB, root, leadA, leadB, st, add, codes };
+  return { buA, buB, root, exec, leadA, leadB, st, add, codes };
 }
 
 describe("Business Unit goal codes", () => {
@@ -29,7 +30,8 @@ describe("Business Unit goal codes", () => {
       const w = await world(c);
       const first = await w.add(w.leadA, w.buA, "First goal");
       await w.add(w.leadA, w.buA, "Second goal");
-      await c.rpc("save_bu_goal", w.leadA, first, null, null, "First goal", "RETIRED");
+      const rq = await c.rpc<{ id: string }>("request_bu_goal_retirement", w.leadA, first, w.exec, "Not needed any more", null);   // a goal is retired only when the chosen executive approves (ADR-134)
+      await c.rpc("decide_bu_goal_retirement", w.exec, rq.id, true, null);
       await w.add(w.leadA, w.buA, "Third goal");
       expect((await w.codes(w.buA)).map((g) => g.code)).toEqual(["BG-1", "BG-2", "BG-3"]);
       const renamed = await c.rpc<string>("save_bu_goal", w.leadA, first, null, null, "First goal, renamed", "RETIRED");

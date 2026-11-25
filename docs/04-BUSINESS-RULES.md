@@ -243,3 +243,7 @@ A holiday declaration must identify the affected reporting week(s) and require c
 
 ### BR-GOV-ORGHOL-003
 The holiday action informs BU Leads that no report is due and suppresses normal reporting reminders for the declared period. The Skip OKR action separately notifies every BU Lead that a report and manual summary comment remain required.
+
+
+## BR-BUG: retiring a Business Unit goal (ADR-134)
+A Business Unit goal is retired only when the executive the BU Lead names approves it. The lead gives a justification; the executive may reject with a comment; until approval the goal is unchanged. Retirement keeps the goal, its code, the weekly goals aligned to it and all scores.

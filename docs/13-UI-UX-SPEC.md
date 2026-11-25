@@ -276,3 +276,7 @@ For a SKIPPED physical session, notify all BU Leads and activate a required manu
 - **Comment page and thread**: the original comment apart from chronological replies, "Amended" with every earlier wording, withdrawn state.
 - **Executive Commentary panel** on Performance, Weekly report, Presentation mode, Strategy (objective, key results), dashboard, Management brief, Unit goals, Session workspace, registers and report snapshots: side panel beside the record, with quick actions; no navigation away.
 Design: the existing tokens, cards, tables and dialogs; status never by colour alone; forms keep their text and request key on failure; dialogs are Radix (focus trap, Esc).
+
+
+## Business Unit goal retirement (ADR-134)
+On `/bu-goals`, **Retire** opens a dialog: a list of executives by name and role, a required justification, "Send for approval". The goal then shows the badge "Retirement pending approval by <name>" and loses its Retire button. A chosen executive (and a Super Admin) sees "Retirements waiting for your decision" with goal, unit, lead, justification and Approve / Reject (Reject opens a dialog that requires a comment). The lead sees each request with its outcome and comment under "Goal retirements" and can cancel a pending one; a rejected goal stays active and can be asked about again. Status is shown in words and by badge, never by colour alone.

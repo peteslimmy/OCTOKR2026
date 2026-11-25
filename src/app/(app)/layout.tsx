@@ -30,7 +30,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   add("Overview", [{ href: "/dashboard", label: "Dashboard", icon: "dashboard", hint: "Scores, tasks and what needs attention" }]);
   add("Execution", [
     { href: "/strategy", label: "Strategy & OKRs", icon: "strategy", hint: "Objective, key results, sub-KRs" },
-    any("bu_goals.manage", "bu_goals.approve_change", "bu_goals.lock") && { href: "/bu-goals", label: "Business Unit Goals", icon: "bugoals", hint: "Your unit's goals for the quarter" },
+    any("bu_goals.manage", "bu_goals.approve_change", "bu_goals.lock", "bu_goals.approve_retirement") && { href: "/bu-goals", label: "Business Unit Goals", icon: "bugoals", hint: "Your unit's goals for the quarter" },
     can(actor, "weekly_report.view_own_bu") && { href: "/weekly", label: "Weekly Reports", icon: "weekly", hint: "Goals and tasks for the week" },
     any("weekly_report.view_all", "weekly_report.view_own_bu") && { href: "/performance", label: "Performance", icon: "performance", hint: "Scores by week" },
     can(actor, "presentation.view") && { href: "/presentation", label: "Presentation", icon: "presentation", hint: "Present the week to leadership" },
@@ -39,8 +39,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     any("attendance.session.manage", "attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance", label: "Sessions & Attendance", icon: "governance", hint: "OKR sessions and who attended" },
     any("violation.create", "violation.edit", "violation.payment.record", "finance.fund.view", "disbursement.create", "finance.ledger.view", "dashboard.executive.view") && { href: "/violations", label: "Violations & Funds", icon: "violations", hint: "Violations, payments and the fund" },
     any("attendance.amendment.view", "attendance.amendment.request", "attendance.amendment.approve") && { href: "/governance/amendments", label: "Attendance Amendments", icon: "amendments", hint: "Corrections to attendance" },
-    { href: "/session-notes", label: "Session Notes", icon: "notes", hint: "Notes from the weekly sessions" },
-    can(actor, "session_notes.create") && { href: "/notes", label: "Take Notes", icon: "notes", hint: "Notes, recommendations, actions and next steps for a session" },
+    { href: "/session-notes", label: "Session Notes", icon: "notes", hint: "The official notes from each weekly session, for everyone" },
+    can(actor, "session_notes.view") && { href: "/notes", label: "Take Notes", icon: "notes", hint: "Your unit's or department's own notes from each session" },
     can(actor, "quote.submit") && !can(actor, "quote.assign") && { href: "/quote", label: "Weekly quote", icon: "presentation", hint: "Which unit gives the quote, and the quote itself" },
     any("executive_oversight.dashboard.view", "executive_comment.view", "executive_recommendation.view") && { href: "/executive-oversight", label: "Executive oversight", icon: "governance", hint: "Executive comments, recommendations and the responses to them", exact: true },
   ]);

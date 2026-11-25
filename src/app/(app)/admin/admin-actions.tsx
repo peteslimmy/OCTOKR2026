@@ -621,6 +621,64 @@ export function WeekLockSwitch({ weekId, weekLabel, suspended, disabled }: { wee
   );
 }
 
+/**
+ * Super Admin: the organisation-wide Off/On switch for the content locks. Off holds every open week open (as suspending one week's locks does) until it is switched back on
+ * or its optional resume time passes. The final lock and scoring are never paused. Switching asks for a reason and a recent second factor, and is audited.
+ */
+export function LockPauseSwitch({ paused, canSwitch, summary }: { paused: boolean; canSwitch: boolean; summary: { by: string | null; since: string | null; reason: string | null; resume: string | null; weeks: number } }) {
+  const { run, pending } = useAction();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [resume, setResume] = useState("");
+  const close = () => { setOpen(false); setReason(""); setResume(""); };
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <div className="space-y-1 text-sm">
+          <p className="flex flex-wrap items-center gap-2 font-medium">Content locks {paused ? <Badge tone="warn">Off (paused)</Badge> : <Badge tone="done">On</Badge>}</p>
+          {paused ? (
+            <>
+              <p className="text-muted">Every open week is held open: Business Unit Leads can create and edit goals and tasks, mark tasks and submit, whatever the clock says{summary.weeks ? ` (${summary.weeks} week${summary.weeks === 1 ? "" : "s"} now)` : ""}. The final lock and scoring still happen on time.</p>
+              <p className="text-xs text-muted">{summary.by ? `Switched off by ${summary.by}` : "Switched off"}{summary.since ? ` on ${summary.since}` : ""}{summary.reason ? ` · ${summary.reason}` : ""}. {summary.resume ? `They switch back on by themselves at ${summary.resume}.` : "They stay off until a Super Admin switches them on."}</p>
+            </>
+          ) : (
+            <p className="text-muted">Goals and tasks lock, and each week is scored, at the times in the policy below. Switch the locks off to hold every open week open for a while.</p>
+          )}
+        </div>
+        {canSwitch ? (
+          <button type="button" role="switch" aria-checked={!paused} aria-label={paused ? "Content locks are off. Switch them on" : "Content locks are on. Switch them off"} onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-3 rounded-full border border-line bg-panel py-1 pl-3 pr-1 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">
+            <span>{paused ? "Off" : "On"}</span>
+            <span aria-hidden className={`relative h-6 w-11 rounded-full transition-colors ${paused ? "bg-line" : "bg-brand-700"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${paused ? "left-0.5" : "left-[22px]"}`} />
+            </span>
+          </button>
+        ) : null}
+      </div>
+      <Modal open={open} onOpenChange={(o) => { if (!o) close(); else setOpen(true); }} title={paused ? "Switch the content locks back on?" : "Switch the content locks off?"}
+        description={paused
+          ? "The content lock and final lock apply again to the weeks this pause held open. If their times have passed, the week locks at the next scheduled run (within a minute or two). A week you suspended on its own stays as it is."
+          : "Every week that is open now, and every week as it opens, stays open: Business Unit Leads can create and edit goals and tasks, mark tasks and submit, whatever the clock says, and reports already locked become editable again. The final lock is not paused: a week is still finalised and scored at its final-lock time."}>
+        <form className="space-y-3" onSubmit={async (e) => {
+          e.preventDefault();
+          const resumeAt = !paused && resume ? new Date(`${resume}:00+01:00`).toISOString() : null;     // typed in Lagos time (UTC+1 all year)
+          const ok = await run(() => apiRequest("POST", "reporting-locks/pause", { paused: !paused, reason, ...(resumeAt ? { resumeAt } : {}) }),
+            { success: paused ? "Content locks are on again." : resumeAt ? "Content locks are off. They switch back on by themselves at the time you chose." : "Content locks are off until you switch them on." });
+          if (ok) close();
+        }}>
+          <Field id="lock-pause-reason" label="Reason" hint="Recorded in the audit trail."><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} required /></Field>
+          {!paused ? (
+            <Field id="lock-pause-resume" label="Switch them back on by themselves at (optional, Lagos time)" hint="At most 30 days from now. Leave empty to switch them on yourself.">
+              <Input type="datetime-local" value={resume} onChange={(e) => setResume(e.target.value)} />
+            </Field>
+          ) : null}
+          <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={close}>Cancel</Button><Button type="submit" disabled={pending || !reason.trim()}>{paused ? "Switch locks on" : "Switch locks off"}</Button></div>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
 const WAT_OFFSET_MS = 3_600_000;   // Africa/Lagos is UTC+1 all year
 const toWatInput = (iso: string) => new Date(new Date(iso).getTime() + WAT_OFFSET_MS).toISOString().slice(0, 16);
 

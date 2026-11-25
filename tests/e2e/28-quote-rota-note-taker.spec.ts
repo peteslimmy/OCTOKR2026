@@ -70,10 +70,11 @@ test("the Presenter sees it in Quote review, shows it on screen, and marks it pr
   await ex.poll(async () => (await query("select status from quote_turns where reporting_week_id = $1 and status <> 'CANCELLED'", [weekId]))[0]?.status).toBe("PRESENTED");
 });
 
-test("a person with the Note Taker role writes the notes on one simple page", async ({ page }) => {
+test("a person with the Note Taker role writes the official session notes on one simple page", async ({ page }) => {
   await loginAs(page, "finance@4core.local");
-  await page.goto("/notes");
-  await ex(page.getByRole("heading", { level: 1, name: "Take notes" })).toBeVisible({ timeout: 90_000 });
+  await page.goto("/session-notes");
+  await ex(page.getByRole("heading", { level: 1, name: "Session notes" })).toBeVisible({ timeout: 90_000 });
+  await ex(page.getByRole("heading", { name: "Write the session notes" })).toBeVisible();
   await page.getByTestId(`take-notes-${weekId}`).click();
   await ex(page).toHaveURL(/\/notes\/[0-9a-f-]{36}/, { timeout: 90_000 });
   await ex(page.getByTestId("note-editor")).toBeVisible();
@@ -85,4 +86,24 @@ test("a person with the Note Taker role writes the notes on one simple page", as
   await page.keyboard.type(jot);
   await ex.poll(async () => (await query("select 1 from okr_session_notes where content like $1", [`%${jot}%`])).length, { timeout: 60_000 }).toBe(1);
   await expectNoA11yViolations(page, "take notes page");
+});
+
+// Take Notes is the unit's own page (ADR-133): the lead writes the unit's notes, and the official Session Notes page does not offer a lead the writing.
+const unitJot = `Engineering will retest the release checklist ${Date.now()}`;
+test("a unit's lead takes the unit's own notes, and cannot write the official session notes", async ({ page }) => {
+  await loginAs(page, "lead.eng@4core.local");
+  await page.goto("/session-notes");
+  await ex(page.getByRole("heading", { level: 1, name: "Session notes" })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("heading", { name: "Write the session notes" })).toHaveCount(0);                       // a lead reads the official notes; only the people who write them see the writing block
+  await page.goto("/notes");
+  await ex(page.getByRole("heading", { level: 1, name: "Take notes" })).toBeVisible({ timeout: 90_000 });
+  await page.getByTestId(`take-notes-${weekId}-${engBu}`).click();
+  await ex(page).toHaveURL(/\/notes\/[0-9a-f-]{36}/, { timeout: 90_000 });
+  await ex(page.getByTestId("note-editor")).toBeVisible();
+  const editor = page.locator('[contenteditable="true"]').first();
+  await editor.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(unitJot);
+  await ex.poll(async () => (await query("select 1 from okr_session_notes n join okr_sessions s on s.id = n.session_id where n.content like $1 and s.business_unit_id = $2", [`%${unitJot}%`, engBu])).length, { timeout: 60_000 }).toBe(1);
+  await expectNoA11yViolations(page, "unit take notes page");
 });

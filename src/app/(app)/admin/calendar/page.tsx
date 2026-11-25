@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Badge, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { Badge, Banner, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { can, requireActor } from "@/lib/auth/actor";
 import { currentQuarter, serverNow, weeksOfQuarter } from "@/lib/data";
 import { listHolidayAmendments, listHolidayRequests } from "@/lib/data/governance";
 import { wat } from "@/components/status";
-import { getLockSchedule } from "@/lib/data/config";
+import { getLockPause, getLockSchedule } from "@/lib/data/config";
 import { QuoteRota } from "../../quote/quote-rota";
 import { LockScheduleForm } from "../lock-schedule-form";
 import { formatWeekLabel } from "@/lib/domain/week-label";
-import { HolidayAmendmentButton, HolidayForm, HolidayRequests, WeekLockSwitch, WeekOpeningEditor } from "../admin-actions";
+import { HolidayAmendmentButton, HolidayForm, HolidayRequests, LockPauseSwitch, WeekLockSwitch, WeekOpeningEditor } from "../admin-actions";
 
 export const metadata: Metadata = { title: "Calendar & holidays" };
 
@@ -22,6 +22,7 @@ export default async function CalendarPage() {
   const quoteRota = can(actor, "quote.assign");
   if (!manage && !amendHoliday && !suspendLocks && !manageWeeks && !quoteRota) return <Card><div className="p-6 text-sm">The calendar is not available for your role.</div></Card>;
   const schedule = manageWeeks ? await getLockSchedule() : null;
+  const lockPause = suspendLocks || manageWeeks ? await getLockPause() : null;
   const weeks = quarter ? await weeksOfQuarter(quarter.id) : [];
   const amendWeeks = weeks;
   const now = await serverNow();
@@ -40,6 +41,18 @@ export default async function CalendarPage() {
                 <HolidayForm weeks={weeks.map((w) => ({ id: w.id, label: formatWeekLabel(w), holiday: w.reporting_state === "ORGANIZATION_HOLIDAY", locked: w.status === "FINAL_LOCKED" || new Date(w.final_lock_at) <= new Date(now) }))} />
               )}
             </div>
+          </Card>
+        ) : null}
+
+        {lockPause?.paused ? (
+          <Banner tone="warn" title="The content locks are switched off">Every open week is being held open. The final lock and scoring still happen at their scheduled times.</Banner>
+        ) : null}
+
+        {lockPause ? (
+          <Card>
+            <CardHeader title="Content locks: Off / On" description="A temporary switch for the whole organisation. While it is Off, goals and tasks do not lock: Business Unit Leads can create and finish their weekly reports by hand. It never pauses the final lock or scoring, it can switch itself back on at a time you choose, and every change is recorded with its reason. To hold a single week open instead, use the exceptions further down." />
+            <LockPauseSwitch paused={lockPause.paused} canSwitch={suspendLocks}
+              summary={{ by: lockPause.paused_by_email, since: lockPause.paused_at ? wat(lockPause.paused_at) : null, reason: lockPause.reason, resume: lockPause.resume_at ? wat(lockPause.resume_at) : null, weeks: lockPause.weeks_held_open }} />
           </Card>
         ) : null}
 

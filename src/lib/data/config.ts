@@ -42,6 +42,18 @@ export async function getLockSchedule(): Promise<LockScheduleView> {
   return data as LockScheduleView;
 }
 
+/** Whether the content locks are paused for the whole organisation. Everyone may read the state; the reason and who paused it are only given to managers. */
+export interface LockPauseView { paused: boolean; paused_at: string | null; resume_at: string | null; reason: string | null; paused_by_email: string | null; weeks_held_open: number }
+export async function getLockPause(): Promise<LockPauseView | null> {
+  const sb = await userClient();
+  const { data, error } = await sb.rpc("read_lock_pause");
+  if (error) {
+    if (error.code === "PGRST202" || error.code === "42883") return null;      // the database has not been brought up to date yet: the card is left out instead of breaking the page
+    throw dbError(error, "lock pause");
+  }
+  return data as LockPauseView;
+}
+
 export interface RetentionSettings { enabled: boolean; read_notifications_months: number; email_days: number }
 export async function getRetention(): Promise<RetentionSettings | null> {
   const sb = await userClient();
