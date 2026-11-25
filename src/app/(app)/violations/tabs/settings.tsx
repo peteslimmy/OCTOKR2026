@@ -2,7 +2,7 @@ import { Badge, Card, CardHeader, EmptyState } from "@/components/ui/primitives"
 import { can, type Actor } from "@/lib/auth/actor";
 import { listPaymentMethods, listPurposes, listViolationTypes } from "@/lib/data/governance";
 import { PurposeManager } from "../finance-actions";
-import { AddPaymentMethodButton, EditPaymentMethodButton } from "../payment-method-actions";
+import { AddPaymentMethodButton, EditPaymentMethodButton, DeletePaymentMethodButton } from "../payment-method-actions";
 import { EditTypeButton } from "../type-actions";
 import { ViolationTypeButton } from "../violation-actions";
 
@@ -47,6 +47,7 @@ export async function SettingsTab({ actor }: { actor: Actor }) {
                   {m.is_deduction ? <Badge tone="info">salary deduction</Badge> : null}
                   {!m.active ? <Badge tone="undefined">not in use</Badge> : null}
                   <EditPaymentMethodButton method={m} />
+                  <DeletePaymentMethodButton method={m} />
                 </span>
               </li>
             ))}

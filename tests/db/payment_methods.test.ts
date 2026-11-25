@@ -131,3 +131,42 @@ describe("approved email domains", () => {
     });
   });
 });
+
+describe("deleting a payment method", () => {
+  it("deletes a method that was never used, audits it, and refuses a method that was used, the last one in use, and people who may not manage methods", async () => {
+    await withTx(async (c) => {
+      const w = await world(c);
+      const admin = await c.user(["ADMIN"], w.bu, "adm");
+      const added = await c.rpc<string>("save_payment_method", admin, null, "BNK", "Bank transfer", false, true);
+      // a person who does not manage payment methods cannot delete one
+      await c.expectError("PERMISSION_DENIED", () => c.rpc("delete_payment_method", w.lead, added));
+      await c.expectError("NOT_FOUND", () => c.rpc("delete_payment_method", admin, "00000000-0000-4000-8000-000000000000"));
+      // the Admin deletes the unused method; the deletion is audited with what was deleted
+      await c.rpc("delete_payment_method", admin, added);
+      expect((await c.q("select 1 from payment_methods where id = $1", [added])).length).toBe(0);
+      const audit = await c.q<{ old_values: { code: string; name: string }; actor_user_id: string }>("select old_values, actor_user_id from audit_logs where action = 'PAYMENT_METHOD_DELETED' and entity_id = $1", [added]);
+      expect(audit).toHaveLength(1);
+      expect(audit[0].old_values).toMatchObject({ code: "BNK", name: "Bank transfer" });
+      expect(audit[0].actor_user_id).toBe(admin);
+      // the code is free again, so a method of that code can be added afresh
+      await c.rpc("save_payment_method", admin, null, "BNK", "Bank transfer", false, true);
+
+      // a method that has been used for a payment cannot be deleted
+      const v = await raise(c, w);
+      await c.rpc("record_violation_payment", w.hr, v.violation_id, "POC", null, "2031-01-14", key());
+      const poc = (await c.q<{ id: string }>("select id from payment_methods where code = 'POC'"))[0].id;
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("delete_payment_method", admin, poc));
+      expect((await c.q("select 1 from payment_methods where id = $1", [poc])).length).toBe(1);
+      // its usage is reported to the screen, and the people who may not manage methods cannot read it
+      const usage = await c.asUser(admin, () => c.rpc<{ code: string; used: number }[]>("read_payment_method_usage"));
+      expect(usage.find((u) => u.code === "POC")!.used).toBeGreaterThan(0);
+      expect(usage.find((u) => u.code === "SAL")!.used).toBe(0);
+      await c.expectError("PERMISSION_DENIED", () => c.asUser(w.lead, () => c.rpc("read_payment_method_usage")));
+
+      // the last method in use cannot be deleted: leave one method in use and try to delete it
+      await c.q("update payment_methods set active = false where code <> 'SAL'");
+      const sal = (await c.q<{ id: string }>("select id from payment_methods where code = 'SAL'"))[0].id;
+      await c.expectError("VALIDATION_ERROR", () => c.rpc("delete_payment_method", admin, sal));
+    });
+  });
+});

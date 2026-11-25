@@ -1,10 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest, Modal, useAction } from "@/components/ui/client";
 import { Button, Field, Input } from "@/components/ui/primitives";
 
-type Method = { id: string; code: string; name: string; is_deduction: boolean; active: boolean };
+type Method = { id: string; code: string; name: string; is_deduction: boolean; active: boolean; used?: number };
 
 function MethodForm({ method, onDone }: { method?: Method; onDone: () => void }) {
   const [f, setF] = useState({ code: method?.code ?? "", name: method?.name ?? "", isDeduction: method?.is_deduction ?? false, active: method?.active ?? true });
@@ -37,6 +38,28 @@ export function EditPaymentMethodButton({ method }: { method: Method }) {
     <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>Edit</Button>
       <Modal open={open} onOpenChange={setOpen} title={`Edit ${method.name}`}><MethodForm method={method} onDone={() => setOpen(false)} /></Modal>
+    </>
+  );
+}
+
+/** Deletes a payment method that has never been used. A used one keeps its code on payments and references, so it can only be switched to not in use (Edit). */
+export function DeletePaymentMethodButton({ method }: { method: Method }) {
+  const [open, setOpen] = useState(false);
+  const { run, pending } = useAction();
+  const router = useRouter();
+  const used = method.used ?? 0;
+  if (used > 0) {
+    return <span className="text-xs text-muted" title="Payments and references already carry this code">Used, so it cannot be deleted. Switch it to not in use (Edit).</span>;
+  }
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)} aria-label={`Delete ${method.name}`}>Delete</Button>
+      <Modal open={open} onOpenChange={setOpen} title={`Delete ${method.name}?`} description={`The method ${method.code} has never been used, so no payment, reference or report is affected. The deletion is recorded in the audit log and cannot be undone; you can add the method again later.`}>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+          <Button variant="danger" disabled={pending} onClick={async () => { const ok = await run(() => apiRequest("POST", `payment-methods/${method.id}/delete`, {}), { success: "Payment method deleted." }); if (ok) { setOpen(false); router.refresh(); } }}>{pending ? "Deleting…" : "Delete"}</Button>
+        </div>
+      </Modal>
     </>
   );
 }

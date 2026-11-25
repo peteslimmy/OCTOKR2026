@@ -85,8 +85,12 @@ export async function listViolationTypes() {
 
 export async function listPaymentMethods() {
   const sb = await userClient();
-  return unwrap(await sb.from("payment_methods").select("id, code, name, is_deduction, active").order("code"), "payment methods") as
+  const methods = unwrap(await sb.from("payment_methods").select("id, code, name, is_deduction, active").order("code"), "payment methods") as
     { id: string; code: string; name: string; is_deduction: boolean; active: boolean }[];
+  // how often each has been used: a used method cannot be deleted (it is switched to not in use instead). Only the people who manage methods may ask.
+  const usage = await sb.rpc("read_payment_method_usage");
+  const used = new Map(((usage.data as { id: string; used: number }[] | null) ?? []).map((u) => [u.id, u.used]));
+  return methods.map((m) => ({ ...m, used: used.get(m.id) ?? 0 }));
 }
 
 export async function listAllowedDomains() {
