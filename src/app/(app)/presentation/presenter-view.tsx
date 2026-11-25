@@ -48,7 +48,11 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="min-w-0 flex-1 basis-52">
-            <h2 className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold leading-tight">{buName}<span className="text-sm font-normal text-muted">{`Week ${view.week.week_number}`}</span></h2>
+            <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold leading-tight">
+              <Link href={prevHref} aria-label="Previous BU" title="Previous BU (left arrow key)" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-brand-700 hover:bg-surface"><ChevronLeft className="h-4 w-4" aria-hidden /></Link>
+              {buName}<span className="text-sm font-normal text-muted">{`Week ${view.week.week_number}`}</span>
+              <Link href={nextHref} aria-label="Next BU" title="Next BU (right arrow key)" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-brand-700 hover:bg-surface"><ChevronRight className="h-4 w-4" aria-hidden /></Link>
+            </h2>
             <div className="mt-1.5 flex flex-wrap gap-1.5"><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} /><ComplianceBadge status={view.compliance?.status} />
               {view.session_outcome === "SKIPPED" ? <Badge tone="warn">SKIPPED WEEK</Badge> : null}</div>
           </div>
@@ -73,11 +77,6 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
             <p className="mt-1 text-xs text-muted">{view.score_preview.done_goals}/{view.score_preview.total_goals} goals done{view.snapshot ? " · final" : " · preview"}</p></div>
         </div>
         {view.report.skipped_session_summary_comment ? <blockquote className="mt-3 rounded-lg bg-surface p-3 text-sm"><p className="mb-1 font-medium">BU performance summary</p><RichText value={view.report.skipped_session_summary_comment} /></blockquote> : null}
-        <div className="mt-3 flex items-center justify-between border-t border-line pt-2">
-          <Link href={prevHref} className="inline-flex items-center gap-1 text-sm text-brand-700 underline"><ChevronLeft className="h-4 w-4" aria-hidden />Previous BU</Link>
-          <span className="text-xs text-muted">Tip: use ← → keys</span>
-          <Link href={nextHref} className="inline-flex items-center gap-1 text-sm text-brand-700 underline">Next BU<ChevronRight className="h-4 w-4" aria-hidden /></Link>
-        </div>
       </Card>
 
       {view.goals.length === 0 ? <Card><p className="p-6 text-sm text-muted">No goals were filed.</p></Card> : (
