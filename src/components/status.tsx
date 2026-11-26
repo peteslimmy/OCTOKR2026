@@ -25,7 +25,9 @@ export function PhaseBadge({ phase }: { phase: string }) {
   }
 }
 
-export function SubmissionBadge({ status }: { status: string }) {
+/** `auto` marks a report the system submitted at the final lock: it counts as submitted, but leadership can see it was not the unit's own act. */
+export function SubmissionBadge({ status, auto = false }: { status: string; auto?: boolean }) {
+  if (status === "SUBMITTED" && auto) return <Badge tone="info" title="Submitted by the system at the final lock">Auto-submitted</Badge>;
   return status === "SUBMITTED" ? <Badge tone="done">Submitted</Badge> : <Badge tone="warn">Not submitted</Badge>;
 }
 

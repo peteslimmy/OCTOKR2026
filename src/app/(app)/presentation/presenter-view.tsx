@@ -53,7 +53,7 @@ export function PresenterView({ view, canCorrect, prevHref, nextHref, buName, la
               {buName}<span className="text-sm font-normal text-muted">{`Week ${view.week.week_number}`}</span>
               <Link href={nextHref} aria-label="Next BU" title="Next BU (right arrow key)" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-brand-700 hover:bg-surface"><ChevronRight className="h-4 w-4" aria-hidden /></Link>
             </h2>
-            <div className="mt-1.5 flex flex-wrap gap-1.5"><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} /><ComplianceBadge status={view.compliance?.status} />
+            <div className="mt-1.5 flex flex-wrap gap-1.5"><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} auto={view.report.auto_submitted} /><ComplianceBadge status={view.compliance?.status} />
               {view.session_outcome === "SKIPPED" ? <Badge tone="warn">SKIPPED WEEK</Badge> : null}</div>
           </div>
           {goalTotal > 0 ? (

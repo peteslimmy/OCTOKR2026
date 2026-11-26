@@ -96,7 +96,7 @@ export function ReportEditor({ view, subKrs, buGoals, trend, currentWeek, intell
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-2">
           <PhaseBadge phase={phase} />
-          <SubmissionBadge status={report.submission_status} />
+          <SubmissionBadge status={report.submission_status} auto={report.auto_submitted} />
           {report.review_status === "REVIEWED" ? <Badge tone="done">Reviewed</Badge> : phase === "FINAL_LOCKED" && submitted ? <Badge tone="warn">Awaiting review</Badge> : null}
           <ComplianceBadge status={view.compliance?.status} />
           {view.session_outcome === "SKIPPED" ? <Badge tone="warn">SKIPPED WEEK · session not held</Badge> : null}

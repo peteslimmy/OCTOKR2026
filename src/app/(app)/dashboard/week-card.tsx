@@ -52,7 +52,7 @@ export function WeekCard({ week, id, view, previousScore, attendance, contentLoc
         ) : view && f ? (
           <>
             {view.session_outcome === "SKIPPED" ? <Badge tone="warn">OKR session skipped — performance summary required</Badge> : null}
-            <div className="flex flex-wrap items-center gap-2"><SubmissionBadge status={view.report.submission_status} /><ComplianceBadge status={view.compliance?.status} />{final ? <Badge tone="locked">Immutable record</Badge> : null}</div>
+            <div className="flex flex-wrap items-center gap-2"><SubmissionBadge status={view.report.submission_status} auto={view.report.auto_submitted} /><ComplianceBadge status={view.compliance?.status} />{final ? <Badge tone="locked">Immutable record</Badge> : null}</div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

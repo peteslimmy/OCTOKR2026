@@ -164,7 +164,8 @@ describe("late-report score amendment (ADR-032, AC-SC-014)", () => {
       const admin = await c.user(["ADMIN"], buA, "admin"); const leadA = await c.user(["BU_LEAD"], buA, "leadA");
       const strat = await seedStrategy(c, admin); const wk = await weekId(c);
       await c.setNow(W1.open);
-      const { reportId } = await draftGoal(c, leadA, wk, strat.subKrIds[0], ["t"], "Ship it by Friday"); // never submitted
+      // an empty draft: a complete one would be submitted by the system at the final lock, an empty one cannot be (it has no goal)
+      const reportId = await c.rpc<string>("get_or_create_weekly_report", leadA, wk);
       await c.setNow(W1.finalLock);
       await c.rpc("finalize_reporting_week", wk);
       expect((await c.q("select status from weekly_reports where id = $1", [reportId]))[0].status).toBe("FINAL_LOCKED");

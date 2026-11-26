@@ -78,7 +78,7 @@ export default async function WeeklyPage({ searchParams }: PageProps<"/weekly">)
                     <p className="text-sm text-muted">Content lock {wat(week.content_lock_at)} · Final lock {wat(week.final_lock_at)}</p>
                     <div className="flex flex-wrap gap-2">
                       {week.reporting_state === "ORGANIZATION_HOLIDAY" ? <Badge tone="info">Organization holiday · report not required</Badge> : null}
-                      {view ? <><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} /></> : week.reporting_state === "NORMAL" ? <Badge tone="warn">Not started</Badge> : null}
+                      {view ? <><PhaseBadge phase={view.phase} /><SubmissionBadge status={view.report.submission_status} auto={view.report.auto_submitted} /></> : week.reporting_state === "NORMAL" ? <Badge tone="warn">Not started</Badge> : null}
                     </div>
                   </div>
                   {week.reporting_state === "NORMAL" ? (id ? <Link className={buttonClass("primary", "sm")} href={`/weekly/${id}`}>Open report</Link>

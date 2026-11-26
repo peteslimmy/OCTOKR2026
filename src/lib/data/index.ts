@@ -134,7 +134,7 @@ export async function reportIdFor(buId: string, weekId: string): Promise<string 
 
 export interface ReportView {
   report: {
-    id: string; status: string; submission_status: "NOT_SUBMITTED" | "SUBMITTED"; review_status: "NOT_REVIEWED" | "REVIEWED";
+    id: string; status: string; submission_status: "NOT_SUBMITTED" | "SUBMITTED"; auto_submitted?: boolean; review_status: "NOT_REVIEWED" | "REVIEWED";
     version: number; submitted_at: string | null; skipped_session_summary_comment: string | null; comment?: string | null; reviewed_at: string | null; final_locked_at: string | null;
     review_comments: string | null; review_initiated_by: string | null; review_rejection_reason: string | null;
   };

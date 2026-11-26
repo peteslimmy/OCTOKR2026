@@ -330,9 +330,10 @@ async function complianceReport(c: Ctx) {
     const submitted = due.filter((r) => r.submission_status === "SUBMITTED");
     const reviewed = submitted.filter((r) => r.review_status === "REVIEWED").length;
     const early = due.filter((r) => r.submitted_before_content_lock).length;
+    const auto = due.filter((r) => r.compliance_reason === "AUTO_SUBMITTED_AT_FINAL_LOCK").length;   // submitted by the system at the final lock: counted as submitted, shown apart
     return {
       business_unit: name, due_weeks: due.length, compliant, non_compliant: non, compliance_rate: pct(compliant, compliant + non),
-      early_rate: pct(early, due.length), review_rate: pct(reviewed, submitted.length),
+      auto_submitted: auto, early_rate: pct(early, due.length), review_rate: pct(reviewed, submitted.length),
       holiday_weeks: rs.filter((r) => r.reporting_state === "ORGANIZATION_HOLIDAY").length, pending_weeks: rs.filter((r) => r.reporting_state === "NORMAL" && r.week_status !== "FINAL_LOCKED").length,
       late_open: rs.filter((r) => r.late_exception_status === "AUTHORISED" || r.late_exception_status === "SUBMITTED").length,
       late_applied: rs.filter((r) => r.late_exception_status === "APPLIED").length,
@@ -345,6 +346,7 @@ async function complianceReport(c: Ctx) {
   const summary: SummaryItem[] = [
     { label: "Compliance rate", value: all.compliance_rate, unit: "%", metricId: "compliance_rate", note: `${all.compliant} compliant of ${all.compliant + all.non_compliant} finalised BU-weeks`, tone: all.compliance_rate === null ? "neutral" : all.compliance_rate >= 90 ? "good" : all.compliance_rate >= 70 ? "warn" : "bad" },
     { label: "Missing reports", value: all.non_compliant, unit: "BU-weeks", metricId: "missing_reports" },
+    { label: "Auto-submitted by the system", value: all.auto_submitted, unit: "BU-weeks", note: "Reports nobody submitted, submitted by the system at the final lock; they count as compliant but are shown apart" },
     { label: "Late-report exceptions open / applied", value: `${all.late_open} / ${all.late_applied}`, metricId: "late_exceptions", note: "Exceptions never turn a missed week into a compliant one" },
     { label: "Review rate", value: all.review_rate, unit: "%", metricId: "review_rate" },
   ];
@@ -352,7 +354,7 @@ async function complianceReport(c: Ctx) {
     series: [{ name: "Compliance rate", points: rows.filter((r) => r.business_unit !== "All Business Units").map((r) => ({ x: r.business_unit, y: r.compliance_rate })) }] }];
   return done({ ...c, summary, charts }, qLabel(q), [
     { key: "business_unit", label: "Business Unit", type: "text" }, { key: "due_weeks", label: "Finalised weeks due", type: "number" },
-    { key: "compliant", label: "Compliant", type: "number" }, { key: "non_compliant", label: "Non-compliant", type: "number", metricId: "missing_reports" },
+    { key: "compliant", label: "Compliant", type: "number" }, { key: "auto_submitted", label: "Auto-submitted", type: "number" }, { key: "non_compliant", label: "Non-compliant", type: "number", metricId: "missing_reports" },
     { key: "compliance_rate", label: "Compliance rate", type: "percent", metricId: "compliance_rate" }, { key: "early_rate", label: "Before content lock", type: "percent", metricId: "early_submission_rate", hint: "pending approval" },
     { key: "review_rate", label: "Reviewed", type: "percent", metricId: "review_rate" }, { key: "holiday_weeks", label: "Holiday weeks (excluded)", type: "number" },
     { key: "pending_weeks", label: "Not yet finalised", type: "number" }, { key: "late_open", label: "Late exceptions open", type: "number", metricId: "late_exceptions" },

@@ -80,15 +80,20 @@ describe("final lock (FR-WR-012/013, UJ-07/08)", () => {
   it("non-submission => 0.00 + NON_COMPLIANT, with durable evidence even when no report row exists; idempotent re-run", async () => {
     await withTx(async (c) => {
       const w = await world(c);
-      await draftGoal(c, w.leadA, w.wk, w.strat.subKrIds[0]); // BU A drafted but never submitted
+      await draftGoal(c, w.leadA, w.wk, w.strat.subKrIds[0]); // BU A filed a complete draft and never submitted it: the system submits it at the final lock and flags it
+      await c.rpc("get_or_create_weekly_report", w.leadB, w.wk); // BU B opened a report and filed nothing: it cannot be submitted
       await c.setNow(W1.finalLock);
       await c.rpc("finalize_reporting_week", w.wk);
-      const rows = await c.q("select business_unit_id, score_state, final_score from weekly_score_snapshots where reporting_week_id = $1", [w.wk]);
+      const rows = await c.q<{ business_unit_id: string; score_state: string; final_score: string }>("select business_unit_id, score_state, final_score from weekly_score_snapshots where reporting_week_id = $1", [w.wk]);
       expect(rows).toHaveLength(3);
-      for (const r of rows) expect(r).toMatchObject({ score_state: "NOT_SUBMITTED", final_score: "0.00" });
-      const comp = await c.q("select status, reason from weekly_compliance where reporting_week_id = $1 order by reason", [w.wk]);
-      expect(comp.every((r) => r.status === "NON_COMPLIANT")).toBe(true);
-      expect(comp.map((r) => r.reason).sort()).toEqual(["NOT_SUBMITTED_AT_FINAL_LOCK", "NO_REPORT_AT_FINAL_LOCK", "NO_REPORT_AT_FINAL_LOCK"]);
+      for (const r of rows) expect(r.final_score).toBe("0.00");
+      expect(rows.find((r) => r.business_unit_id === w.buA)!.score_state).not.toBe("NOT_SUBMITTED");   // the auto-submitted report is scored from what was filed
+      expect(rows.filter((r) => r.business_unit_id !== w.buA).every((r) => r.score_state === "NOT_SUBMITTED")).toBe(true);
+      const comp = await c.q<{ business_unit_id: string; status: string; reason: string }>("select business_unit_id, status, reason from weekly_compliance where reporting_week_id = $1", [w.wk]);
+      const of = (bu: string) => comp.find((r) => r.business_unit_id === bu);
+      expect(of(w.buA)).toMatchObject({ status: "COMPLIANT", reason: "AUTO_SUBMITTED_AT_FINAL_LOCK" });
+      expect(of(w.buB)).toMatchObject({ status: "NON_COMPLIANT", reason: "NOT_SUBMITTED_AT_FINAL_LOCK" });
+      expect(of(w.buC)).toMatchObject({ status: "NON_COMPLIANT", reason: "NO_REPORT_AT_FINAL_LOCK" });
       const again = await c.rpc<{ already_final_locked: boolean }>("finalize_reporting_week", w.wk);
       expect(again.already_final_locked).toBe(true);
       expect((await c.q("select count(*)::int n from weekly_score_snapshots where reporting_week_id = $1", [w.wk]))[0].n).toBe(3);
